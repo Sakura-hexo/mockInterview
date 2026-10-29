@@ -1,0 +1,19 @@
+# 密钥与本地配置，严禁提交到仓库
+.env
+application-local.yml
+
+# 构建产物
+target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# 运行时数据
+.agentscope/
+logs/
+
+# 操作系统
+.DS_Store
+Thumbs.db
