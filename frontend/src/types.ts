@@ -40,3 +40,27 @@ export interface MessageBadge {
   text: string;
   cls: 'question' | 'followup' | 'next';
 }
+
+// 复盘报告结构（接口文档第 3 节）
+export interface ReportScore {
+  overall: number; // 综合表现
+  technicalDepth: number; // 技术深度
+  expression: number; // 表达沟通
+  followUpHandling: number; // 追问应对
+}
+
+export interface ReportItem {
+  question: string;
+  userAnswerSummary: string;
+  comment: string;
+  score: number;
+}
+
+export interface InterviewReport {
+  sessionId: string;
+  scores: ReportScore;
+  items: ReportItem[];
+  suggestions: string[];
+  tokenTotal: number;
+  durationMs: number;
+}

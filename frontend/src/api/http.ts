@@ -32,7 +32,13 @@ interface Envelope<T> {
   data: T;
 }
 
-export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+// acceptCodes：响应体 code 非 0 但业务上可接受的码（如报告接口的 202 生成中），
+// 命中时照常返回 data，由调用方自行判别结构
+export async function apiFetch<T>(
+  path: string,
+  init?: RequestInit,
+  acceptCodes?: number[],
+): Promise<T> {
   const headers = new Headers(init?.headers);
   const token = getToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
@@ -56,7 +62,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   }
 
   const body = (await res.json()) as Envelope<T>;
-  if (body.code !== 0) {
+  if (body.code !== 0 && !acceptCodes?.includes(body.code)) {
     throw new ApiError(body.code, body.message || '业务错误');
   }
   return body.data;
