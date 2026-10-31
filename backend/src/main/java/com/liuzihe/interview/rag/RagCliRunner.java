@@ -3,8 +3,14 @@ package com.liuzihe.interview.rag;
 import com.liuzihe.interview.infra.EmbeddingModels;
 import com.liuzihe.interview.infra.EnvKeys;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * 步骤 2 命令行入口：题库导入与混合检索验证。
@@ -13,7 +19,7 @@ import java.util.List;
  */
 public final class RagCliRunner {
 
-    private static final Path BANK_FILE = Path.of("question-bank", "java-backend.md");
+    private static final Path BANK_DIR = Path.of("question-bank");
 
     private RagCliRunner() {
     }
@@ -42,7 +48,17 @@ public final class RagCliRunner {
     }
 
     private static void runImport(MilvusQuestionStore store, boolean rebuild) {
-        List<BankQuestion> questions = QuestionBankParser.parse(BANK_FILE);
+        List<Path> files = bankFiles();
+        List<BankQuestion> questions = new ArrayList<>();
+        for (Path file : files) {
+            questions.addAll(QuestionBankParser.parse(file));
+        }
+        Set<String> ids = new HashSet<>();
+        for (BankQuestion q : questions) {
+            if (!ids.add(q.id())) {
+                throw new IllegalStateException("题号重复，请检查各题库文件：" + q.id());
+            }
+        }
         if (rebuild) {
             store.rebuild();
             System.out.println("已重建集合，换 embedding 模型后必须走此路径。");
@@ -50,8 +66,20 @@ public final class RagCliRunner {
             store.ensureCollection();
         }
         int imported = store.importQuestions(questions);
-        System.out.printf("题库解析 %d 题 | 本次入库 %d 题 | 跳过已存在 %d 题%n",
-                questions.size(), imported, questions.size() - imported);
+        System.out.printf("题库文件 %d 个 | 解析 %d 题 | 本次入库 %d 题 | 跳过已存在 %d 题%n",
+                files.size(), questions.size(), imported, questions.size() - imported);
+    }
+
+    private static List<Path> bankFiles() {
+        try (Stream<Path> stream = Files.list(BANK_DIR)) {
+            List<Path> files = stream.filter(p -> p.toString().endsWith(".md")).sorted().toList();
+            if (files.isEmpty()) {
+                throw new IllegalStateException("question-bank 目录下没有 Markdown 题库文件");
+            }
+            return files;
+        } catch (IOException e) {
+            throw new IllegalStateException("扫描题库目录失败：" + BANK_DIR, e);
+        }
     }
 
     private static void runSearch(MilvusQuestionStore store, String[] args) {
@@ -64,6 +92,10 @@ public final class RagCliRunner {
         int topK = intFlag(args, "--topK", SearchTiers.topK(query));
         if (hasFlag(args, "--dense-only")) {
             print("纯稠密检索", store.denseSearch(query, topK));
+            return;
+        }
+        if (hasFlag(args, "--sparse-only")) {
+            print("纯稀疏检索", store.sparseSearch(query, topK));
             return;
         }
         if (hasFlag(args, "--no-rewrite")) {
@@ -122,8 +154,8 @@ public final class RagCliRunner {
         for (int i = 1; i < args.length; i++) {
             String arg = args[i];
             if (arg.startsWith("--")) {
-                if (arg.equals("--topK") || arg.equals("--dense-only") || arg.equals("--no-rewrite")
-                        || arg.equals("--rebuild")) {
+                if (arg.equals("--topK") || arg.equals("--dense-only") || arg.equals("--sparse-only")
+                        || arg.equals("--no-rewrite") || arg.equals("--rebuild")) {
                     if (arg.equals("--topK")) {
                         i++;
                     }
