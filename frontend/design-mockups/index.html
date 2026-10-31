@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>AI 模拟面试平台 - 设计稿导航</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif; background: #f5f6fa; color: #2c3e50; }
+  .container { max-width: 1080px; margin: 0 auto; padding: 48px 24px; }
+  h1 { font-size: 28px; margin-bottom: 8px; }
+  .subtitle { color: #7d8ba1; font-size: 14px; margin-bottom: 32px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+  .card { background: #fff; border: 1px solid #e5e8ef; border-radius: 12px; padding: 20px 24px; transition: all .2s; text-decoration: none; color: inherit; display: block; }
+  .card:hover { border-color: #3b82f6; box-shadow: 0 4px 12px rgba(59,130,246,.12); transform: translateY(-2px); }
+  .card h2 { font-size: 16px; margin-bottom: 6px; color: #2c3e50; }
+  .card .route { font-family: Consolas, monospace; font-size: 12px; color: #3b82f6; margin-bottom: 8px; }
+  .card p { font-size: 13px; color: #7d8ba1; line-height: 1.6; }
+  .card .no { font-size: 11px; color: #b1b9c8; font-family: Consolas, monospace; margin-bottom: 4px; }
+  .note { background: #fff8e6; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 6px; margin-top: 32px; font-size: 13px; color: #92400e; line-height: 1.7; }
+  .note strong { color: #78350f; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>AI 模拟面试平台 · 前端设计稿</h1>
+  <div class="subtitle">作者：Sakura | 创建时间：2026-10-29 | 定稿风格：travelScope 简约风 | 全站无 emoji 图标</div>
+
+  <div class="grid">
+    <a class="card" href="01-login.html">
+      <div class="no">01</div>
+      <h2>令牌输入页</h2>
+      <div class="route">/login</div>
+      <p>输入 APP_TOKEN 进入系统。居中卡片布局，单输入框 + 提交按钮，错误时显示红色提示。</p>
+    </a>
+
+    <a class="card" href="01-login-error.html">
+      <div class="no">01b</div>
+      <h2>令牌错误态</h2>
+      <div class="route">/login (error)</div>
+      <p>令牌无效时的红色错误提示与红色输入框边。</p>
+    </a>
+
+    <a class="card" href="02-home.html">
+      <div class="no">02</div>
+      <h2>历史会话首页</h2>
+      <div class="route">/</div>
+      <p>左侧深蓝侧栏 + 右侧空状态。侧栏显示历史面试会话，状态用彩色文字徽章；主区为纯文字引导。</p>
+    </a>
+
+    <a class="card" href="03-new-interview.html">
+      <div class="no">03</div>
+      <h2>新建面试页</h2>
+      <div class="route">/new</div>
+      <p>居中卡片表单：简历上传（PDF 或纯文本二选一）+ JD 粘贴 + 方向/难度/题数三段配置 + 提交按钮。</p>
+    </a>
+
+    <a class="card" href="04-interview.html">
+      <div class="no">04</div>
+      <h2>面试聊天页（核心）</h2>
+      <div class="route">/interview/:id</div>
+      <p>SSE 流式渲染面试官提问、追问、候选人作答。气泡用文字徽章区分新题/追问/下一题，红色"结束面试"按钮在顶栏。</p>
+    </a>
+
+    <a class="card" href="05-report.html">
+      <div class="no">05</div>
+      <h2>复盘报告页</h2>
+      <div class="route">/report/:id</div>
+      <p>白底评分卡（大号综合分）+ 四维评分进度条 + 逐题回顾手风琴 + 改进建议列表 + 元信息。</p>
+    </a>
+
+    <a class="card" href="06-interview-streaming.html">
+      <div class="no">06</div>
+      <h2>流式中间态</h2>
+      <div class="route">/interview/:id (streaming)</div>
+      <p>面试官正在输出：气泡内光标闪烁、Agent 活动流滚动、发送按钮变为红色停止按钮、顶部状态横幅。</p>
+    </a>
+
+    <a class="card" href="07-report-generating.html">
+      <div class="no">07</div>
+      <h2>报告生成中</h2>
+      <div class="route">/report/:id (generating)</div>
+      <p>面试刚结束、复盘智能体正在生成报告的过渡态：旋转 loading + 分步进度提示。</p>
+    </a>
+  </div>
+
+  <div class="note">
+    <strong>定稿说明（2026-10-29 用户确认）：</strong>采用 travelScope 简约风——白底、深蓝侧栏 <code>#1e2a3a</code>、主蓝 <code>#3b82f6</code>、细边框扁平卡片、无渐变、无插画。全站禁用 emoji 图标：状态用彩色文字徽章，动作用文字标签，难度等选项用纯文字。设计稿数据均为示例假数据。
+  </div>
+</div>
+</body>
+</html>

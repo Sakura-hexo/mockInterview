@@ -4,6 +4,10 @@ application-local.yml
 
 # 构建产物
 target/
+dist/
+
+# 前端依赖
+node_modules/
 
 # IDE
 .idea/

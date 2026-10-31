@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>06 流式中间态 · AI 模拟面试</title>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="seal">面</div>
+      <div>
+        <div class="brand-name">AI 模拟面试</div>
+        <div class="brand-sub mono">MOCK INTERVIEW</div>
+      </div>
+    </div>
+    <button class="new-btn">
+      <svg class="ic" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>
+      新建面试
+    </button>
+    <div class="side-scroll">
+      <div class="side-label mono">进行中 · Active</div>
+      <div class="hist-item active">
+        <div class="hist-l1"><span>Java 后端 · 中等</span><span class="status st-live"><i></i>面试中</span></div>
+        <div class="hist-l2 mono"><span>第 4 / 10 题</span><span>刚刚</span></div>
+      </div>
+    </div>
+    <div class="side-foot"><span class="mono">LOCAL · v0.1</span><button class="link-btn">退出</button></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="crumbs">
+        Java 后端 · 中等难度
+        <span class="sep">/</span>
+        <span class="light">第 4 题</span>
+      </div>
+      <span class="pill pill-wait"><i></i>回复中</span>
+      <div class="spacer"></div>
+      <span class="mono muted" style="font-size:11.5px;">4 / 10</span>
+      <button class="btn btn-danger">
+        <svg class="ic" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3.5" y="3.5" width="9" height="9" rx="1.5"/></svg>
+        结束面试
+      </button>
+    </header>
+    <div class="progress-track"><div class="progress-fill" style="width:40%"></div></div>
+
+    <div class="stream-banner">
+      <i></i>
+      <span>面试官正在回复<span class="mono"> · 已生成 142 tokens · 3.4s</span></span>
+    </div>
+
+    <div class="main-body">
+      <div class="transcript">
+
+        <div class="turn">
+          <div class="avatar ai">官</div>
+          <div class="turn-body">
+            <div class="turn-head">
+              <span class="turn-name">面试官</span>
+              <span class="pill pill-next">第 4 题</span>
+              <span class="turn-time mono">21:41</span>
+            </div>
+            <div class="turn-content">
+              好。你项目里用 RocketMQ 做异步下单——<strong>如果下游库存服务消费失败导致超卖，你怎么保证消息的最终一致性？</strong>
+            </div>
+            <div class="turn-foot mono">tokens 312 · 3.5s</div>
+          </div>
+        </div>
+
+        <div class="turn">
+          <div class="avatar me">我</div>
+          <div class="turn-body">
+            <div class="turn-head">
+              <span class="turn-name">你</span>
+              <span class="turn-time mono">21:44</span>
+            </div>
+            <div class="turn-content as-block">
+              我用本地消息表加定时补偿：下单时在同一个本地事务里写订单表和消息表，异步推送 MQ。消费失败走重试，多次失败进死信队列，由定时任务扫描做人工介入。
+            </div>
+          </div>
+        </div>
+
+        <!-- 流式输出中的追问 -->
+        <div class="turn">
+          <div class="avatar ai">官</div>
+          <div class="turn-body">
+            <div class="turn-head">
+              <span class="turn-name">面试官</span>
+              <span class="pill pill-fu">追问</span>
+              <span class="turn-time mono">streaming…</span>
+            </div>
+            <div class="turn-content">
+              方案比较完整。你刚提到<strong>本地消息表</strong>，我追一问：<br><br>
+              如果本地事务提交成功、但应用进程在<strong>推送 MQ 之前宕机</strong>，这条消息会不会丢？怎么保证它最终被投递？<span class="cursor"></span><span class="typing"><i></i><i></i><i></i></span>
+            </div>
+            <div class="activity">
+              <div class="act-head mono">AGENT TRACE</div>
+              <div class="act-row dim"><span class="act-dot ok"></span><span class="who">router</span><span>意图识别 → 面试中</span></div>
+              <div class="act-row dim"><span class="act-dot ok"></span><span class="who">supervisor</span><span>调度面试官智能体</span></div>
+              <div class="act-row"><span class="act-dot ok"></span><span class="who">interviewer</span><span>回答质量 7.5 / 10 · 可深挖</span></div>
+              <div class="act-row"><span class="act-dot run"></span><span class="who">interviewer</span><span>生成追问中…</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="composer">
+      <div class="composer-inner">
+        <div class="composer-box">
+          <textarea rows="2" placeholder="面试官正在回复，请稍候…" disabled></textarea>
+          <button class="icon-btn stop" title="停止">
+            <svg class="ic" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="3.5" width="9" height="9" rx="1.5"/></svg>
+          </button>
+        </div>
+        <div class="composer-hint mono">SSE 流式接收中 · 点击停止可中断</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="mockup-nav"><a href="index.html">
+  <svg class="ic" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg>
+  返回导航</a></div>
+</body>
+</html>

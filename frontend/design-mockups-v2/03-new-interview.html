@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>03 新建面试 · AI 模拟面试</title>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="seal">面</div>
+      <div>
+        <div class="brand-name">AI 模拟面试</div>
+        <div class="brand-sub mono">MOCK INTERVIEW</div>
+      </div>
+    </div>
+    <button class="new-btn">
+      <svg class="ic" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>
+      新建面试
+    </button>
+    <div class="side-scroll">
+      <div class="side-label mono">进行中 · Active</div>
+      <div class="hist-item">
+        <div class="hist-l1"><span>Java 后端 · 中等</span><span class="status st-live"><i></i>面试中</span></div>
+        <div class="hist-l2 mono"><span>第 4 / 10 题</span><span>10 分钟前</span></div>
+      </div>
+      <div class="side-label mono">已归档 · Archive</div>
+      <div class="hist-item">
+        <div class="hist-l1"><span>Java 后端 · 困难</span><span class="status st-done"><i></i>已出报告</span></div>
+        <div class="hist-l2 mono"><span>10 题 · 综合 7.8</span><span>昨天</span></div>
+      </div>
+      <div class="hist-item">
+        <div class="hist-l1"><span>Java 后端 · 简单</span><span class="status st-done"><i></i>已出报告</span></div>
+        <div class="hist-l2 mono"><span>5 题 · 综合 8.4</span><span>3 天前</span></div>
+      </div>
+    </div>
+    <div class="side-foot"><span class="mono">LOCAL · v0.1</span><button class="link-btn">退出</button></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="crumbs">新建面试</div>
+      <div class="spacer"></div>
+      <span class="mono muted" style="font-size:11px;">STEP 1 / 1</span>
+    </header>
+
+    <div class="page-center">
+      <div class="form-card">
+        <div class="form-title">配置你的模拟面试</div>
+        <div class="form-sub">简历与 JD 是 AI 面试官出题的核心依据，越完整越贴近真实面试</div>
+
+        <div class="field">
+          <div class="field-label">简历 <span class="req">*</span> <span class="opt">PDF 或纯文本，二选一</span></div>
+          <div class="dropzone">
+            <svg class="ic" width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 10.5V2.5M4.8 5.2L8 2l3.2 3.2M2.5 13.5h11"/></svg>
+            <div class="dz-title">拖入 PDF 简历，或点击选择文件</div>
+            <div class="dz-limit mono">上限 5 MB · 解析后可预览结构化摘要</div>
+          </div>
+          <div class="divider-or">或</div>
+          <textarea class="textarea" placeholder="直接粘贴简历纯文本：技能清单、项目经历、教育背景…"></textarea>
+        </div>
+
+        <div class="field">
+          <div class="field-label">目标岗位 JD <span class="req">*</span> <span class="opt mono">MAX 20 KB</span></div>
+          <textarea class="textarea" style="min-height:130px;" placeholder="粘贴目标岗位的完整 JD：职位描述、任职要求、技术栈…"></textarea>
+        </div>
+
+        <div class="field">
+          <div class="field-label">岗位方向 <span class="req">*</span></div>
+          <div class="segmented">
+            <div class="seg on">Java 后端</div>
+            <div class="seg off">前端 · 二期</div>
+            <div class="seg off">算法 · 二期</div>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <div class="field-label">难度 <span class="req">*</span></div>
+            <div class="segmented">
+              <div class="seg">简单</div>
+              <div class="seg on">中等</div>
+              <div class="seg">困难</div>
+            </div>
+          </div>
+          <div class="field">
+            <div class="field-label">题数 <span class="req">*</span></div>
+            <div class="segmented">
+              <div class="seg">5</div>
+              <div class="seg on">10</div>
+              <div class="seg">15</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-footer">
+          <button class="btn btn-ghost">取消</button>
+          <button class="btn btn-primary">
+            开始面试
+            <svg class="ic" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8h11M9 4l4 4-4 4"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="mockup-nav"><a href="index.html">
+  <svg class="ic" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg>
+  返回导航</a></div>
+</body>
+</html>

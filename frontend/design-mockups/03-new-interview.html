@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>03 新建面试页 - AI 模拟面试平台</title>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-brand">AI 模拟面试</div>
+    <button class="new-chat-btn">＋ 新建面试</button>
+
+    <div class="sidebar-section">进行中</div>
+    <div class="conversation-list">
+      <div class="conversation-item">
+        <div class="conversation-title">
+          <span>Java 后端 · 中等</span>
+          <span class="badge badge-blue">进行中</span>
+        </div>
+        <div class="conversation-meta"><span>第 4/10 题</span><span>10分钟前</span></div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">已结束</div>
+    <div class="conversation-list">
+      <div class="conversation-item">
+        <div class="conversation-title"><span>Java 后端 · 困难</span><span class="badge badge-green">已出报告</span></div>
+        <div class="conversation-meta"><span>10题 · 综合 7.8</span><span>昨天</span></div>
+      </div>
+      <div class="conversation-item">
+        <div class="conversation-title"><span>Java 后端 · 简单</span><span class="badge badge-green">已出报告</span></div>
+        <div class="conversation-meta"><span>5题 · 综合 8.4</span><span>3天前</span></div>
+      </div>
+    </div>
+
+    <div class="sidebar-footer"><span>本机模式</span><button>退出</button></div>
+  </aside>
+
+  <main class="main">
+    <header class="chat-header">
+      <div class="title">新建模拟面试</div>
+      <div class="actions"><a href="02-home.html" class="btn btn-ghost" style="text-decoration:none;">取消</a></div>
+    </header>
+
+    <div class="page-center">
+      <div class="form-card">
+        <h2>配置你的面试</h2>
+        <div class="subtitle">简历和 JD 是 AI 面试官出题的核心依据，请认真填写</div>
+
+        <!-- 简历 -->
+        <div class="form-section">
+          <label class="form-label">简历 <span class="required">*</span> <span class="hint">PDF 或纯文本，二选一</span></label>
+          <div class="upload-box">
+            <div>点击或拖拽上传 PDF 简历</div>
+            <div style="font-size:11px; margin-top:4px;">上限 5MB · 与下方粘贴文本二选一</div>
+          </div>
+          <div class="divider-or">或者</div>
+          <textarea class="form-textarea" placeholder="直接粘贴简历纯文本（支持 Markdown）"></textarea>
+        </div>
+
+        <!-- JD -->
+        <div class="form-section">
+          <label class="form-label">目标岗位 JD <span class="required">*</span> <span class="hint">最大 20KB</span></label>
+          <textarea class="form-textarea" style="min-height:140px;" placeholder="粘贴目标岗位的完整 JD 文本，包括职位描述、任职要求、技术栈等"></textarea>
+        </div>
+
+        <!-- 面试配置 -->
+        <div class="form-section">
+          <label class="form-label">岗位方向 <span class="required">*</span></label>
+          <div class="radio-group">
+            <div class="radio-pill"><input type="radio" name="dir" id="dir1" checked><label for="dir1">Java 后端</label></div>
+            <div class="radio-pill"><input type="radio" name="dir" id="dir2" disabled><label for="dir2" style="opacity:0.4;cursor:not-allowed;">前端（二期）</label></div>
+            <div class="radio-pill"><input type="radio" name="dir" id="dir3" disabled><label for="dir3" style="opacity:0.4;cursor:not-allowed;">算法（二期）</label></div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-section">
+            <label class="form-label">难度 <span class="required">*</span></label>
+            <div class="radio-group">
+              <div class="radio-pill"><input type="radio" name="diff" id="d1"><label for="d1">简单</label></div>
+              <div class="radio-pill"><input type="radio" name="diff" id="d2" checked><label for="d2">中等</label></div>
+              <div class="radio-pill"><input type="radio" name="diff" id="d3"><label for="d3">困难</label></div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <label class="form-label">题数 <span class="required">*</span></label>
+            <div class="radio-group">
+              <div class="radio-pill"><input type="radio" name="count" id="c1"><label for="c1">5 题</label></div>
+              <div class="radio-pill"><input type="radio" name="count" id="c2" checked><label for="c2">10 题</label></div>
+              <div class="radio-pill"><input type="radio" name="count" id="c3"><label for="c3">15 题</label></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-footer">
+          <button class="btn btn-ghost">取消</button>
+          <button class="btn btn-primary">开始面试 →</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="mockup-nav"><a href="index.html">← 返回设计稿导航</a></div>
+</body>
+</html>
