@@ -1,0 +1,222 @@
+/* 面试聊天页样式（V1 定稿设计稿 04/06），由 InterviewPage.tsx 引入 */
+
+.message-list {
+  padding: 24px;
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.message-row {
+  display: flex;
+  margin-bottom: 16px;
+  flex-direction: column;
+}
+
+.message-row.user { align-items: flex-end; }
+.message-row.assistant { align-items: flex-start; }
+
+.bubble {
+  max-width: 76%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+.bubble.user {
+  background: #3b82f6;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.bubble.assistant {
+  background: #fff;
+  color: #2c3e50;
+  border: 1px solid #e5e8ef;
+  border-bottom-left-radius: 4px;
+}
+
+.bubble-meta {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.bubble-tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.bubble-tag.question { background: #dbeafe; color: #1e40af; }
+.bubble-tag.followup { background: #fef3c7; color: #92400e; }
+.bubble-tag.next { background: #e0e7ff; color: #3730a3; }
+
+.bubble-time { font-size: 11px; color: #94a3b8; }
+
+.bubble-content :is(p, ul, ol) { margin: 0 0 4px; }
+.bubble-content :is(p:last-child, ul:last-child, ol:last-child) { margin-bottom: 0; }
+.bubble-content strong { font-weight: 700; }
+.bubble-content code {
+  font-family: Consolas, monospace;
+  background: #f1f5f9;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.cursor {
+  display: inline-block;
+  color: #3b82f6;
+  animation: blink 1s infinite;
+  font-weight: bold;
+}
+
+@keyframes blink { 50% { opacity: 0; } }
+
+.bubble-error {
+  margin-top: 8px;
+  padding: 6px 10px;
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 6px;
+  font-size: 12.5px;
+}
+
+.bubble-stats {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 8px;
+  font-family: Consolas, monospace;
+}
+
+/* ==================== Agent 活动流 ==================== */
+
+.activity-wrap {
+  align-self: flex-start;
+  margin-left: 4px;
+  width: 76%;
+  margin-top: -8px;
+}
+
+.activity-stream {
+  padding: 6px 10px;
+  background: #f6f7fa;
+  border: 1px solid #e8ebf1;
+  border-radius: 8px;
+}
+
+.activity-toggle {
+  all: unset;
+  cursor: pointer;
+  font-size: 11px;
+  color: #8a94a6;
+  user-select: none;
+  font-family: inherit;
+}
+
+.activity-items {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-family: Consolas, monospace;
+  color: #6b7688;
+}
+
+.activity-who { color: #475569; }
+
+.activity-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-ok { background: #10b981; }
+.dot-running { background: #f59e0b; animation: blink 1s infinite; }
+.dot-failed { background: #ef4444; }
+
+/* ==================== 输入区 ==================== */
+
+.input-area {
+  display: flex;
+  gap: 12px;
+  padding: 16px 24px;
+  background: #fff;
+  border-top: 1px solid #e5e8ef;
+}
+
+.input-area textarea {
+  flex: 1;
+  resize: none;
+  border: 1px solid #d5dbe6;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+  line-height: 1.5;
+}
+
+.input-area textarea:focus { border-color: #3b82f6; }
+.input-area textarea:disabled { background: #f5f6fa; cursor: not-allowed; }
+
+.send-btn,
+.stop-btn {
+  align-self: flex-end;
+  padding: 10px 22px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.send-btn { background: #3b82f6; color: #fff; }
+.send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.stop-btn { background: #ef4444; color: #fff; }
+
+/* ==================== 流式提示条与错误条（V1 设计稿 06） ==================== */
+
+.streaming-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 24px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 12px;
+  border-bottom: 1px solid #fde68a;
+}
+
+.streaming-hint .pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+  animation: blink 1s infinite;
+}
+
+.interview-error {
+  margin: 0 auto 16px;
+  max-width: 920px;
+  padding: 8px 14px;
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 8px;
+  font-size: 13px;
+}

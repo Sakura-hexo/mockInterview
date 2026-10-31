@@ -90,6 +90,13 @@ export default function Sidebar() {
     load();
   }, [load, location.pathname]);
 
+  // 聊天页一轮 done 后经 interviews-changed 事件通知刷新（页面方案 4.2）
+  useEffect(() => {
+    const handler = () => load();
+    window.addEventListener('interviews-changed', handler);
+    return () => window.removeEventListener('interviews-changed', handler);
+  }, [load]);
+
   const activeList = conversations.filter(
     (c) => c.status === 'IN_PROGRESS' || c.status === 'CREATED',
   );
