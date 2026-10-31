@@ -1,8 +1,8 @@
 import { apiFetch } from './http';
-import type { InterviewSummary, SessionConfig } from '../types';
+import type { ChatMessage, InterviewSummary, SessionConfig } from '../types';
 
 // 领域方法与接口文档一一对应（前端架构方案第 3 节），随 F 步骤逐个补充
-// 已有：F1 listInterviews、F3 createInterview/startInterview
+// 已有：F1 listInterviews、F3 createInterview/startInterview、F4 endInterview/getInterviewDetail
 
 // 接口文档 4.6 历史会话列表
 export function listInterviews(page = 1, size = 20) {
@@ -46,4 +46,20 @@ export function startInterview(sessionId: string) {
     `/api/interviews/${sessionId}/start`,
     { method: 'POST' },
   );
+}
+
+// 接口文档 4.4 结束面试：幂等，触发异步复盘生成，状态变 ENDED
+export function endInterview(sessionId: string) {
+  return apiFetch<{ reportStatus: string }>(`/api/interviews/${sessionId}/end`, {
+    method: 'POST',
+  });
+}
+
+// 接口文档 4.7 会话详情：刷新恢复与消息记录的数据源
+// questionCount 为可选字段：InterviewSummary 未定义该字段，后端补充后顶栏可显示 第 N/M 题
+export function getInterviewDetail(sessionId: string) {
+  return apiFetch<{
+    session: InterviewSummary & { questionCount?: number };
+    messages: ChatMessage[];
+  }>(`/api/interviews/${sessionId}`);
 }
