@@ -179,7 +179,15 @@
 
 .btn-primary { background: #3b82f6; color: #fff; }
 .btn-primary:hover:not(:disabled) { background: #2563eb; }
+.btn-danger { background: #ef4444; color: #fff; }
+.btn-danger:hover:not(:disabled) { background: #dc2626; }
+.btn-ghost { background: transparent; color: #555; border: 1px solid #d5dbe6; }
+.btn-ghost:hover:not(:disabled) { background: #f1f5f9; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ==================== 工具类 ==================== */
+
+.mono { font-family: Consolas, 'Courier New', monospace; }
 
 /* ==================== 空状态（纯文字引导，无插画） ==================== */
 

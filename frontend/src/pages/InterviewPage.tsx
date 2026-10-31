@@ -19,6 +19,7 @@ export default function InterviewPage() {
     annotated,
     phase,
     streaming,
+    streamStart,
     recovering,
     loaded,
     loadError,
@@ -108,7 +109,7 @@ export default function InterviewPage() {
           <span>
             {recovering
               ? '面试官回复生成中，自动同步中（每 3 秒）…'
-              : '面试官正在回复…'}
+              : `面试官正在回复…已生成 ${annotated.find((m) => m.streaming)?.content.length ?? 0} 字 · ${Math.floor((Date.now() - streamStart) / 1000)}s`}
           </span>
         </div>
       )}
