@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import com.liuzihe.interview.infra.StructuredOutputInvoker;
 import com.liuzihe.interview.session.ContextAssembler;
 import com.liuzihe.interview.session.ContextCompressor;
+import com.liuzihe.interview.session.ReportService;
 import com.liuzihe.interview.session.SessionState;
 import com.liuzihe.interview.session.SessionStore;
 import com.liuzihe.interview.session.SessionSummary;
@@ -30,13 +31,16 @@ public final class Supervisor {
     private final Router router;
     private final SessionStore store;
     private final ContextCompressor compressor;
+    private final ReportService reportService;
 
     public Supervisor(AgentRuntime runtime, StructuredOutputInvoker invoker,
-                      SessionStore store, ContextCompressor compressor) {
+                      SessionStore store, ContextCompressor compressor,
+                      ReportService reportService) {
         this.runtime = runtime;
         this.invoker = invoker;
         this.store = store;
         this.compressor = compressor;
+        this.reportService = reportService;
         this.router = new Router(invoker);
     }
 
@@ -57,15 +61,13 @@ public final class Supervisor {
         return new CreateResult(sessionId, digest, jd);
     }
 
-    /** 单轮对话：路由分流到面试官、闲聊或复盘占位，历史经组装器注入。 */
+    /** 单轮对话：路由分流到面试官、闲聊或复盘流程，历史经组装器注入。 */
     public SupervisorReply chat(String sessionId, String userText) {
         SessionState state = requireState(sessionId);
         Intent intent = router.route(userText);
         return switch (intent) {
-            case REPORT -> {
-                store.appendMessage(sessionId, "user", userText, 0, 0);
-                yield new SupervisorReply(intent, Prompts.REPORT_PLACEHOLDER, 0, 0);
-            }
+            // 复盘元命令不落消息：报告评估读全量日志，不能被元命令污染问答配对
+            case REPORT -> new SupervisorReply(intent, reportService.handle(sessionId), 0, 0);
             case CHAT -> agentTurn(state, Intent.CHAT,
                     AgentRuntime.ROLE_CHAT, Prompts.CHAT_SYSTEM, userText);
             case INTERVIEW -> agentTurn(state, Intent.INTERVIEW,

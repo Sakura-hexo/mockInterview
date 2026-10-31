@@ -120,6 +120,19 @@ public final class MySqlSessionStore {
         jdbc.update("DELETE FROM t_session WHERE session_id = ?", sessionId);
     }
 
+    public void endSession(String sessionId) {
+        jdbc.update("UPDATE t_session SET status = 'ENDED', ended_at = NOW() WHERE session_id = ?",
+                sessionId);
+    }
+
+    public long durationMs(String sessionId) {
+        List<Long> spans = jdbc.query(
+                "SELECT TIMESTAMPDIFF(MICROSECOND, MIN(created_at), MAX(created_at))"
+                        + " FROM t_message WHERE session_id = ?",
+                (rs, i) -> rs.getLong(1) / 1000, sessionId);
+        return spans.isEmpty() ? 0 : spans.get(0);
+    }
+
     private List<String> parseList(String json) {
         if (json == null || json.isBlank() || "null".equals(json)) {
             return List.of();
