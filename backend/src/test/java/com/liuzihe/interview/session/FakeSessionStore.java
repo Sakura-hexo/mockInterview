@@ -15,6 +15,7 @@ public final class FakeSessionStore implements SessionStore {
     public final Map<String, SessionState> sessions = new HashMap<>();
     public final Map<String, List<StoredMessage>> messages = new HashMap<>();
     public final Map<String, SessionSummary> summaries = new HashMap<>();
+    public final List<String> endedSessions = new ArrayList<>();
 
     @Override
     public void saveSession(SessionState state) {
@@ -53,6 +54,11 @@ public final class FakeSessionStore implements SessionStore {
     }
 
     @Override
+    public List<StoredMessage> readAll(String sessionId) {
+        return List.copyOf(messages.getOrDefault(sessionId, List.of()));
+    }
+
+    @Override
     public Optional<SessionSummary> loadSummary(String sessionId) {
         return Optional.ofNullable(summaries.get(sessionId));
     }
@@ -67,5 +73,15 @@ public final class FakeSessionStore implements SessionStore {
         sessions.remove(sessionId);
         messages.remove(sessionId);
         summaries.remove(sessionId);
+    }
+
+    @Override
+    public void endSession(String sessionId) {
+        endedSessions.add(sessionId);
+    }
+
+    @Override
+    public long durationMs(String sessionId) {
+        return 0;
     }
 }
