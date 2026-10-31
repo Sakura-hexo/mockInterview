@@ -8,6 +8,7 @@
 
 - 步骤 0 工程初始化与基础设施编排：已完成，五容器 healthy，应用健康检查 UP
 - 步骤 1 DashScope 接入与最小面试官智能体：代码就绪，待填入密钥验证
+- 运行时策略（2026-10-31）：开发期本地优先——MySQL 与 Redis 用本机服务，Milvus 从步骤 2 起按需容器启动；完整 Docker Compose 部署留待初版（步骤 8、9）
 
 ## 目录结构
 
@@ -24,6 +25,7 @@ mockInterview/
 - 技术方案：`.agentdocs/plans/2026-10-29/AI模拟面试平台-技术方案.md`
 - 接口文档：`.agentdocs/plans/2026-10-29/AI模拟面试平台-接口文档.md`
 - 简历要点对照：`.agentdocs/plans/2026-10-29/AI模拟面试平台-简历要点对照.md`
+- 前端页面方案：`.agentdocs/plans/2026-10-29/AI模拟面试平台-前端页面-优化方案.md`（定稿设计稿 `frontend/design-mockups/`，预览 `node frontend/serve.js`）
 - 开发指令步骤 0-1：`.agentdocs/plans/2026-10-29/AI模拟面试平台-开发指令-步骤01.md`
 
 ## 技术栈（后端）
@@ -35,7 +37,13 @@ Java 21、Spring Boot 3.4、AgentScope-Java 2.0、MySQL 8（容器映射 3307）
 ```bash
 cd backend
 cp .env.example .env      # 填入 DASHSCOPE_API_KEY 与 APP_TOKEN
-docker compose up -d      # mysql redis etcd minio milvus 全部 healthy
-mvn spring-boot:run       # 应用启动在 8080
-mvn compile exec:java     # 命令行运行最小面试官智能体
+mvn compile exec:java     # 命令行最小面试官：只依赖模型密钥，无需任何中间件
+
+# 开发模式：中间件用本机服务（MySQL 3306 / Redis 6379）
+# 本机 MySQL 需先建 interview 库，凭据经环境变量传入
+MYSQL_USERNAME=root MYSQL_PASSWORD=本机密码 mvn spring-boot:run
+
+# 初版部署（步骤 8、9）：一键启动全部容器
+docker compose up -d
+# 开发期仅需 Milvus 时（步骤 2 起）：docker compose up -d milvus
 ```

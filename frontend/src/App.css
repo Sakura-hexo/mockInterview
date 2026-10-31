@@ -1,0 +1,218 @@
+/* 全局共享样式：布局、侧栏、徽章、顶栏、按钮、空态。
+   页面专属样式拆分至各页面 css（单文件 300 行红线）：
+   LoginPage.css / NewInterviewPage.css，视觉均按 V1 定稿设计稿还原 */
+
+/* ==================== 整体布局（V1 设计稿 02） ==================== */
+
+.app { display: flex; height: 100vh; }
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.main-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: #f5f6fa;
+}
+
+/* ==================== 左侧栏 ==================== */
+
+.sidebar {
+  width: 260px;
+  background: #1e2a3a;
+  color: #dde3ec;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.sidebar-brand {
+  padding: 18px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  border-bottom: 1px solid #2a3a50;
+}
+
+.new-chat-btn {
+  margin: 16px;
+  padding: 10px;
+  border: 1px dashed #5a6b82;
+  border-radius: 8px;
+  background: transparent;
+  color: #dde3ec;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.new-chat-btn:hover { background: #2a3a50; }
+
+.conversation-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 8px 16px;
+}
+
+.sidebar-section {
+  padding: 8px 16px 4px;
+  font-size: 11px;
+  color: #7d8ba1;
+  letter-spacing: 0.5px;
+}
+
+.conversation-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  transition: background 0.15s;
+}
+
+.conversation-item:hover { background: #2a3a50; }
+.conversation-item.active { background: #34495e; }
+
+.conversation-title {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.conversation-meta {
+  font-size: 11px;
+  color: #7d8ba1;
+  margin-top: 4px;
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.sidebar-footer {
+  padding: 12px 16px;
+  border-top: 1px solid #2a3a50;
+  font-size: 12px;
+  color: #7d8ba1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sidebar-footer button {
+  background: transparent;
+  border: 1px solid #2a3a50;
+  color: #dde3ec;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.sidebar-footer button:hover { background: #2a3a50; }
+
+/* ==================== 状态徽章（彩色文字，无 emoji） ==================== */
+
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.badge-blue { background: #dbeafe; color: #1e40af; }
+.badge-yellow { background: #fef3c7; color: #92400e; }
+.badge-green { background: #dcfce7; color: #166534; }
+.badge-red { background: #fee2e2; color: #991b1b; }
+.badge-gray { background: #f1f5f9; color: #475569; }
+
+/* ==================== 主区顶栏 ==================== */
+
+.chat-header {
+  padding: 14px 24px;
+  background: #fff;
+  border-bottom: 1px solid #e5e8ef;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.chat-header .title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chat-header .actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* ==================== 按钮 ==================== */
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.btn-primary { background: #3b82f6; color: #fff; }
+.btn-primary:hover:not(:disabled) { background: #2563eb; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ==================== 空状态（纯文字引导，无插画） ==================== */
+
+.empty-hint {
+  text-align: center;
+  padding: 18vh 24px;
+  color: #8a94a6;
+}
+
+.empty-hint h2 {
+  margin-bottom: 10px;
+  color: #5a6b82;
+  font-size: 22px;
+}
+
+.empty-hint p {
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.empty-hint .btn {
+  margin-top: 18px;
+  padding: 10px 22px;
+  font-size: 14px;
+}
+
+/* ==================== 占位（F4-F5 实现后移除） ==================== */
+
+.home-placeholder {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7d8ba1;
+  font-size: 14px;
+}

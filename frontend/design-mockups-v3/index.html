@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>AI 模拟面试平台 · 设计稿 V3（考卷风）</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .nav-wrap { max-width: 920px; margin: 0 auto; padding: 56px 24px 90px; }
+  .nav-head h1 {
+    font-family: var(--f-display);
+    font-size: 27px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .ver-pill {
+    display: inline-block;
+    font-size: 11.5px;
+    color: var(--red);
+    border: 1px solid var(--red);
+    border-radius: 2px;
+    padding: 2px 10px;
+    margin-left: 12px;
+    vertical-align: 4px;
+    letter-spacing: 0.08em;
+  }
+  .nav-rule { height: 2px; background: var(--red); width: 72px; margin: 14px 0 10px; }
+  .nav-sub { color: var(--ink-3); font-size: 13px; margin-bottom: 30px; }
+  .nav-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .nav-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 18px 20px;
+    transition: border-color 0.15s;
+  }
+  .nav-card:hover { border-color: var(--ink-2); }
+  .nav-card .no { font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.1em; }
+  .nav-card h2 {
+    font-family: var(--f-display);
+    font-size: 15.5px;
+    font-weight: 700;
+    margin: 5px 0 3px;
+    letter-spacing: 0.03em;
+  }
+  .nav-card .route { font-family: var(--f-mono); font-size: 11.5px; color: var(--red); margin-bottom: 7px; }
+  .nav-card p { font-size: 12.5px; color: var(--ink-2); line-height: 1.7; }
+  .nav-note {
+    margin-top: 34px;
+    background: var(--paper-2);
+    border-left: 3px solid var(--red);
+    padding: 16px 20px;
+    font-size: 13px;
+    color: var(--ink-2);
+    line-height: 1.9;
+  }
+  .nav-note strong { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="nav-wrap">
+  <div class="nav-head">
+    <h1>AI 模拟面试平台 · 设计稿 V3<span class="ver-pill">考卷风 · 已否决</span></h1>
+  </div>
+  <div class="nav-rule"></div>
+  <div class="nav-sub">方向：考卷风 · 红笔批改 ｜ 作者：前端设计 AI ｜ 创建时间：2026-10-31 ｜ 状态：用户评审已否决存档，V1 为当前定稿</div>
+
+  <div class="nav-grid">
+    <a class="nav-card" href="01-login.html">
+      <div class="no">01</div>
+      <h2>令牌输入页</h2>
+      <div class="route">/login</div>
+      <p>入场卡式登录：宋体标题 + 红色题线 + 等宽字体令牌输入。</p>
+    </a>
+
+    <a class="nav-card" href="01-login-error.html">
+      <div class="no">01b</div>
+      <h2>令牌错误态</h2>
+      <div class="route">/login (error)</div>
+      <p>令牌无效：红色输入框边 + 居中红色提示行。</p>
+    </a>
+
+    <a class="nav-card" href="02-home.html">
+      <div class="no">02</div>
+      <h2>历史会话首页</h2>
+      <div class="route">/</div>
+      <p>纸色侧栏名册 + 主区空状态引导。状态用文字标签：墨蓝进行中 / 绿已出报告 / 赭待生成。</p>
+    </a>
+
+    <a class="nav-card" href="03-new-interview.html">
+      <div class="no">03</div>
+      <h2>新建面试页</h2>
+      <div class="route">/new</div>
+      <p>面试配置单：一二三大题式分节（简历 / JD / 配置），方角分段选择按钮。</p>
+    </a>
+
+    <a class="nav-card" href="04-interview.html">
+      <div class="no">04</div>
+      <h2>面试聊天页（核心）</h2>
+      <div class="route">/interview/:id</div>
+      <p>顶栏答题卡进度格 + 题号方框对话流；面试官消息为方框题号卡片，你的作答为墨线答块，Agent 活动流收在题卡下方。</p>
+    </a>
+
+    <a class="nav-card" href="05-report.html">
+      <div class="no">05</div>
+      <h2>复盘报告页</h2>
+      <div class="route">/report/:id</div>
+      <p>评定表式报告：红笔圈分大分数 + 蓝黑维度进度条 + 逐题回顾 + 红底批注评语。</p>
+    </a>
+
+    <a class="nav-card" href="06-interview-streaming.html">
+      <div class="no">06</div>
+      <h2>流式中间态</h2>
+      <div class="route">/interview/:id (streaming)</div>
+      <p>面试官生成中：红点提示条 + 朱红光标闪烁 + 活动流末项运行中，发送变为红色停止。</p>
+    </a>
+
+    <a class="nav-card" href="07-report-generating.html">
+      <div class="no">07</div>
+      <h2>报告生成中</h2>
+      <div class="route">/report/:id (generating)</div>
+      <p>正在批阅：旋转圆环 + 方框勾选式分步进度（消息汇总 / 逐题评分 / 生成建议 / 汇总输出）。</p>
+    </a>
+  </div>
+
+  <div class="nav-note">
+    <strong>提案说明：</strong>V3 借用中文试卷的视觉语言——纸白卷面、墨色正文、蓝黑墨水交互色，<strong>朱砂红只用于批改与终止语义</strong>（顶栏红线、红笔圈分、逐题得分、批注评语、结束面试/停止）。签名元素三处：主顶栏下的红头文件线、面试页答题卡进度格、报告页红笔圈分。字体分工：微软雅黑承担全部中文（Bold 区分层级）、Georgia 写分数数字、Consolas 放数据——衬线宋体与楷体因屏幕小字号发虚已移除，试卷感完全由结构与红笔语义承担。硬约束全部保持：无 emoji、无渐变、无插画、扁平、桌面端。2026-10-31 用户评审未采用（字体观感不佳），仅存档参考。
+  </div>
+</div>
+
+<div class="mockup-nav"><a href="../mockups.html">← 返回设计稿版本入口</a></div>
+</body>
+</html>

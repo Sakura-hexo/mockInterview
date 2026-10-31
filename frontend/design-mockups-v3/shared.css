@@ -1,0 +1,741 @@
+/* ============================================================
+   AI 模拟面试平台 · 设计稿 V3 共享样式
+   方向：考卷风 · 红笔批改（提案稿，未定稿）
+   概念：纸白卷面 + 墨色正文 + 蓝黑墨水交互 + 朱砂红批改语义
+   字体角色：雅黑标题与正文 / Georgia 分数数字 / Consolas 数据
+   说明：宋体楷体在屏幕小字号下位图发虚已移除，试卷感由结构与红笔语义承担
+   ============================================================ */
+
+:root {
+  --paper:    #faf9f6;   /* 卷面纸白 */
+  --paper-2:  #f1efe8;   /* 侧栏与浅底 */
+  --card:     #ffffff;   /* 卡片 */
+  --ink:      #211f1c;   /* 墨色正文 */
+  --ink-2:    #5a564e;   /* 次要文字 */
+  --ink-3:    #8b8679;   /* 弱化文字 */
+  --line:     #d8d4c8;   /* 纸色细线 */
+  --red:      #b3261e;   /* 朱砂红 仅批改与终止语义 */
+  --red-wash: #faf0ee;   /* 批注底色 */
+  --navy:     #2d4b73;   /* 蓝黑墨水 主交互色 */
+  --navy-wash:#eef1f5;   /* 选中浅底 */
+  --green:    #2e7d54;   /* 已出报告 */
+  --ochre:    #96691d;   /* 待生成 / 生成中 */
+  --f-display: 'Microsoft YaHei', 'PingFang SC', -apple-system, sans-serif;
+  --f-num:     Georgia, 'Times New Roman', serif;
+  --f-body:    'Microsoft YaHei', 'PingFang SC', -apple-system, sans-serif;
+  --f-mono:    Consolas, 'Courier New', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  font-family: var(--f-body);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.6;
+}
+a { color: var(--navy); text-decoration: none; }
+code { font-family: var(--f-mono); font-size: 12px; background: var(--paper-2); padding: 1px 6px; border-radius: 2px; }
+.mono { font-family: var(--f-mono); }
+
+/* ==================== 整体布局 ==================== */
+.app { display: flex; height: 100vh; }
+
+/* ==================== 左侧栏（名册页） ==================== */
+.sidebar {
+  width: 264px;
+  flex-shrink: 0;
+  background: var(--paper-2);
+  border-right: 1.5px solid var(--ink);
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-brand {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.sidebar-brand .name {
+  font-family: var(--f-display);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.sidebar-brand .sub {
+  font-size: 11px;
+  color: var(--ink-3);
+  margin-top: 2px;
+  letter-spacing: 0.06em;
+}
+.new-btn {
+  margin: 16px 16px 4px;
+  padding: 9px;
+  border: 1.5px dashed var(--ink-2);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13.5px;
+  font-family: var(--f-body);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.new-btn:hover { background: var(--card); }
+.side-scroll { flex: 1; overflow-y: auto; padding: 8px 12px 16px; }
+.side-label {
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 0.14em;
+  padding: 12px 8px 5px;
+}
+.hist-item {
+  padding: 9px 10px;
+  border-radius: 2px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  margin-bottom: 2px;
+  transition: background 0.15s;
+}
+.hist-item:hover { background: var(--card); }
+.hist-item.active {
+  background: var(--card);
+  border-left-color: var(--navy);
+}
+.hist-l1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.hist-l1 .dir { overflow: hidden; text-overflow: ellipsis; }
+.hist-l2 {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-family: var(--f-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  margin-top: 3px;
+}
+.side-foot {
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-family: var(--f-body);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-bottom: 1px solid var(--line);
+}
+.link-btn:hover { color: var(--ink); border-bottom-color: var(--ink); }
+
+/* ==================== 状态标签（文字 · 无 emoji） ==================== */
+.tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.7;
+}
+.tag-live  { background: var(--navy); color: #fff; }
+.tag-wait  { color: var(--ochre); border: 1px solid var(--ochre); }
+.tag-done  { color: var(--green); border: 1px solid var(--green); }
+.tag-plain { color: var(--ink-2); border: 1px solid var(--line); background: var(--card); }
+
+/* ==================== 主区顶栏（红头文件线） ==================== */
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.topbar {
+  padding: 0 28px;
+  height: 58px;
+  background: var(--card);
+  border-bottom: 2px solid var(--red);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.topbar .title {
+  font-family: var(--f-display);
+  font-size: 16.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.topbar .spacer { flex: 1; }
+
+/* 答题卡式题目进度（签名元素） */
+.qtrack { display: flex; align-items: center; gap: 5px; }
+.qcell {
+  width: 20px; height: 20px;
+  border: 1.5px solid var(--line);
+  border-radius: 2px;
+  font-family: var(--f-num);
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-3);
+}
+.qcell.done { background: var(--navy); border-color: var(--navy); color: #fff; }
+.qcell.cur  { border-color: var(--red); color: var(--red); background: #fff; font-weight: 700; }
+.qtrack .qsum {
+  font-family: var(--f-mono);
+  font-size: 11.5px;
+  color: var(--ink-2);
+  margin-left: 8px;
+}
+
+.main-body { flex: 1; min-height: 0; overflow-y: auto; }
+
+/* ==================== 按钮（方角 · 纸面） ==================== */
+.btn {
+  padding: 7px 16px;
+  border: none;
+  border-radius: 2px;
+  font-size: 13px;
+  font-family: var(--f-body);
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+}
+.btn-primary { background: var(--navy); color: #fff; }
+.btn-primary:hover { opacity: 0.88; }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-danger:hover { opacity: 0.88; }
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+}
+.btn-ghost:hover { background: var(--paper-2); color: var(--ink); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ==================== 面试对话区（试卷排版） ==================== */
+.transcript { max-width: 860px; margin: 0 auto; padding: 28px 24px 36px; }
+
+.turn { margin-bottom: 20px; }
+.turn-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+.qbox {
+  width: 24px; height: 24px;
+  border: 1.5px solid var(--ink);
+  border-radius: 2px;
+  font-family: var(--f-num);
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card);
+  flex-shrink: 0;
+}
+.qbox.followup { border-color: var(--red); color: var(--red); }
+.turn-label { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.turn-time { font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); }
+
+.turn-content {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 14px 18px;
+  font-size: 13.5px;
+  line-height: 1.85;
+  max-width: 760px;
+}
+.turn-content strong { font-weight: 700; }
+.turn-foot {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  margin-top: 6px;
+  padding-left: 2px;
+}
+
+/* 候选人作答（楷体 · 答卷感） */
+.answer { max-width: 72%; margin-left: auto; }
+.answer-head {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.answer-mark {
+  font-size: 11px;
+  color: var(--navy);
+  border: 1px solid var(--navy);
+  border-radius: 2px;
+  padding: 0 5px;
+  line-height: 1.7;
+}
+.answer-time { font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); }
+.answer-text {
+  background: var(--paper-2);
+  border-left: 3px solid var(--navy);
+  border-radius: 2px;
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--ink);
+}
+
+/* Agent 活动流（监考记录） */
+.activity { margin: 6px 0 0 2px; }
+.act-toggle {
+  all: unset;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--ink-3);
+  font-family: var(--f-body);
+  user-select: none;
+}
+.act-toggle:hover { color: var(--ink-2); }
+.act-items { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
+.act-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--f-mono);
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.act-item .who { color: var(--navy); }
+.act-item.faded { opacity: 0.45; }
+.act-dot { width: 6px; height: 6px; border-radius: 1px; flex-shrink: 0; }
+.act-dot.ok { background: var(--ink-2); }
+.act-dot.running { background: var(--red); animation: blink 1s infinite; }
+
+/* ==================== 输入区 ==================== */
+.input-area {
+  display: flex;
+  gap: 12px;
+  padding: 14px 28px 18px;
+  background: var(--card);
+  border-top: 1px solid var(--line);
+}
+.input-area textarea {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 10px 13px;
+  font-size: 14px;
+  font-family: var(--f-body);
+  line-height: 1.6;
+  outline: none;
+  background: var(--paper);
+  transition: border-color 0.15s;
+}
+.input-area textarea:focus { border-color: var(--navy); }
+.send-btn, .stop-btn {
+  align-self: flex-end;
+  padding: 10px 24px;
+  border: none;
+  border-radius: 2px;
+  font-size: 14px;
+  font-family: var(--f-body);
+  cursor: pointer;
+}
+.send-btn { background: var(--navy); color: #fff; }
+.send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.stop-btn { background: var(--red); color: #fff; }
+
+/* ==================== 表单卡片（面试配置单） ==================== */
+.page-center {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 32px 24px;
+}
+.form-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 30px 34px;
+  width: 100%;
+  max-width: 720px;
+}
+.form-card h2 {
+  font-family: var(--f-display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.form-card .subtitle { font-size: 12.5px; color: var(--ink-3); margin: 4px 0 6px; }
+.form-rule { height: 2px; background: var(--red); width: 56px; margin: 10px 0 22px; }
+
+.fsec { margin-bottom: 24px; }
+.fsec-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.fsec-head .fnum {
+  font-family: var(--f-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--red);
+  letter-spacing: 0.05em;
+}
+.fsec-head .fname { font-family: var(--f-display); font-size: 15px; font-weight: 700; letter-spacing: 0.03em; }
+.fsec-head .fhint { font-size: 11.5px; color: var(--ink-3); font-family: var(--f-body); font-weight: normal; }
+
+.flabel { display: block; font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
+.flabel .required { color: var(--red); margin-left: 2px; }
+.flabel .hint { font-size: 12px; color: var(--ink-3); margin-left: 6px; }
+
+.finput, .ftextarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  font-size: 13px;
+  font-family: var(--f-body);
+  outline: none;
+  background: var(--paper);
+  transition: border-color 0.15s;
+}
+.finput:focus, .ftextarea:focus { border-color: var(--navy); background: #fff; }
+.ftextarea { resize: vertical; min-height: 104px; line-height: 1.7; }
+
+.frow { display: flex; gap: 20px; }
+.frow > * { flex: 1; }
+
+.seg { display: flex; gap: 8px; flex-wrap: wrap; }
+.seg-pill { position: relative; }
+.seg-pill input { position: absolute; opacity: 0; pointer-events: none; }
+.seg-pill label {
+  display: inline-block;
+  padding: 6px 16px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  font-size: 13px;
+  cursor: pointer;
+  background: var(--paper);
+  transition: all 0.12s;
+}
+.seg-pill label:hover { border-color: var(--ink-2); }
+.seg-pill input:checked + label {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: #fff;
+}
+.seg-pill input:disabled + label { opacity: 0.35; cursor: not-allowed; }
+
+.upload-box {
+  border: 1.5px dashed var(--line);
+  border-radius: 2px;
+  padding: 22px;
+  text-align: center;
+  color: var(--ink-3);
+  cursor: pointer;
+  font-size: 13px;
+  background: var(--paper);
+  transition: all 0.15s;
+}
+.upload-box:hover { border-color: var(--navy); color: var(--navy); background: var(--navy-wash); }
+.upload-box .limit { font-size: 11px; margin-top: 4px; }
+
+.divider-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink-3);
+  font-size: 12px;
+  margin: 12px 0;
+}
+.divider-or::before, .divider-or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+
+.form-error {
+  background: var(--red-wash);
+  border-left: 3px solid var(--red);
+  color: var(--red);
+  padding: 9px 14px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+.form-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  margin-top: 24px;
+  padding-top: 20px;
+}
+
+/* ==================== 报告页（评定表） ==================== */
+.report-wrap { max-width: 860px; margin: 0 auto; padding: 28px 24px 20px; }
+
+.rp-head {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 26px 30px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+.rp-head h1 {
+  font-family: var(--f-display);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.rp-head .rp-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.rp-head .rp-meta .m { display: flex; gap: 6px; align-items: baseline; }
+.rp-head .rp-meta .k { color: var(--ink-3); }
+
+/* 红笔圈分（签名元素） */
+.score-box { text-align: center; flex-shrink: 0; }
+.score-circle {
+  display: inline-block;
+  border: 3px solid var(--red);
+  border-radius: 50%;
+  transform: rotate(-5deg);
+  padding: 4px 24px 8px;
+}
+.score-num {
+  font-family: var(--f-num);
+  font-size: 52px;
+  font-weight: 700;
+  color: var(--red);
+  line-height: 1.1;
+}
+.score-label { font-family: var(--f-mono); font-size: 11px; color: var(--ink-3); margin-top: 8px; }
+
+.rp-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 22px 26px;
+  margin-bottom: 20px;
+}
+.rp-card h3 {
+  font-family: var(--f-display);
+  font-size: 15.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rp-card h3 .cnt { font-family: var(--f-body); font-size: 12px; color: var(--ink-3); font-weight: normal; }
+
+.srow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--paper-2);
+}
+.srow:last-child { border-bottom: none; }
+.sname { width: 96px; font-size: 13px; color: var(--ink-2); flex-shrink: 0; }
+.strack { flex: 1; height: 7px; background: var(--paper-2); border-radius: 1px; overflow: hidden; }
+.sfill { height: 100%; background: var(--navy); }
+.sval {
+  width: 46px;
+  text-align: right;
+  font-family: var(--f-num);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--red);
+  flex-shrink: 0;
+}
+
+/* 逐题回顾（批改过的试卷） */
+.acc { border: 1px solid var(--line); border-radius: 2px; margin-bottom: 8px; overflow: hidden; background: var(--card); }
+.acc summary {
+  padding: 11px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  background: var(--paper);
+  user-select: none;
+  list-style: none;
+}
+.acc summary::-webkit-details-marker { display: none; }
+.acc summary:hover { background: var(--paper-2); }
+.acc[open] summary { border-bottom: 1px solid var(--line); background: var(--card); }
+.acc .qbox { width: 22px; height: 22px; font-size: 12px; }
+.acc .qtitle { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+.qscore {
+  font-family: var(--f-num);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--red);
+  flex-shrink: 0;
+}
+.acc-body { padding: 16px 18px 14px; }
+.acc-body section { margin-bottom: 14px; }
+.acc-body section:last-child { margin-bottom: 0; }
+.acc-body h5 {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  letter-spacing: 0.1em;
+  margin-bottom: 5px;
+  font-weight: normal;
+}
+.acc-body p { font-size: 13px; line-height: 1.8; }
+.comment {
+  background: var(--red-wash);
+  border-left: 3px solid var(--red);
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+/* 改进建议 */
+.advice-ol { list-style: none; }
+.advice-ol li { display: flex; gap: 10px; padding: 6px 0; font-size: 13.5px; line-height: 1.8; }
+.advice-ol .no {
+  font-family: var(--f-num);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--red);
+  flex-shrink: 0;
+  line-height: 1.5;
+}
+.keep-list { list-style: none; border-top: 1px dashed var(--line); margin-top: 14px; padding-top: 12px; }
+.keep-list li {
+  font-size: 13px;
+  color: var(--ink-2);
+  padding: 3px 0 3px 16px;
+  position: relative;
+  line-height: 1.8;
+}
+.keep-list li::before {
+  content: '';
+  position: absolute;
+  left: 2px; top: 12px;
+  width: 5px; height: 5px;
+  background: var(--ink-3);
+  border-radius: 1px;
+}
+
+.rp-foot {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  font-family: var(--f-mono);
+  font-size: 12px;
+  color: var(--ink-2);
+  padding: 14px 0 22px;
+}
+
+/* ==================== 空状态 ==================== */
+.empty { text-align: center; padding: 17vh 24px; }
+.empty h2 {
+  font-family: var(--f-display);
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 14px;
+}
+.empty p { font-size: 13.5px; color: var(--ink-2); line-height: 2; }
+.empty .btn { margin-top: 22px; padding: 9px 26px; font-size: 14px; }
+
+/* ==================== 登录页（入场卡） ==================== */
+.login-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: var(--paper);
+}
+.login-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 38px 40px 32px;
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.login-card h2 {
+  font-family: var(--f-display);
+  font-size: 23px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+.login-rule { height: 2px; background: var(--red); width: 52px; margin: -6px auto 0; }
+.login-sub { text-align: center; font-size: 12px; color: var(--ink-3); margin-top: -8px; letter-spacing: 0.04em; }
+.login-card label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--ink-2); }
+.login-input {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  font-size: 14px;
+  font-family: var(--f-mono);
+  background: var(--paper);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.login-input:focus { border-color: var(--navy); }
+.login-btn {
+  padding: 11px;
+  background: var(--navy);
+  color: #fff;
+  border: none;
+  border-radius: 2px;
+  font-size: 15px;
+  font-family: var(--f-body);
+  letter-spacing: 0.2em;
+  cursor: pointer;
+}
+.login-btn:hover { opacity: 0.88; }
+.login-error { color: var(--red); font-size: 13px; text-align: center; }
+.login-tip { font-size: 12px; color: var(--ink-3); text-align: center; line-height: 1.8; }
+
+/* ==================== 动效（仅闪烁与旋转） ==================== */
+@keyframes blink { 50% { opacity: 0; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ==================== 设计稿专用：导航返回条 ==================== */
+.mockup-nav { position: fixed; bottom: 16px; right: 16px; z-index: 1000; }
+.mockup-nav a {
+  display: inline-block;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 7px 14px;
+  border-radius: 2px;
+  font-size: 12px;
+}
+.mockup-nav a:hover { background: var(--navy); }

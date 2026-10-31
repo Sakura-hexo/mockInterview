@@ -1,14 +1,14 @@
 # AI 模拟面试平台 前端页面 优化方案
 
-作者:Sakura | 创建时间:2026-10-29 22:35
+作者:Sakura | 创建时间:2026-10-29 22:35 | 视觉定稿:2026-10-29（用户确认 travelScope 简约风、全站无 emoji；2026-10-31 复审维持）
 
-承接《AI模拟面试平台-技术方案》第 7 节"Web 层：自写极简页面（对话流、简历上传、报告展示），SSE 流式渲染"，《AI模拟面试平台-接口文档》第 4 节接口清单。本方案只覆盖**前端工程**，对应开发步骤 7 中"REST 全套 SSE 与极简 Web 页面"的 Web 部分。视觉与交互风格沿用同机参考项目 `D:\travelScope\TravelScope\frontend`（React 19 + Vite + TypeScript + 纯 CSS、左侧栏 + 主聊天区 + SSE 流式气泡 + Agent 活动流）。
+承接《AI模拟面试平台-技术方案》第 7 节"Web 层：自写极简页面（对话流、简历上传、报告展示），SSE 流式渲染"，《AI模拟面试平台-接口文档》第 4 节接口清单。本方案只覆盖**前端工程**，对应开发步骤 7 中"REST 全套 SSE 与极简 Web 页面"的 Web 部分。视觉与交互风格沿用同机参考项目 `D:\travelScope\TravelScope\frontend`（React 19 + Vite + TypeScript + 纯 CSS、左侧栏 + 主聊天区 + SSE 流式气泡 + Markdown 渲染 + Agent 活动流）。
 
 ## 1 目标与边界
 
 ### 1.1 要做什么
 
-为 AI 模拟面试平台搭建一个浏览器 WebUI，让用户完成面试的完整闭环：
+为 AI 模拟面试平台搭建浏览器 WebUI，让用户完成面试完整闭环：
 
 ```mermaid
 flowchart LR
@@ -20,17 +20,20 @@ flowchart LR
     F --> G[历史会话回看]
 ```
 
-页面清单（共 4 个主视图 + 1 个登录/令牌视图）：
+页面清单（4 个主视图 + 1 个登录视图）：
 
 1. **新建面试页** `/new`：上传/粘贴简历、粘贴 JD、选择方向/难度/题数，提交后跳转面试页
-2. **面试聊天页** `/interview/:id`：核心页面，SSE 流式渲染面试官提问、用户作答、追问、换题，附带"结束面试"按钮
-3. **复盘报告页** `/report/:id`：展示结构化评分（雷达图改表格版）、逐题回顾、改进建议
-4. **历史会话列表** `/`：左侧栏形式的历史会话入口（沿用 travelScope 布局）
-5. **令牌输入页** `/login`：输入 `APP_TOKEN` 存 localStorage（对应接口文档 Bearer体系（仅一个 `APP_TOKEN`）
+2. **面试聊天页** `/interview/:id`：核心页面，SSE 流式渲染面试官提问、用户作答、追问、换题，顶栏提供"结束面试"按钮
+3. **复盘报告页** `/report/:id`：结构化评分、逐题回顾、改进建议
+4. **历史会话列表** `/`：左侧栏形式的历史会话入口（沿用 travelScope 布局），主区为空状态引导
+5. **令牌输入页** `/login`：输入 `APP_TOKEN` 存 localStorage，对应接口文档第 1 节 Bearer 鉴权（本地单用户，全局仅一个 APP_TOKEN）
+
+### 1.2 明确不做
+
 - 不做移动端适配（只保证桌面 Chrome 正常）
-- 不做华丽视觉（无插画、无渐变背景、无动效库）
+- 不做华丽视觉：无插画、无渐变、无动效库、无 emoji 图标（见第 6.1 节视觉定稿）
 - 不做语音作答、图片作答（P1 二期）
-- 不做报告 PDF 导出按钮的实功能（P1 二期，仅留占位）
+- 不做报告 PDF 导出实功能（P1 二期，仅留占位按钮）
 
 ## 2 技术选型（与 travelScope 完全对齐，降低复制成本）
 
@@ -42,18 +45,9 @@ flowchart LR
 | 样式 | 纯 CSS（`App.css` 单文件） | 不引 Tailwind / antd，与 travelScope 一致 |
 | HTTP | 原生 fetch + 手写 SSE 解析 | 复用 travelScope `parseSse`（接口文档明确要求 fetch 而非 EventSource） |
 | 鉴权 | localStorage 存 `APP_TOKEN`，apiFetch 自动加 `Authorization: Bearer` | 复用 travelScope 的 auth.ts 模式 |
-| 图表 | 不引库，评分用 CSS 表格 + 进度条替代雷达图 | 极简 |
+| 图表 | 不引库，评分用 CSS 表格 + 进度条 | 极简 |
 
-工程位置：项目根新增 `frontend/` 子目录，与 `src/`（后端）平级。后端在 `resources/static/` 不放假前端，避免构建耦合；开发期 Vite 起 5173 端口，proxy 转发 `/api` 到 `http://localhost:8080`。
-
-```mermaid
-flowchart LR
-    B[浏览器 5173] -->|Vite dev server| P[/api 代理/]
-    P --> S[Spring Boot 8080]
-    B -->|生产| ST[Spring Boot static 内嵌打包后静态资源]
-```
-
-生产部署：`vite build` 产物拷到 `src/main/resources/static/`，由 Spring Boot 直接发静态文件，docker-compose 单容器即可演示。
+工程位置：项目根新增 `frontend/` 子目录，与后端 `src/` 平级。开发期 Vite 起 5173 端口，proxy 转发 `/api` 到 `http://localhost:8080`；生产期 `vite build` 产物拷到 `src/main/resources/static/`，由 Spring Boot 直接服务，docker-compose 单容器即可演示。
 
 ## 3 信息架构
 
@@ -61,8 +55,10 @@ flowchart LR
 
 ```text
 /login                令牌输入
-/                     历史会话列表（左侧栏布局，主区显示空状态提示）
- 状态）
+/                     历史会话列表（左侧栏布局，主区显示空状态引导）
+/new                  新建面试
+/interview/:id        面试聊天（仅 IN_PROGRESS 状态可进入）
+/report/:id           复盘报告（ENDED 与 REPORTED 状态）
 *                     重定向 /
 ```
 
@@ -85,16 +81,18 @@ flowchart TB
 
 **左侧栏（所有页共享）**：
 
-- 顶部："＋ 新建面试" 虚线按钮（travelScope 的 `new-chat-btn`）
-- 中部：会话列表，每项显示"方向 · 难度 · 创建时间 + 状态徽章"，点击跳转对应路由（IN_PROGRESS → /interview/:id；REPORTED → /report/:id）
+- 顶部：品牌文字"AI 模拟面试"（纯文字，无图标）+ "＋ 新建面试"虚线按钮（travelScope 的 `new-chat-btn`）
+- 中部：会话列表，每项两行——"方向 · 难度"与"第 N/M 题 · 时间 + 状态徽章"；点击按状态路由（IN_PROGRESS → `/interview/:id`；ENDED/REPORTED → `/report/:id`）
 - 底部：难度筛选下拉 + 退出登录（清 token）
 
 **顶栏（主区顶部）**：
 
-- 左侧：页面标题（"面试中 · Java 后端 · 中等难度 · 第 3/10 题"）
-- 右侧：状态徽章 + 主操作按钮（聊天页为"结束面试"红色按钮，报告页为"查看消息记录"链接）
+- 左侧：页面标题（面试页为"面试中 · Java 后端 · 中等难度 · 第 3/10 题"）
+- 右侧：状态徽章 + 主操作按钮（聊天页为红色"结束面试"，报告页为"查看消息记录"链接）
 
 ## 4 页面设计详述
+
+高保真设计稿已定稿，位于 `frontend/design-mockups/`（预览：`node frontend/serve.js` 后访问 `http://127.0.0.1:8765`）。以下描述与设计稿一一对应。
 
 ### 4.1 新建面试页 `/new`
 
@@ -107,17 +105,21 @@ flowchart TB
     B --> B2[或 粘贴纯文本 textarea]
     B1 & B2 --> C[岗位 JD textarea 20KB]
     C --> D[面试配置]
-    D --> D1[方向 JAVA_BACKEND 单选 radio]
-    D --> D2[难度 EASY MEDIUM HARD radio]
-    D --> D3[题数 5/10/15 radio]
+    D --> D1[方向 JAVA_BACKEND 单选]
+    D --> D2[难度 简单 中等 困难 单选]
+    D --> D3[题数 5 10 15 单选]
     D1 & D2 & D3 --> E[提交按钮 开始面试]
 ```
 
 字段约束（对应接口文档 4.1）：
 
-- 简历文本与 PDF 二选一，前端互斥禁用
+- 简历 PDF 与纯文本二选一，选中一种后另一种禁用
 - 提交后调 `POST /api/interviews` → 拿 `sessionId` → 立即调 `POST /api/interviews/{id}/start` → 跳 `/interview/:id`
-- 失败时表单顶部红色错误替换语义：
+- 失败时表单顶部红色错误条提示；401 统一跳 `/login`
+
+### 4.2 面试聊天页 `/interview/:id`（核心）
+
+布局沿用 travelScope 聊天页结构（左栏会话 + 右侧消息流 + 底部输入区），顶栏与输入区替换为面试语义：
 
 ```mermaid
 flowchart TB
@@ -125,7 +127,7 @@ flowchart TB
     L --> M1[面试官气泡 白色左侧]
     L --> M2[候选人气泡 蓝色右侧]
     L --> A[Agent 活动流 灰色小字]
-    L --> C[输入区 textarea 加 发送 加 结束面试]
+    L --> C[输入区 textarea 加 发送 加 停止]
 ```
 
 **消息气泡类型**（映射接口文档 4.3 SSE 事件）：
@@ -133,20 +135,20 @@ flowchart TB
 | SSE 事件 | 前端渲染 |
 |---|---|
 | `message`（delta 累积） | 面试官气泡正文，流式追加 + 光标 `▌` |
-| `action` type=QUESTION | 当前气泡前缀 badge：`📌 新题` |
-| `action` type=FOLLOW_UP | 当前气泡前缀 badge：`🔁 追问` |
-| `action` type=NEXT | 当前气泡前缀 badge：`➡️ 下一题` |
+| `action` type=QUESTION | 当前气泡前缀文字徽章：`第 N 题`（蓝底） |
+| `action` type=FOLLOW_UP | 当前气泡前缀文字徽章：`追问`（黄底） |
+| `action` type=NEXT | 当前气泡前缀文字徽章：`下一题`（紫底） |
 | `metrics` | 累积到气泡底部小字：`tokens: 1234 · 5.6s` |
 | `done` | 关流，去光标，刷新左侧会话列表 |
 
-**Agent 活动流**（沿用 travelScope `ActivityStream`）：面试页 P0 阶段事件较少（路由→Supervisor→面试官），但保留组件，事件类型用 travelScope 的 `agent_status` 同款协议（即便后端只发 1-2 条也保留折叠 UI）。
+**Agent 活动流**（沿用 travelScope `ActivityStream` 组件）：气泡下方灰色小字流（最近 4 条、更旧淡出、可折叠）。面试页 P0 事件较少（路由 → Supervisor → 面试官），保留组件与折叠 UI，标题为纯文字"Agent 活动（N）"。
 
 **顶栏右侧主按钮**：
 
-- 状态为 IN_PROGRESS：红色"结束面试"按钮 → 确认对话框 → `POST /api/interviews/{id}/end` → 跳 `/report/:id`
-- 状态为 ENDED（报告生成中）：黄色"报告生成中..."禁用按钮，3 秒轮询 `/api/interviews/{id}/report`，拿到 200 跳报告页
+- IN_PROGRESS：红色"结束面试"→ confirm 确认 → `POST /api/interviews/{id}/end` → 跳 `/report/:id`
+- ENDED（报告生成中）：顶栏显示"报告生成中"黄色徽章，报告页轮询兜底
 
-**底部输入区**：textarea 自动高度（2-6 行），Enter 发送、Shift+Enter 换行。streaming 时输入框禁用、按钮换成"停止"（调 abortRef 中断读流，与 travelScope 一致）。
+**底部输入区**：textarea 自动高度（2-6 行），Enter 发送、Shift+Enter 换行。streaming 时输入框禁用、发送按钮换成红色"停止"（abortRef 中断读流，与 travelScope 一致）。
 
 ### 4.3 复盘报告页 `/report/:id`
 
@@ -157,69 +159,83 @@ flowchart TB
     A[顶部 标题与元信息] --> B[综合评分卡]
     B --> C[四维评分明细表]
     C --> D[逐题回顾 手风琴列表]
-    D --> E[改进建议 Markdown 块]
-    E --> F[操作区 返回列表 加`scores.overall` / 10），配一句话结论（取自 `suggestions` 首条）
-- **四维评分明细**：表格，行 = overall/technicalDepth/expression/followUpHandling，列 = 维度名 / 得分 / CSS 进度条
-- **逐题回顾**：`items[]` 每题一个 `<details>` 手风琴：summary 显示题号+得分+题干截断 50 字，展开显示题干全文、用户答案摘要、面试官评语、单题得分
-- **改进建议**：`suggestions` Markdown 列表（后端返回的就是 Markdown 字符串，直接用 `<Md>` 渲染）
-- **元信息**：`tokenTotal`、`durationMs` 格式化为 `总耗时 12 分 30 秒 · 消耗 8,432 tokens`
+    D --> E[改进建议列表]
+    E --> F[底部元信息与操作区]
+```
 
-**报告生成中兜底**：进入页面时若 `GET /report` 返回 `code: 202`，显示加载动画 + 3 秒轮询，直到拿到完整报告。
+- **综合评分卡**：白底扁平卡片，大号蓝色数字显示 `scores.overall`（满分 10），旁配日期/时长/题数/难度元信息与一句话结论（取 `suggestions` 首条）
+- **四维评分明细**：行 = overall / technicalDepth / expression / followUpHandling，列 = 维度名 / 得分 / CSS 进度条（纯色，不用渐变）
+- **逐题回顾**：`items[]` 每题一个 `<details>` 手风琴：summary 显示题号徽章 + 得分 + 题干截断 50 字，展开显示题目全文、回答摘要、面试官评语（左侧蓝色竖线引用样式）、单题得分
+- **改进建议**：`suggestions` 列表，编号 + 加粗主题 + 说明；末尾虚线框显示"继续保持"项
+- **元信息**：底部居中等宽字体一行——`Token 消耗：12,847 · 面试时长：32 分 18 秒 · 模型：qwen-plus`
+- **报告生成中兜底**：进入页面时若 `GET /report` 返回 `code: 202`，显示旋转 loading + 分步进度（消息汇总 → 逐题评分 → 生成建议 → 汇总输出），3 秒轮询直到拿到完整报告
 
 ### 4.4 历史会话列表 `/`（左栏内嵌）
 
-不单独成页，复用 travelScope 左栏 `conversation-list` 样式：
+复用 travelScope 左栏 `conversation-list` 样式：
 
-- 每项：`{direction} · {difficulty}` 一行 + `{createTime} · 状态徽章` 一行
-- 状态徽章色板（travelScope 同款）：IN_PROGRESS 蓝 / ENDED 黄 / REPORTED 绿
-- 点击：IN_PROGRESS → `/interview/:id`；REPORTED → `/report/:id`；ENDED → `/report/:id`（轮询兜底）
-- 主区显示空状态插画（大字提示"点击左侧新建面试开始"）
+- 每项两行：`{direction} · {difficulty}` + 状态徽章；`第 N/M 题 或 综合 X.X` + `{时间}`
+- 状态徽章为彩色文字（不用 emoji）：IN_PROGRESS 蓝"进行中" / ENDED 黄"待生成" / REPORTED 绿"已出报告"
+- 点击：IN_PROGRESS → `/interview/:id`；ENDED 与 REPORTED → `/report/:id`（轮询兜底）
+- 主区空状态为纯文字引导 + "新建面试"主按钮（无插画）
 
 ### 4.5 令牌输入页 `/login`
 
 travelScope 的 `login-card` 居中卡片：
 
-- 标题"AI 模拟面试平台"
-- 一个密码输入框 `APP_TOKEN`
-- 提交后写入 localStorage，调 `GET /api/interviews?page=1&size=1` 验证 token 有效（401 则提示"令牌无效"），成功跳 `/`
-- 页面底部小字提示："令牌从后端 `.env` 文件的 APP_TOKEN 复制"
+- 标题"AI 模拟面试平台" + 副标题（纯文字，无 logo 图形）
+- 一个密码输入框 `APP_TOKEN`（等宽字体）
+- 提交后写入 localStorage，调 `GET /api/interviews?page=1&size=1` 验证 token（401 显示"令牌无效"红色提示），成功跳 `/`
+- 底部小字提示：令牌从后端 `.env` 文件的 `APP_TOKEN` 复制
 
 ## 5 状态与数据流
 
 ```mermaid
 flowchart LR
     LS[localStorage token] --> AF[apiFetch 拦截器]
-    AF -->|401| L[/login]
+    AF -->|401| L[跳转 login]
     AF -->|200| API[Spring Boot API]
     API --> SSE[SSE 流]
     SSE --> CP[InterviewPage state]
     CP --> UI[气泡渲染]
 ```
 
-**前端本地状态**（无 Redux/Zustand，纯 useState）：
+前端本地状态（无 Redux/Zustand，纯 useState）：
 
-| 会话级，路由切换刷新 |
+| 状态 | 存放位置 | 生命周期 |
+|---|---|---|
+| `token` | localStorage | 全局，退出清空 |
+| `conversations` | Sidebar 组件 state | 会话级，路由切换刷新 |
 | `messages` | InterviewPage useState | 进入页面拉取 + SSE 增量 |
 | `streaming` | InterviewPage useState | 单次 SSE 期间 true |
 | `report` | ReportPage useState | 进入页面拉取 |
 
-## 6 样式规范（沿用 travelScope 调色板）
+## 6 样式规范
+
+### 6.1 视觉定稿记录（2026-10-29 用户确认，2026-10-31 复审维持）
+
+- **定稿版本**：`frontend/design-mockups/`（V1，travelScope 简约风）。另有两版未采用仅存档：暗色工程风 `frontend/design-mockups-v2/`（2026-10-29 否决）、考卷风红笔批改 `frontend/design-mockups-v3/`（2026-10-31 提案当日否决，字体观感不佳），均不得采用
+- **禁用 emoji 图标**：全站不出现任何 emoji 表情。状态用彩色文字徽章（蓝/黄/绿/红底浅色字），面试动作用文字标签（第 N 题 / 追问 / 下一题），难度等选项用纯文字，品牌区用纯文字
+- **扁平无装饰**：卡片一律白底 + 1px 细边框，不使用渐变（含评分进度条）、阴影堆叠、插画；唯一阴影是设计稿导航卡 hover 的轻微投影
+- **预览方式**：`node frontend/serve.js` → `http://127.0.0.1:8765`（入口页可对比三版）
+
+### 6.2 调色板（沿用 travelScope）
 
 | 变量 | 值 | 用途 |
 |---|---|---|
 | 侧栏底色 | `#1e2a3a` | 左栏 |
 | 侧栏 hover | `#2a3a50` | 列表项 hover |
 | 侧栏 active | `#34495e` | 列表项选中 |
-| 主色 | `#3b82f6` | 用户气泡、主按钮、focus 边 |
+| 主色 | `#3b82f6` | 用户气泡、主按钮、focus 边、报告大数字 |
 | 危险色 | `#ef4444` | 结束面试、停止 |
-| 成功色 | `#10b981` | REPORTED 徽章 |
-| 警告色 | `#f59e0b` | ENDED 徽章 |
+| 成功色 | `#10b981` / 浅底 `#dcfce7` | REPORTED 徽章 |
+| 警告色 | `#f59e0b` / 浅底 `#fef3c7` | ENDED 徽章、追问标签 |
 | 正文文字 | `#2c3e50` | 气泡文字 |
 | 次要文字 | `#7d8ba1` | 时间戳、活动流 |
 | 边框 | `#e5e8ef` | 气泡、卡片边 |
 | 页面背景 | `#f5f6fa` | body |
 
-字体：`'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif`（travelScope 同款）。
+字体：`'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif`（travelScope 同款）；token 数、时间戳等数字信息可用 Consolas 等宽字体。
 
 ## 7 工程结构
 
@@ -229,6 +245,10 @@ frontend/
 ├── package.json
 ├── vite.config.ts             代理 /api → 8080
 ├── tsconfig.json
+├── design-mockups/            定稿设计稿（静态 HTML，非构建产物）
+├── design-mockups-v2/         已否决的暗色版，仅存档
+├── design-mockups-v3/         已否决的考卷风版，仅存档
+├── serve.js                   设计稿本地预览服务器 端口 8765
 └── src/
     ├── main.tsx
     ├── App.tsx                路由 + RequireAuth
@@ -246,12 +266,12 @@ frontend/
     │   └── HistoryPage.tsx    空主区占位
     └── components/
         ├── Sidebar.tsx        左栏
-        ├── MessageBubble.tsx  气泡+badge+metrics
+        ├── MessageBubble.tsx  气泡 + 文字徽章 + metrics
         ├── ActivityStream.tsx Agent 活动流 沿用 travelScope
         └── ScoreBar.tsx       评分进度条
 ```
 
-文件行数红线：单文件 ≤ 300 行（用户全局规则），InterviewPage 若超 300 行则把 SSE 事件 reducer 抽到 `api/interviewStream.ts`。
+文件行数红线：单文件 ≤ 300 行（用户全局规则），InterviewPage 若超 300 行则把 SSE 事件处理抽到 `api/interviewStream.ts`。
 
 ## 8 与后端接口的契约清单
 
@@ -265,17 +285,18 @@ frontend/
 | `GET /api/interviews?page=1&size=20` | 4.6 | 左栏列表 |
 | `GET /api/interviews/{id}` | 4.7 | 报告页"查看消息记录" |
 
-**SSE 协议约定**（前端必须实现的解析逻辑，与接口文档 4.3 对齐）：
+**SSE 协议约定**（与接口文档 4.3 对齐）：
 
 - 用 `fetch` + `ReadableStream` 手写解析，不用 EventSource（带不了 Authorization 头）
-- 一个事件块内多行: error` 显示在气泡尾部
+- 一个事件块内多个 `data:` 行按换行 join 拼接（travelScope 踩过的坑：漏掉拼接会把字面 `data:` 前缀渲染进正文）
+- 事件顺序 `message → action → metrics → done`；异常时后端发 `error`，气泡尾部红色提示
 - 中断：用户点"停止"→ 调 `reader.cancel()`
 
 ## 9 开发步骤拆分（前端部分）
 
 | 步骤 | 内容 | 验证 |
 |---|---|---|
-| F0 | 工程初始化：Vite + React + TS，写 vite proxy，跑通 hello world | `pnpm dev` 打开空白页 |
+| F0 | 工程初始化：Vite + React + TS，写 vite proxy，跑通 hello world | `npm dev` 打开空白页 |
 | F1 | auth.ts + LoginPage + RequireAuth | 错 token 401，对 token 进首页 |
 | F2 | Sidebar + HistoryPage（空态）+ 路由骨架 | 路由切换正常 |
 | F3 | NewInterviewPage 表单 + 调通 create/start | 提交后跳到 /interview/:id |
@@ -284,22 +305,24 @@ frontend/
 | F6 | 样式打磨 + 空态 + 加载态 + 错误条 | 走查 4 个页面 |
 | F7 | `vite build` 产物集成到 Spring Boot static | 8080 端口直接访问页面 |
 
-预计 F0-F3 一个开发会话，F4 单独一个会话（SSE 是最容易踩坑的），F5-F7 一个会话。
+预计 F0-F3 一个开发会话，F4 单独一个会话（SSE 最容易踩坑），F5-F7 一个会话。
 
-## 10 风险与待确认事项
+## 10 待确认事项
 
-1. **SSE 在浏览器中断恢复**：用户刷新页面时 streaming 状态丢失，需要进入页面时根据会话状态判断"是否正处于流式中"——P0 简化处理：刷新后视为非流式，消息以最后一条 `done` 为准（需用户确认）
-2. **报告生成轮询频率**：3 秒一次会不会太频繁打到后端？建议第一版 3 秒，观察后调（需用户确认）
-3. **雷达图**：是否坚持纯 CSS 进度条，还是引 `recharts` 画雷达图？引库 +50KB，效果更好（需用户确认）
-4. **新建面试页简历 PDF 解析提示**：上传 PDF 后是否前端立刻显示 `resumeDigest`（接口文档 4.1 出参字段）让用户确认解析结果？建议显示一个折叠区（需用户确认）
-5. **结束面试二次确认**：点"结束面试"是否弹 confirm？建议弹，误触成本高（建议默认弹）
+1. **SSE 刷新恢复**：面试中刷新页面，是否接受"视为非流式，从最后一条 done 继续"？（需用户确认）
+2. **报告轮询频率**：3 秒一次是否合适？（需用户确认）
+3. ~~雷达图还是进度条~~ 已确认：CSS 纯色进度条，不引图表库（2026-10-29）
+4. **PDF 上传后**是否立刻显示 `resumeDigest` 折叠区让用户确认识别结果？（需用户确认）
+5. **结束面试二次确认**：默认弹 confirm，是否保留？（需用户确认）
 
 ## 11 验收清单
 
-- [ ] 在 5173 端口完整跑通": 前缀泄漏（travelScope 踩过的坑）
+- [ ] 5173 端口完整跑通一场 10 题面试，含追问分支
+- [ ] SSE 流式正文渲染无字面 `data:` 前缀泄漏（travelScope 踩过的坑）
 - [ ] 停止按钮能立刻中断流式
-- [ ] token 错误时所有页面跳 /login
+- [ ] token 错误时所有页面跳 `/login`
 - [ ] 历史会话点击能正确路由到 interview 或 report
-- [ ] `vite build` 后由 Spring Boot 8080 直接服务，刷新任意路由不 404（history fallback 配置）
+- [ ] `vite build` 后由 Spring Boot 8080 直接服务，刷新任意路由不 404
+- [ ] 全站无 emoji 图标残留（对照 6.1 节视觉定稿）
 - [ ] 单文件不超过 300 行
 - [ ] 浏览器控制台无 error 级别红字
