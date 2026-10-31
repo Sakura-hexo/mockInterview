@@ -1,5 +1,6 @@
 package com.sakura.interview.session;
 
+import com.google.gson.Gson;
 import com.sakura.interview.infra.MySqlDb;
 import com.sakura.interview.infra.PersistentSessionStore;
 import com.sakura.interview.infra.RedisSessionCache;
@@ -23,12 +24,14 @@ public final class SessionCliRunner {
 
     public static void main(String[] args) {
         if (args.length < 1) {
-            System.err.println("用法：init-db（建库建表） | selfcheck（全链路自检，需 MySQL 与 Redis 在运行）");
+            System.err.println("用法：init-db（建库建表） | selfcheck（全链路自检，需 MySQL 与 Redis 在运行）"
+                    + " | report show 会话id | report recover");
             System.exit(2);
         }
         switch (args[0]) {
             case "init-db" -> initDb();
             case "selfcheck" -> selfcheck();
+            case "report" -> report(args);
             default -> {
                 System.err.println("未知子命令：" + args[0]);
                 System.exit(2);
@@ -36,10 +39,56 @@ public final class SessionCliRunner {
         }
     }
 
+    private static void report(String[] args) {
+        if (args.length < 2) {
+            System.err.println("用法：report show 会话id | report recover");
+            System.exit(2);
+        }
+        switch (args[1]) {
+            case "show" -> {
+                if (args.length < 3) {
+                    System.err.println("用法：report show 会话id");
+                    System.exit(2);
+                }
+                showReport(args[2]);
+            }
+            case "recover" -> {
+                try (HikariDataSource ds = MySqlDb.dataSource()) {
+                    int reset = new com.sakura.interview.infra.MySqlReportStore(ds).resetStaleRunning();
+                    System.out.println("已把 " + reset + " 个残留 RUNNING 任务重置为 GENERATING");
+                }
+            }
+            default -> {
+                System.err.println("未知 report 子命令：" + args[1]);
+                System.exit(2);
+            }
+        }
+    }
+
+    private static void showReport(String sessionId) {
+        try (HikariDataSource ds = MySqlDb.dataSource()) {
+            var task = new com.sakura.interview.infra.MySqlReportStore(ds).loadBySession(sessionId);
+            if (task.isEmpty()) {
+                System.out.println("会话 " + sessionId + " 没有报告任务，需先在面试中触发复盘。");
+                return;
+            }
+            ReportTask t = task.get();
+            System.out.println("任务：" + t.taskId() + " | 状态：" + t.status()
+                    + " | 失败次数：" + t.retryCount()
+                    + (t.errorMsg() == null ? "" : " | 上次错误：" + t.errorMsg()));
+            if (!ReportTask.DONE.equals(t.status()) || t.reportJson() == null) {
+                return;
+            }
+            InterviewReport report = new Gson().fromJson(t.reportJson(), InterviewReport.class);
+            System.out.println();
+            System.out.println(new com.sakura.interview.tool.ReportExportTool().export(report));
+        }
+    }
+
     private static void initDb() {
         try (HikariDataSource ds = MySqlDb.dataSource()) {
             MySqlDb.init(ds);
-            System.out.println("会话表已就绪：t_session、t_message、t_context_summary");
+            System.out.println("表已就绪：t_session、t_message、t_context_summary、t_report");
         }
     }
 

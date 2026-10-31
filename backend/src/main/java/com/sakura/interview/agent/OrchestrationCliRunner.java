@@ -5,11 +5,15 @@ import com.sakura.interview.infra.AgentScopeRuntime;
 import com.sakura.interview.infra.EmbeddingModels;
 import com.sakura.interview.infra.EnvKeys;
 import com.sakura.interview.infra.MySqlDb;
+import com.sakura.interview.infra.MySqlReportStore;
 import com.sakura.interview.infra.PersistentSessionStore;
 import com.sakura.interview.infra.RedisSessionCache;
 import com.sakura.interview.infra.StructuredOutputInvoker;
 import com.sakura.interview.rag.MilvusQuestionStore;
 import com.sakura.interview.session.ContextCompressor;
+import com.sakura.interview.session.ReportGenerator;
+import com.sakura.interview.session.ReportService;
+import com.sakura.interview.session.ReportWorker;
 import com.sakura.interview.session.SessionState;
 import com.sakura.interview.tool.QuestionBankAgentTool;
 import com.sakura.interview.tool.QuestionBankTool;
@@ -51,52 +55,60 @@ public final class OrchestrationCliRunner {
             QuestionBankAgentTool bankTool =
                     new QuestionBankAgentTool(new QuestionBankTool(questionStore));
             AgentScopeRuntime runtime = new AgentScopeRuntime(List.of(bankTool));
-            Supervisor supervisor = new Supervisor(runtime,
-                    new StructuredOutputInvoker(new AgentLlmCaller()),
-                    store, new ContextCompressor(new AgentLlmCaller()));
-
-            String sessionId;
-            long round;
-            if (resumeId != null) {
-                SessionState restored = supervisor.state(resumeId);
-                sessionId = restored.sessionId();
-                round = restored.round();
-                System.out.println("会话已恢复：" + sessionId + " | 已面试 " + round + " 轮");
-                System.out.println("简历摘要：" + restored.resumeDigest());
-            } else {
-                String resumeText = Files.readString(Path.of(args[0]));
-                String jdText = Files.readString(Path.of(args[1]));
-                Supervisor.CreateResult created = supervisor.createSession(resumeText, jdText);
-                sessionId = created.sessionId();
-                round = 0;
-                System.out.println("会话已创建：" + sessionId);
-                System.out.println("简历摘要：" + created.resumeDigest());
-                System.out.println("岗位要点：" + created.jdProfile().direction()
-                        + " | " + created.jdProfile().skills());
+            StructuredOutputInvoker invoker = new StructuredOutputInvoker(new AgentLlmCaller());
+            MySqlReportStore reportStore = new MySqlReportStore(ds);
+            Supervisor supervisor = new Supervisor(runtime, invoker, store,
+                    new ContextCompressor(new AgentLlmCaller()),
+                    new ReportService(store, reportStore));
+            try (ReportWorker worker = new ReportWorker(reportStore,
+                    new ReportGenerator(invoker, store)).start()) {
+                runLoop(supervisor, args, resumeId);
             }
-            System.out.println("输入回答开始面试；输入 exit、quit 或 退出 结束。");
+        }
+    }
 
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(System.in, StandardCharsets.UTF_8))) {
-                while (true) {
-                    System.out.print("\n[候选人] > ");
-                    String input = reader.readLine();
-                    if (input == null || input.isBlank()) {
-                        continue;
-                    }
-                    String text = input.strip();
-                    if ("exit".equalsIgnoreCase(text) || "quit".equalsIgnoreCase(text) || "退出".equals(text)) {
-                        System.out.println("编排验证结束。会话 id：" + sessionId + "（可用 --resume 恢复）");
-                        break;
-                    }
-                    round++;
-                    long start = System.nanoTime();
-                    Supervisor.SupervisorReply reply = supervisor.chat(sessionId, text);
-                    long millis = (System.nanoTime() - start) / 1_000_000;
-                    System.out.println("\n[意图 " + reply.intent() + "] [面试官] " + reply.reply());
-                    System.out.printf("[统计] 第 %d 轮 | 耗时 %d ms | 输入 token: %d | 输出 token: %d%n",
-                            round, millis, reply.inputTokens(), reply.outputTokens());
+    private static void runLoop(Supervisor supervisor, String[] args, String resumeId) throws Exception {
+        String sessionId;
+        long round;
+        if (resumeId != null) {
+            SessionState restored = supervisor.state(resumeId);
+            sessionId = restored.sessionId();
+            round = restored.round();
+            System.out.println("会话已恢复：" + sessionId + " | 已面试 " + round + " 轮");
+            System.out.println("简历摘要：" + restored.resumeDigest());
+        } else {
+            String resumeText = Files.readString(Path.of(args[0]));
+            String jdText = Files.readString(Path.of(args[1]));
+            Supervisor.CreateResult created = supervisor.createSession(resumeText, jdText);
+            sessionId = created.sessionId();
+            round = 0;
+            System.out.println("会话已创建：" + sessionId);
+            System.out.println("简历摘要：" + created.resumeDigest());
+            System.out.println("岗位要点：" + created.jdProfile().direction()
+                    + " | " + created.jdProfile().skills());
+        }
+        System.out.println("输入回答开始面试；输入 生成报告 或 结束面试 触发复盘；输入 exit、quit 或 退出 结束。");
+
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(System.in, StandardCharsets.UTF_8))) {
+            while (true) {
+                System.out.print("\n[候选人] > ");
+                String input = reader.readLine();
+                if (input == null || input.isBlank()) {
+                    continue;
                 }
+                String text = input.strip();
+                if ("exit".equalsIgnoreCase(text) || "quit".equalsIgnoreCase(text) || "退出".equals(text)) {
+                    System.out.println("编排验证结束。会话 id：" + sessionId + "（可用 --resume 恢复）");
+                    break;
+                }
+                round++;
+                long start = System.nanoTime();
+                Supervisor.SupervisorReply reply = supervisor.chat(sessionId, text);
+                long millis = (System.nanoTime() - start) / 1_000_000;
+                System.out.println("\n[意图 " + reply.intent() + "] [面试官] " + reply.reply());
+                System.out.printf("[统计] 第 %d 轮 | 耗时 %d ms | 输入 token: %d | 输出 token: %d%n",
+                        round, millis, reply.inputTokens(), reply.outputTokens());
             }
         }
     }

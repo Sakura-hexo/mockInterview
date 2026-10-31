@@ -33,6 +33,8 @@ public final class MySqlDb {
         try (Connection connection = dataSource.getConnection()) {
             ScriptUtils.executeSqlScript(connection,
                     new ClassPathResource("sql/session-schema.sql"));
+            ScriptUtils.executeSqlScript(connection,
+                    new ClassPathResource("sql/report-schema.sql"));
         } catch (SQLException e) {
             throw new IllegalStateException("初始化会话表失败：", e);
         }

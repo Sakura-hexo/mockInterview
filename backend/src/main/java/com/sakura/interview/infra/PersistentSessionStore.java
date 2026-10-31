@@ -77,6 +77,11 @@ public final class PersistentSessionStore implements SessionStore, AutoCloseable
     }
 
     @Override
+    public List<StoredMessage> readAll(String sessionId) {
+        return mysql.readAll(sessionId);
+    }
+
+    @Override
     public Optional<SessionSummary> loadSummary(String sessionId) {
         try {
             String cached = redis.readSummary(sessionId);
@@ -115,6 +120,16 @@ public final class PersistentSessionStore implements SessionStore, AutoCloseable
         } catch (RuntimeException e) {
             System.err.printf("[会话缓存] 清理失败可容忍：%s%n", e.getMessage());
         }
+    }
+
+    @Override
+    public void endSession(String sessionId) {
+        mysql.endSession(sessionId);
+    }
+
+    @Override
+    public long durationMs(String sessionId) {
+        return mysql.durationMs(sessionId);
     }
 
     /** 删除该会话两个缓存 key（保留 MySQL 数据），供自检模拟缓存丢失。 */
