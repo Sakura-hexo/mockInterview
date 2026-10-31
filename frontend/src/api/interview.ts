@@ -1,11 +1,49 @@
 import { apiFetch } from './http';
-import type { InterviewSummary } from '../types';
+import type { InterviewSummary, SessionConfig } from '../types';
 
 // 领域方法与接口文档一一对应（前端架构方案第 3 节），随 F 步骤逐个补充
-// F1 仅实现登录验证所需的列表接口（接口文档 4.6）
+// 已有：F1 listInterviews、F3 createInterview/startInterview
 
+// 接口文档 4.6 历史会话列表
 export function listInterviews(page = 1, size = 20) {
   return apiFetch<{ total: number; list: InterviewSummary[] }>(
     `/api/interviews?page=${page}&size=${size}`,
+  );
+}
+
+// 接口文档 4.1 新建面试：resumeText 与 resumeFile 二选一
+export interface CreateInterviewInput {
+  resumeText?: string;
+  resumeFile?: File;
+  jdText: string;
+  config: SessionConfig;
+}
+
+export function createInterview(input: CreateInterviewInput) {
+  if (input.resumeFile) {
+    const form = new FormData();
+    form.append('resumeFile', input.resumeFile);
+    form.append('jdText', input.jdText);
+    form.append('config', JSON.stringify(input.config));
+    return apiFetch<{ sessionId: string; resumeDigest: string }>('/api/interviews', {
+      method: 'POST',
+      body: form,
+    });
+  }
+  return apiFetch<{ sessionId: string; resumeDigest: string }>('/api/interviews', {
+    method: 'POST',
+    body: JSON.stringify({
+      resumeText: input.resumeText ?? '',
+      jdText: input.jdText,
+      config: input.config,
+    }),
+  });
+}
+
+// 接口文档 4.2 开始面试：CREATED → IN_PROGRESS，返回第一题
+export function startInterview(sessionId: string) {
+  return apiFetch<{ firstQuestion: string; focusPoints: string[] }>(
+    `/api/interviews/${sessionId}/start`,
+    { method: 'POST' },
   );
 }

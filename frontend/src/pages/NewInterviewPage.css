@@ -1,0 +1,181 @@
+/* 新建面试页样式（V1 定稿设计稿 03），由 NewInterviewPage.tsx 引入 */
+
+.page-center {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 24px;
+}
+
+.form-card {
+  background: #fff;
+  border: 1px solid #e5e8ef;
+  border-radius: 12px;
+  padding: 28px;
+  width: 100%;
+  max-width: 720px;
+}
+
+.form-card h2 {
+  font-size: 18px;
+  margin-bottom: 4px;
+  color: #2c3e50;
+}
+
+.form-card .subtitle {
+  font-size: 13px;
+  color: #7d8ba1;
+  margin-bottom: 20px;
+}
+
+.form-section { margin-bottom: 20px; }
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #2c3e50;
+  margin-bottom: 6px;
+}
+
+.form-label .required { color: #ef4444; margin-left: 2px; }
+
+.form-label .hint {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: normal;
+  margin-left: 6px;
+}
+
+.form-textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #d5dbe6;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+  background: #fff;
+  resize: vertical;
+  min-height: 100px;
+  line-height: 1.6;
+}
+
+.form-textarea:focus { border-color: #3b82f6; }
+
+.form-textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f1f5f9;
+}
+
+.form-row { display: flex; gap: 12px; }
+
+.form-row > * { flex: 1; }
+
+.radio-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.radio-pill {
+  position: relative;
+  display: inline-block;
+  padding: 7px 14px;
+  border: 1px solid #d5dbe6;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: #fff;
+}
+
+.radio-pill:hover { border-color: #3b82f6; }
+
+.radio-pill input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.radio-pill:has(input:checked) {
+  background: #eef2ff;
+  border-color: #3b82f6;
+  color: #3b82f6;
+  font-weight: 500;
+}
+
+.radio-pill:has(input:disabled) {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.upload-box {
+  display: block;
+  border: 1.5px dashed #d5dbe6;
+  border-radius: 10px;
+  padding: 24px;
+  text-align: center;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+}
+
+.upload-box:hover { border-color: #3b82f6; color: #3b82f6; background: #f8faff; }
+
+.upload-box input[type='file'] { display: none; }
+
+.upload-box.is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.upload-box .limit { font-size: 11px; margin-top: 4px; }
+
+.upload-remove {
+  color: #ef4444;
+  cursor: pointer;
+  user-select: none;
+}
+
+.upload-remove:hover { text-decoration: underline; }
+
+.divider-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #94a3b8;
+  font-size: 12px;
+  margin: 12px 0;
+}
+
+.divider-or::before,
+.divider-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e5e8ef;
+}
+
+.form-error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.form-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  border-top: 1px solid #e5e8ef;
+  margin-top: 20px;
+  padding-top: 20px;
+}

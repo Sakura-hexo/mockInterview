@@ -99,3 +99,40 @@
 ### 提交记录
 
 - F2 提交于 `frontend` 分支（侧栏 + 首页空态 + 路由骨架 + 布局样式）
+
+## F3 新建面试表单（2026-10-31）
+
+### 做了什么
+
+- **`src/api/interview.ts`**：补 `createInterview`（接口文档 4.1，resumeText 走 JSON、resumeFile 走 FormData 二选一）与 `startInterview`（4.2，返回 firstQuestion/focusPoints）
+- **`src/api/http.ts` 修复**：`Content-Type: application/json` 只对字符串 body 设置——FormData 必须由浏览器自动生成 multipart 边界，原实现会让文件上传请求带错误头
+- **`src/types.ts`**：补 `SessionConfig`（接口文档第 3 节）
+- **`src/pages/NewInterviewPage.tsx`**（249 行）：完整表单按 V1 设计稿 03 还原。简历二选一互斥（选文件禁用粘贴框、粘贴文本禁用上传框，已选文件可"移除"）；PDF 5MB 前置校验；简历与 JD 必填校验；错误条显示在表单顶部；提交按钮请求中禁用并显示"创建中…"；成功后 `createInterview → startInterview → navigate('/interview/:id')`（页面方案 4.1 顺序）
+- **样式拆分**（对方案"App.css 单文件"表述的偏离，按 300 行红线执行）：登录样式移至 `LoginPage.css`，表单样式新建 `NewInterviewPage.css`，`App.css` 只留全局布局（196 行）。radio 选中态用 `:has(input:checked)` 实现且无需 htmlFor 绑定
+- **`vite.config.ts` 修复**：代理目标 `localhost:8080` 改为 `127.0.0.1:8080`
+
+### 验证记录（mock 成功路径 + 真后端错误路径）
+
+1. 表单结构对照设计稿完整（全部区块/标签/radio 含禁用态与默认选中/双取消入口/提交按钮）
+2. 空表单提交 → "请上传 PDF 简历，或粘贴简历纯文本"
+3. 粘贴简历文本后上传框进入禁用态（互斥生效）
+4. 只填简历不填 JD → "请填写目标岗位 JD"
+5. 成功路径：临时将代理指向 8081 mock（create 返回 sessionId=mock-123、start 返回第一题）→ 填表提交 → 跳转 `/interview/mock-123` 落在 F4 占位页 ✓（mock 文件已删）
+6. 错误路径：对真后端提交 → 代理层故障显示 502 错误条、页面停留（当时根因见下）
+
+### 遇到的问题
+
+| 问题 | 处理 |
+|---|---|
+| Vite 代理 target 写 `localhost:8080`，Node 先解析到 IPv6 `::1`，连接被拒（ECONNREFUSED），代理返回 502——并非后端问题 | target 改 `127.0.0.1:8080`，问题消失；已写入配置注释防止回退 |
+| FormData 请求被 http.ts 误设 `Content-Type: application/json` | 修复为仅字符串 body 设置该头 |
+| 共享浏览器标签页上有并行活动（用户操作/后端会话），token 与页面状态偶发变化 | 验证改为单次调用内完成"设 token→填表→提交→断言"，减少干扰窗口 |
+
+### 环境观察（供后端会话参考）
+
+- 真后端 `GET /api/interviews` 已返回 200（无鉴权拦截），前后端联调条件正在形成
+- 真后端健康检查 db 组件 DOWN（MySQL 连不上），由后端会话跟进
+
+### 提交记录
+
+- F3 提交于 `frontend` 分支（新建面试表单 + create/start 接入 + 样式拆分 + 代理修复）

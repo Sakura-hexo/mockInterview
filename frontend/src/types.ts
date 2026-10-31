@@ -9,3 +9,10 @@ export interface InterviewSummary {
   difficulty: string;
   createTime: string;
 }
+
+// 面试配置（接口文档第 3 节 SessionConfig）
+export interface SessionConfig {
+  direction: string;
+  difficulty: string;
+  questionCount: number;
+}

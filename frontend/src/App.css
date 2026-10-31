@@ -1,5 +1,6 @@
-/* 全部样式统一放 App.css 单文件（前端页面方案第 2 节），
-   视觉按 V1 定稿设计稿 frontend/design-mockups/ 像素级还原 */
+/* 全局共享样式：布局、侧栏、徽章、顶栏、按钮、空态。
+   页面专属样式拆分至各页面 css（单文件 300 行红线）：
+   LoginPage.css / NewInterviewPage.css，视觉均按 V1 定稿设计稿还原 */
 
 /* ==================== 整体布局（V1 设计稿 02） ==================== */
 
@@ -205,95 +206,7 @@
   font-size: 14px;
 }
 
-/* ==================== 登录页（V1 设计稿 01） ==================== */
-
-.login-page {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  background: #f5f6fa;
-}
-
-.login-card {
-  background: #fff;
-  padding: 40px;
-  border-radius: 12px;
-  border: 1px solid #e5e8ef;
-  width: 380px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.login-card h2 {
-  margin: 0;
-  text-align: center;
-  color: #2c3e50;
-  font-size: 20px;
-}
-
-.login-card .sub {
-  text-align: center;
-  font-size: 12px;
-  color: #94a3b8;
-  margin-top: -10px;
-}
-
-.login-card label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
-  color: #555;
-}
-
-.login-card input {
-  padding: 10px;
-  border: 1px solid #d5dbe6;
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: Consolas, monospace;
-}
-
-.login-card input:focus {
-  outline: none;
-  border-color: #3b82f6;
-}
-
-.login-card button {
-  padding: 11px;
-  background: #3b82f6;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 15px;
-  cursor: pointer;
-}
-
-.login-card button:hover:not(:disabled) {
-  background: #2563eb;
-}
-
-.login-card button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.login-error {
-  color: #ef4444;
-  font-size: 13px;
-  text-align: center;
-}
-
-.login-tip {
-  font-size: 12px;
-  color: #94a3b8;
-  text-align: center;
-  line-height: 1.6;
-}
-
-/* ==================== 占位（F3-F5 实现后移除） ==================== */
+/* ==================== 占位（F4-F5 实现后移除） ==================== */
 
 .home-placeholder {
   height: 100%;
