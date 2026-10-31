@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>04 面试聊天页 - AI 模拟面试平台</title>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-brand">AI 模拟面试</div>
+    <button class="new-chat-btn">＋ 新建面试</button>
+
+    <div class="sidebar-section">进行中</div>
+    <div class="conversation-list">
+      <div class="conversation-item active">
+        <div class="conversation-title">
+          <span>Java 后端 · 中等</span>
+          <span class="badge badge-blue">进行中</span>
+        </div>
+        <div class="conversation-meta"><span>第 4/10 题</span><span>刚刚</span></div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">已结束</div>
+    <div class="conversation-list">
+      <div class="conversation-item">
+        <div class="conversation-title"><span>Java 后端 · 困难</span><span class="badge badge-green">已出报告</span></div>
+        <div class="conversation-meta"><span>10题 · 综合 7.8</span><span>昨天</span></div>
+      </div>
+      <div class="conversation-item">
+        <div class="conversation-title"><span>Java 后端 · 简单</span><span class="badge badge-green">已出报告</span></div>
+        <div class="conversation-meta"><span>5题 · 综合 8.4</span><span>3天前</span></div>
+      </div>
+    </div>
+
+    <div class="sidebar-footer"><span>本机模式</span><button>退出</button></div>
+  </aside>
+
+  <main class="main">
+    <header class="chat-header">
+      <div class="title">
+        面试中 · Java 后端 · 中等难度 · 第 4/10 题
+        <span class="badge badge-blue">IN_PROGRESS</span>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost">暂停</button>
+        <button class="btn btn-danger">结束面试</button>
+      </div>
+    </header>
+
+    <div class="main-body">
+      <div class="message-list">
+
+        <!-- 面试官开场 -->
+        <div class="message-row assistant">
+          <div class="bubble assistant">
+            <div class="bubble-meta">
+              <span class="bubble-tag question">第 1 题</span>
+              <span style="font-size:11px; color:#94a3b8;">09:32</span>
+            </div>
+            你好，我是今天的面试官。看了你的简历，看到你做过一个基于 Spring Boot 的在线商城项目。我们先从一个基础问题开始：<br><br>
+            <strong>请你说说 Spring Boot 的自动装配原理，它是怎么实现的？</strong>
+            <div class="bubble-stats">tokens: 287 · 3.2s</div>
+          </div>
+        </div>
+
+        <!-- 用户回答 -->
+        <div class="message-row user">
+          <div class="bubble user">
+            Spring Boot 的自动装配主要是通过 @EnableAutoConfiguration 注解实现的，它会扫描 META-INF/spring.factories 文件里配置的自动配置类，然后根据条件注解如 @ConditionalOnClass、@ConditionalOnProperty 来决定是否加载这些配置。
+            <div class="bubble-stats">12:09:33</div>
+          </div>
+        </div>
+
+        <!-- 面试官追问 -->
+        <div class="message-row assistant">
+          <div class="bubble assistant">
+            <div class="bubble-meta">
+              <span class="bubble-tag followup">追问</span>
+              <span style="font-size:11px; color:#94a3b8;">09:33</span>
+            </div>
+            回答得不错。那你刚才提到了 <code>@ConditionalOnClass</code>，<strong>能具体说说这个条件注解的匹配过程吗？它是怎么判断类是否存在的？</strong>如果类不在 classpath 上会发生什么？
+            <div class="bubble-stats">tokens: 412 · 4.1s</div>
+          </div>
+          <div class="activity-wrap">
+            <div class="activity-stream">
+              <button class="activity-toggle">Agent 活动（3）▾</button>
+              <div class="activity-items">
+                <div class="activity-item faded">
+                  <span class="activity-dot dot-success"></span>
+                  <span style="color:#475569;">router</span>
+                  <span>识别意图：面试中</span>
+                </div>
+                <div class="activity-item faded">
+                  <span class="activity-dot dot-success"></span>
+                  <span style="color:#475569;">interviewer</span>
+                  <span>调用题库检索工具</span>
+                </div>
+                <div class="activity-item">
+                  <span class="activity-dot dot-success"></span>
+                  <span style="color:#475569;">interviewer</span>
+                  <span>生成追问</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 用户回答 -->
+        <div class="message-row user">
+          <div class="bubble user">
+            @ConditionalOnClass 是通过 ClassValue 来判断的，底层用的是 ASM 字节码读取技术，不会真的去加载类。如果类不在 classpath 上，条件不成立，这个配置类就会被跳过。
+            <div class="bubble-stats">12:09:36</div>
+          </div>
+        </div>
+
+        <!-- 面试官进入下一题 -->
+        <div class="message-row assistant">
+          <div class="bubble assistant">
+            <div class="bubble-meta">
+              <span class="bubble-tag next">第 2 题</span>
+              <span style="font-size:11px; color:#94a3b8;">09:37</span>
+            </div>
+            好的，基础知识掌握得不错。我们进入下一个问题，<strong>看到你在项目里用了 Redis 做缓存，请你说说缓存穿透、缓存击穿、缓存雪崩这三个问题的区别，以及你项目里是怎么解决的？</strong>
+            <div class="bubble-stats">tokens: 358 · 3.8s</div>
+          </div>
+        </div>
+
+        <!-- 当前用户输入中（占位） -->
+
+      </div>
+    </div>
+
+    <div class="input-area">
+      <textarea placeholder="输入你的回答…（Enter 发送，Shift+Enter 换行）" rows="2"></textarea>
+      <button class="send-btn">发送</button>
+    </div>
+  </main>
+</div>
+
+<div class="mockup-nav"><a href="index.html">← 返回设计稿导航</a></div>
+</body>
+</html>

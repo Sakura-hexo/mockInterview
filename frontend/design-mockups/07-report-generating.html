@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>07 报告生成中 - AI 模拟面试平台</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .generating-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 15vh 24px;
+    text-align: center;
+  }
+  .generating-icon {
+    width: 80px;
+    height: 80px;
+    border: 3px solid #e5e8ef;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 24px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .generating-wrap h2 {
+    font-size: 20px;
+    color: #2c3e50;
+    margin-bottom: 8px;
+  }
+  .generating-wrap p {
+    color: #7d8ba1;
+    font-size: 13px;
+    line-height: 1.8;
+  }
+  .generating-steps {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    text-align: left;
+    background: #fff;
+    padding: 20px 28px;
+    border-radius: 10px;
+    border: 1px solid #e5e8ef;
+    min-width: 320px;
+  }
+  .step-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: #475569;
+  }
+  .step-row .icon { width: 18px; text-align: center; }
+  .step-row.done { color: #10b981; }
+  .step-row.running { color: #f59e0b; }
+  .step-row.pending { color: #cbd5e1; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-brand">AI 模拟面试</div>
+    <button class="new-chat-btn">＋ 新建面试</button>
+
+    <div class="sidebar-section">已结束</div>
+    <div class="conversation-list">
+      <div class="conversation-item active">
+        <div class="conversation-title">
+          <span>Java 后端 · 中等</span>
+          <span class="badge badge-yellow">生成中</span>
+        </div>
+        <div class="conversation-meta"><span>10题 · 刚刚结束</span><span>刚刚</span></div>
+      </div>
+    </div>
+
+    <div class="sidebar-footer"><span>本机模式</span><button>退出</button></div>
+  </aside>
+
+  <main class="main">
+    <header class="chat-header">
+      <div class="title">
+        复盘报告 · Java 后端 · 中等
+        <span class="badge badge-yellow">报告生成中</span>
+      </div>
+      <div class="actions"></div>
+    </header>
+
+    <div class="main-body">
+      <div class="generating-wrap">
+        <div class="generating-icon"></div>
+        <h2>复盘点评智能体正在生成报告…</h2>
+        <p>正在分析你的 10 题回答、调用评分模型、汇总改进建议<br>通常需要 15-30 秒，请稍候</p>
+
+        <div class="generating-steps">
+          <div class="step-row done"><span class="icon">✓</span>面试消息汇总完成</div>
+          <div class="step-row done"><span class="icon">✓</span>逐题评分完成</div>
+          <div class="step-row running"><span class="icon">●</span>生成改进建议中…</div>
+          <div class="step-row pending"><span class="icon">○</span>汇总输出</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="mockup-nav"><a href="index.html">← 返回设计稿导航</a></div>
+</body>
+</html>

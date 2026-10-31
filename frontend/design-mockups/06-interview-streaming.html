@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>06 面试聊天页（流式中间态） - AI 模拟面试平台</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* 设计稿专用：模拟打字机光标与活动流呼吸感 */
+  .streaming-hint {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 24px;
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 12px;
+    border-bottom: 1px solid #fde68a;
+  }
+  .streaming-hint .pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f59e0b;
+    animation: blink 1s infinite;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-brand">AI 模拟面试</div>
+    <button class="new-chat-btn">＋ 新建面试</button>
+
+    <div class="sidebar-section">进行中</div>
+    <div class="conversation-list">
+      <div class="conversation-item active">
+        <div class="conversation-title">
+          <span>Java 后端 · 中等</span>
+          <span class="badge badge-blue">进行中</span>
+        </div>
+        <div class="conversation-meta"><span>第 4/10 题</span><span>刚刚</span></div>
+      </div>
+    </div>
+
+    <div class="sidebar-footer"><span>本机模式</span><button>退出</button></div>
+  </aside>
+
+  <main class="main">
+    <header class="chat-header">
+      <div class="title">
+        面试中 · Java 后端 · 中等难度 · 第 4/10 题
+        <span class="badge badge-blue">IN_PROGRESS</span>
+      </div>
+      <div class="actions">
+        <button class="btn btn-ghost">暂停</button>
+        <button class="btn btn-danger">结束面试</button>
+      </div>
+    </header>
+
+    <div class="streaming-hint">
+      <span class="pulse"></span>
+      <span>面试官正在回复…已生成 142 tokens · 用时 3.4s</span>
+    </div>
+
+    <div class="main-body">
+      <div class="message-list">
+
+        <!-- 历史：面试官提问 -->
+        <div class="message-row assistant">
+          <div class="bubble assistant">
+            <div class="bubble-meta">
+              <span class="bubble-tag next">第 4 题</span>
+              <span style="font-size:11px; color:#94a3b8;">09:41</span>
+            </div>
+            好的。看到你在项目里用 RocketMQ 做异步下单，<strong>如果下游库存服务消费失败导致超卖，你怎么保证消息的最终一致性？</strong>
+            <div class="bubble-stats">tokens: 312 · 3.5s</div>
+          </div>
+        </div>
+
+        <!-- 历史：用户回答 -->
+        <div class="message-row user">
+          <div class="bubble user">
+            我会用本地消息表 + 定时任务补偿。下单时在同一个本地事务里写订单表和消息表，然后异步把消息表的数据推到 MQ。如果消费失败，MQ 会重试，重试多次还失败就进死信队列，定时任务扫描死信消息做人工介入。
+            <div class="bubble-stats">12:09:44</div>
+          </div>
+        </div>
+
+        <!-- 当前流式中的面试官追问 -->
+        <div class="message-row assistant">
+          <div class="bubble assistant">
+            <div class="bubble-meta">
+              <span class="bubble-tag followup">追问</span>
+              <span style="font-size:11px; color:#94a3b8;">streaming…</span>
+            </div>
+            方案讲得比较完整。那你刚才提到了<strong>本地消息表</strong>，我追一个问题：<br><br>
+            如果本地事务提交成功了，但应用进程在<strong>推送 MQ 之前宕机</strong>了，这条消息会不会丢？你怎么保证它最终被投递？<span class="cursor">▌</span>
+          </div>
+          <div class="activity-wrap">
+            <div class="activity-stream">
+              <button class="activity-toggle">Agent 活动（4）▾</button>
+              <div class="activity-items">
+                <div class="activity-item faded">
+                  <span class="activity-dot dot-success"></span>
+                  <span style="color:#475569;">router</span>
+                  <span>识别意图：面试中</span>
+                </div>
+                <div class="activity-item faded">
+                  <span class="activity-dot dot-success"></span>
+                  <span style="color:#475569;">supervisor</span>
+                  <span>调度面试官智能体</span>
+                </div>
+                <div class="activity-item">
+                  <span class="activity-dot dot-success"></span>
+                  <span style="color:#475569;">interviewer</span>
+                  <span>评估回答质量：7.5/10 可深挖</span>
+                </div>
+                <div class="activity-item">
+                  <span class="activity-dot dot-running"></span>
+                  <span style="color:#475569;">interviewer</span>
+                  <span>生成追问中…</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="input-area">
+      <textarea placeholder="面试官正在回复，请稍候…" rows="2" disabled></textarea>
+      <button class="stop-btn">■ 停止</button>
+    </div>
+  </main>
+</div>
+
+<div class="mockup-nav"><a href="index.html">← 返回设计稿导航</a></div>
+</body>
+</html>

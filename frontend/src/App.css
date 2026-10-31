@@ -1,0 +1,16 @@
+/* 全部样式统一放 App.css 单文件（前端页面方案第 2 节），F1 起按定稿设计稿填充 */
+
+.boot {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.boot h1 { font-size: 22px; }
+
+.boot p { color: #7d8ba1; font-size: 13px; }
+
+.boot-sub { font-size: 12px; }

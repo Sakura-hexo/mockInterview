@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>AI 模拟面试平台 · 前端设计稿入口</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, sans-serif;
+    background: #f5f6fa; color: #2c3e50;
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  }
+  .wrap { max-width: 880px; padding: 60px 24px; width: 100%; }
+  h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  .sub { color: #7d8ba1; font-size: 13.5px; margin-bottom: 36px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .card {
+    display: block; text-decoration: none; color: inherit;
+    border: 1px solid #e5e8ef; border-radius: 12px; padding: 26px 28px;
+    background: #fff;
+    transition: border-color .15s, transform .15s;
+  }
+  .card:hover { border-color: #3b82f6; transform: translateY(-2px); }
+  .tag {
+    display: inline-block; font-size: 11px; letter-spacing: .08em;
+    padding: 3px 10px; border-radius: 99px; margin-bottom: 14px; font-weight: 600;
+  }
+  .chosen .tag { background: #dcfce7; color: #166534; }
+  .archived .tag { background: #f1f5f9; color: #94a3b8; }
+  .archived { opacity: 0.65; }
+  .archived:hover { border-color: #cbd5e1; transform: none; }
+  .card h2 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+  .card p { font-size: 12.5px; color: #7d8ba1; line-height: 1.8; }
+  .note { margin-top: 30px; font-size: 12px; color: #b1b9c8; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>AI 模拟面试平台 · 设计稿</h1>
+  <div class="sub">当前定稿：travelScope 简约风（2026-10-29 定稿，2026-10-31 复审维持）。作者：Sakura</div>
+
+  <div class="grid">
+    <a class="card chosen" href="design-mockups/index.html">
+      <span class="tag">已选定 · V1</span>
+      <h2>travelScope 简约风</h2>
+      <p>深蓝侧栏 + 白底气泡聊天 + 细边框扁平卡片。状态用彩色文字徽章、动作用文字标签，emoji 已全部移除，报告头卡压平为白底。</p>
+    </a>
+    <a class="card archived" href="design-mockups-v2/index.html">
+      <span class="tag">已否决 · V2 存档</span>
+      <h2>暗色工程风（Dark Console）</h2>
+      <p>暗底 + 笔录式排版 + 评分仪表环。2026-10-29 用户评审未采用，保留仅作参考。</p>
+    </a>
+    <a class="card archived" href="design-mockups-v3/index.html">
+      <span class="tag">已否决 · V3 存档</span>
+      <h2>考卷风 · 红笔批改</h2>
+      <p>纸白卷面 + 红笔批改语义 + 答题卡进度格。2026-10-31 用户评审未采用（字体观感不佳），保留仅作参考。</p>
+    </a>
+  </div>
+
+  <div class="note">本页仅为设计稿预览入口 · 服务器：node frontend/serve.js · 端口 8765</div>
+</div>
+</body>
+</html>

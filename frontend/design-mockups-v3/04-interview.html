@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>04 面试聊天页 - AI 模拟面试平台 V3</title>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="name">AI 模拟面试</div>
+      <div class="sub">本地部署 · 单用户模式</div>
+    </div>
+    <button class="new-btn">＋ 新建面试</button>
+
+    <div class="side-scroll">
+      <div class="side-label">进行中</div>
+      <div class="hist-item active">
+        <div class="hist-l1">
+          <span class="dir">Java 后端 · 中等</span>
+          <span class="tag tag-live">进行中</span>
+        </div>
+        <div class="hist-l2"><span>第 4/10 题</span><span>刚刚</span></div>
+      </div>
+
+      <div class="side-label">已结束</div>
+      <div class="hist-item">
+        <div class="hist-l1">
+          <span class="dir">Java 后端 · 困难</span>
+          <span class="tag tag-done">已出报告</span>
+        </div>
+        <div class="hist-l2"><span>10题 · 综合 7.8</span><span>昨天</span></div>
+      </div>
+      <div class="hist-item">
+        <div class="hist-l1">
+          <span class="dir">Java 后端 · 简单</span>
+          <span class="tag tag-done">已出报告</span>
+        </div>
+        <div class="hist-l2"><span>5题 · 综合 8.4</span><span>3天前</span></div>
+      </div>
+    </div>
+
+    <div class="side-foot">
+      <span class="mono">LOCAL</span>
+      <button class="link-btn">退出</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="title">面试中 · Java 后端 · 中等难度 <span class="tag tag-live mono">IN_PROGRESS</span></div>
+      <div class="spacer"></div>
+      <div class="qtrack">
+        <span class="qcell done">1</span>
+        <span class="qcell done">2</span>
+        <span class="qcell done">3</span>
+        <span class="qcell cur">4</span>
+        <span class="qcell">5</span>
+        <span class="qcell">6</span>
+        <span class="qcell">7</span>
+        <span class="qcell">8</span>
+        <span class="qcell">9</span>
+        <span class="qcell">10</span>
+        <span class="qsum">第 4 / 10 题</span>
+      </div>
+      <button class="btn btn-danger">结束面试</button>
+    </header>
+
+    <div class="main-body">
+      <div class="transcript">
+
+        <!-- 面试官：第 1 题（开场） -->
+        <div class="turn">
+          <div class="turn-head">
+            <span class="qbox">1</span>
+            <span class="turn-label">第 1 题</span>
+            <span class="turn-time">09:32</span>
+          </div>
+          <div class="turn-content">
+            你好，我是今天的面试官。看了你的简历，看到你做过一个基于 Spring Boot 的在线商城项目。我们先从一个基础问题开始：<br><br>
+            <strong>请你说说 Spring Boot 的自动装配原理，它是怎么实现的？</strong>
+          </div>
+          <div class="turn-foot">tokens: 287 · 3.2s</div>
+        </div>
+
+        <!-- 候选人作答 -->
+        <div class="answer">
+          <div class="answer-head">
+            <span class="answer-time">09:35</span>
+            <span class="answer-mark">答</span>
+          </div>
+          <div class="answer-text">
+            Spring Boot 的自动装配主要是通过 @EnableAutoConfiguration 注解实现的，它会扫描 META-INF/spring.factories 文件里配置的自动配置类，然后根据条件注解如 @ConditionalOnClass、@ConditionalOnProperty 来决定是否加载这些配置。
+          </div>
+        </div>
+
+        <!-- 面试官：追问 -->
+        <div class="turn">
+          <div class="turn-head">
+            <span class="qbox followup">1</span>
+            <span class="turn-label">追问</span>
+            <span class="turn-time">09:36</span>
+          </div>
+          <div class="turn-content">
+            回答得不错。那你刚才提到了 <code>@ConditionalOnClass</code>，<strong>能具体说说这个条件注解的匹配过程吗？它是怎么判断类是否存在的？</strong>如果类不在 classpath 上会发生什么？
+          </div>
+          <div class="turn-foot">tokens: 412 · 4.1s</div>
+          <div class="activity">
+            <button class="act-toggle">Agent 活动（3）▾</button>
+            <div class="act-items">
+              <div class="act-item faded">
+                <span class="act-dot ok"></span>
+                <span class="who">router</span>
+                <span>识别意图：面试中</span>
+              </div>
+              <div class="act-item faded">
+                <span class="act-dot ok"></span>
+                <span class="who">interviewer</span>
+                <span>调用题库检索工具</span>
+              </div>
+              <div class="act-item">
+                <span class="act-dot ok"></span>
+                <span class="who">interviewer</span>
+                <span>生成追问</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 候选人作答 -->
+        <div class="answer">
+          <div class="answer-head">
+            <span class="answer-time">09:38</span>
+            <span class="answer-mark">答</span>
+          </div>
+          <div class="answer-text">
+            @ConditionalOnClass 是通过 ClassValue 来判断的，底层用的是 ASM 字节码读取技术，不会真的去加载类。如果类不在 classpath 上，条件不成立，这个配置类就会被跳过。
+          </div>
+        </div>
+
+        <!-- 面试官：第 2 题 -->
+        <div class="turn">
+          <div class="turn-head">
+            <span class="qbox">2</span>
+            <span class="turn-label">第 2 题</span>
+            <span class="turn-time">09:41</span>
+          </div>
+          <div class="turn-content">
+            好的，基础知识掌握得不错。我们进入下一个问题，<strong>看到你在项目里用了 Redis 做缓存，请你说说缓存穿透、缓存击穿、缓存雪崩这三个问题的区别，以及你项目里是怎么解决的？</strong>
+          </div>
+          <div class="turn-foot">tokens: 358 · 3.8s</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="input-area">
+      <textarea placeholder="输入你的回答…（Enter 发送，Shift+Enter 换行）" rows="2"></textarea>
+      <button class="send-btn">发送</button>
+    </div>
+  </main>
+</div>
+
+<div class="mockup-nav"><a href="index.html">← 返回设计稿导航</a></div>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>AI 模拟面试 · 设计稿 V2（暗色工程风）</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .nav-wrap { max-width: 980px; margin: 0 auto; padding: 52px 24px 80px; }
+  .nav-head { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+  .nav-head .seal { width: 40px; height: 40px; font-size: 19px; border-radius: 10px; }
+  .nav-wrap h1 { font-size: 24px; font-weight: 700; }
+  .ver-pill { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 99px; background: var(--accent-dim); color: var(--accent-2); border: 1px solid var(--accent-bd); }
+  .nav-sub { color: var(--text-2); font-size: 13px; margin: 0 0 30px 54px; }
+  .nav-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+  .nav-card {
+    display: block; text-decoration: none; color: inherit;
+    background: var(--bg-elev); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 22px;
+  }
+  .nav-card:hover { border-color: var(--accent-bd); background: var(--surface); }
+  .nav-card .no { font-size: 10.5px; color: var(--text-3); letter-spacing: 0.12em; }
+  .nav-card h2 { font-size: 15px; font-weight: 600; margin: 5px 0 3px; }
+  .nav-card .route { font-size: 11px; color: var(--accent-2); margin-bottom: 8px; }
+  .nav-card p { font-size: 12px; color: var(--text-3); line-height: 1.65; }
+  .compare {
+    margin-top: 34px; background: var(--bg-elev); border: 1px solid var(--border);
+    border-radius: 12px; padding: 22px 26px;
+  }
+  .compare h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+  .compare ul { list-style: none; }
+  .compare li { font-size: 12.5px; color: var(--text-2); padding: 5px 0; display: flex; gap: 10px; }
+  .compare li::before { content: ''; width: 6px; height: 6px; border-radius: 2px; background: var(--accent); margin-top: 7px; flex-shrink: 0; }
+  .compare a { color: var(--accent-2); }
+</style>
+</head>
+<body>
+<div class="nav-wrap">
+  <div class="nav-head">
+    <div class="seal">面</div>
+    <h1>AI 模拟面试平台 · 设计稿 V2</h1>
+    <span class="ver-pill">DARK CONSOLE</span>
+  </div>
+  <div class="nav-sub">暗色工程风 · 零 emoji · SVG 线条图标 · 笔录式对话排版 · 创建时间 2026-10-29</div>
+
+  <div class="nav-grid">
+    <a class="nav-card" href="01-login.html">
+      <div class="no">01</div>
+      <h2>令牌输入页</h2>
+      <div class="route mono">/login</div>
+      <p>居中卡片，APP_TOKEN 单输入框，印章式 Logo。</p>
+    </a>
+    <a class="nav-card" href="02-home.html">
+      <div class="no">02</div>
+      <h2>历史会话首页</h2>
+      <div class="route mono">/</div>
+      <p>侧栏历史列表（状态用色点，不用 emoji），主区三步引导空状态。</p>
+    </a>
+    <a class="nav-card" href="03-new-interview.html">
+      <div class="no">03</div>
+      <h2>新建面试页</h2>
+      <div class="route mono">/new</div>
+      <p>简历二选一 + JD + 分段选择器（Segmented Control）配置难度题数。</p>
+    </a>
+    <a class="nav-card" href="04-interview.html">
+      <div class="no">04</div>
+      <h2>面试聊天页 · 核心</h2>
+      <div class="route mono">/interview/:id</div>
+      <p>笔录式排版：左侧头像 + 角色名 + 动作药丸，替代气泡对话。</p>
+    </a>
+    <a class="nav-card" href="05-report.html">
+      <div class="no">05</div>
+      <h2>复盘报告页</h2>
+      <div class="route mono">/report/:id</div>
+      <p>评分环仪表 + 四维进度条 + 逐题手风琴 + 建议清单。</p>
+    </a>
+    <a class="nav-card" href="06-streaming.html">
+      <div class="no">06</div>
+      <h2>流式中间态</h2>
+      <div class="route mono">/interview/:id · streaming</div>
+      <p>顶部琥珀色状态条 + 光标闪烁 + Agent 活动流 + 停止按钮。</p>
+    </a>
+    <a class="nav-card" href="07-report-generating.html">
+      <div class="no">07</div>
+      <h2>报告生成中</h2>
+      <div class="route mono">/report/:id · generating</div>
+      <p>旋转环 + 四步进度清单的过渡态。</p>
+    </a>
+  </div>
+
+  <div class="compare">
+    <h3>V2 相对 V1（travelScope 风格）的变化</h3>
+    <ul>
+      <li>彻底移除全部 emoji 图标，改用 SVG 线条图标与色点状态</li>
+      <li>明底蓝紫换成暗色工程风：近黑底、低饱和紫主色、细边框分层</li>
+      <li>对话从"左右气泡"改为"笔录式"单栏排版——更贴近正式面试记录，长技术回答更易读</li>
+      <li>新建面试的 radio 换成分段选择器；评分从进度条升级为仪表环</li>
+      <li>状态、时间、token 数等数字信息统一等宽字体，强化工具感</li>
+    </ul>
+    <p style="margin-top:14px; font-size:12.5px; color:var(--text-2);">
+      对比看 <a href="../design-mockups/index.html">V1（travelScope 风格设计稿）</a>，两版可混搭（如 V1 布局 + V2 配色）。
+    </p>
+  </div>
+</div>
+</body>
+</html>
