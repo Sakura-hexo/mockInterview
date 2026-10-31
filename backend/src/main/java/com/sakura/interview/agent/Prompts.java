@@ -1,5 +1,6 @@
 package com.sakura.interview.agent;
 
+import com.sakura.interview.session.SessionState;
 import com.sakura.interview.tool.JdProfile;
 
 import java.util.List;
@@ -26,7 +27,7 @@ final class Prompts {
             "收到。复盘报告将在面试结束后统一生成（报告功能随后续步骤落地），本轮尚未结束，请继续作答。";
 
     /** 面试官系统提示词：角色行为、防重复清单、简历与岗位要点逐轮组装。 */
-    static String interviewerSystem(InMemorySessionState state) {
+    static String interviewerSystem(SessionState state) {
         JdProfile jd = state.jdProfile();
         List<String> asked = state.askedQuestions();
         StringBuilder sb = new StringBuilder();

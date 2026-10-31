@@ -43,6 +43,10 @@ mvn compile exec:java     # 命令行最小面试官：只依赖模型密钥，�
 # 本机 MySQL 需先建 interview 库，凭据经环境变量传入
 MYSQL_USERNAME=root MYSQL_PASSWORD=本机密码 mvn spring-boot:run
 
+# 会话持久化（步骤 5 起）：建表 + 全链路自检（需 MySQL 与 Redis 在运行）
+mvn compile exec:java -Dexec.mainClass=com.sakura.interview.session.SessionCliRunner -Dexec.args="init-db"
+mvn compile exec:java -Dexec.mainClass=com.sakura.interview.session.SessionCliRunner -Dexec.args="selfcheck"
+
 # 初版部署（步骤 8、9）：一键启动全部容器
 docker compose up -d
 # 开发期仅需 Milvus 时（步骤 2 起）：docker compose up -d milvus
