@@ -36,7 +36,8 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   const headers = new Headers(init?.headers);
   const token = getToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
-  if (init?.body && !headers.has('Content-Type')) {
+  // FormData 不能手动设 Content-Type，需让浏览器自动生成 multipart 边界
+  if (typeof init?.body === 'string' && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 
