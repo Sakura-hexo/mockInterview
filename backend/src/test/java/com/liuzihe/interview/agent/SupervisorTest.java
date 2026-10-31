@@ -2,6 +2,8 @@ package com.liuzihe.interview.agent;
 
 import com.liuzihe.interview.infra.LlmCaller;
 import com.liuzihe.interview.infra.StructuredOutputInvoker;
+import com.liuzihe.interview.session.ContextCompressor;
+import com.liuzihe.interview.session.FakeSessionStore;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,10 +27,14 @@ class SupervisorTest {
         };
     }
 
+    private static Supervisor newSupervisor(FakeAgentRuntime runtime) {
+        return new Supervisor(runtime, new StructuredOutputInvoker(branchingCaller()),
+                new FakeSessionStore(), new ContextCompressor((sys, user) -> "合并摘要"));
+    }
+
     @Test
     void 建会话产出简历摘要与岗位要点() {
-        Supervisor supervisor = new Supervisor(new FakeAgentRuntime(c -> "x"),
-                new StructuredOutputInvoker(branchingCaller()));
+        Supervisor supervisor = newSupervisor(new FakeAgentRuntime(c -> "x"));
         Supervisor.CreateResult created = supervisor.createSession("我的简历", "招 Java 后端");
         assertThat(created.resumeDigest()).contains("三年 Java 后端");
         assertThat(created.jdProfile().skills()).contains("Spring");
@@ -38,7 +44,7 @@ class SupervisorTest {
     @Test
     void 面试意图走面试官并注入简历与岗位要点() {
         FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "请介绍一下 HashMap 的底层结构。");
-        Supervisor supervisor = new Supervisor(runtime, new StructuredOutputInvoker(branchingCaller()));
+        Supervisor supervisor = newSupervisor(runtime);
         String sessionId = supervisor.createSession("我的简历", "招 Java 后端").sessionId();
 
         Supervisor.SupervisorReply reply = supervisor.chat(sessionId, "我先自我介绍，三年经验");
@@ -52,12 +58,13 @@ class SupervisorTest {
                 .contains("Spring")
                 .contains("search_question_bank")
                 .contains("禁止重复");
+        assertThat(call.userInput()).contains("我先自我介绍，三年经验");
     }
 
     @Test
     void 多轮后已问题目注入防重复清单且会话延续() {
         FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "追问：HashMap 树化条件是什么？");
-        Supervisor supervisor = new Supervisor(runtime, new StructuredOutputInvoker(branchingCaller()));
+        Supervisor supervisor = newSupervisor(runtime);
         String sessionId = supervisor.createSession("我的简历", "招 Java 后端").sessionId();
 
         supervisor.chat(sessionId, "回答一");
@@ -72,7 +79,7 @@ class SupervisorTest {
     @Test
     void 闲聊意图走chat角色() {
         FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "面试加油！");
-        Supervisor supervisor = new Supervisor(runtime, new StructuredOutputInvoker(branchingCaller()));
+        Supervisor supervisor = newSupervisor(runtime);
         String sessionId = supervisor.createSession("我的简历", "招 Java 后端").sessionId();
 
         Supervisor.SupervisorReply reply = supervisor.chat(sessionId, "今天天气不错");
@@ -86,7 +93,7 @@ class SupervisorTest {
     @Test
     void 复盘意图返回占位不调智能体() {
         FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "不应被调用");
-        Supervisor supervisor = new Supervisor(runtime, new StructuredOutputInvoker(branchingCaller()));
+        Supervisor supervisor = newSupervisor(runtime);
         String sessionId = supervisor.createSession("我的简历", "招 Java 后端").sessionId();
 
         Supervisor.SupervisorReply reply = supervisor.chat(sessionId, "我想结束面试");
@@ -98,8 +105,7 @@ class SupervisorTest {
 
     @Test
     void 会话不存在抛异常() {
-        Supervisor supervisor = new Supervisor(new FakeAgentRuntime(c -> "x"),
-                new StructuredOutputInvoker(branchingCaller()));
+        Supervisor supervisor = newSupervisor(new FakeAgentRuntime(c -> "x"));
         assertThatThrownBy(() -> supervisor.chat("s-none", "你好"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("会话不存在");

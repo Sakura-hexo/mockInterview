@@ -81,6 +81,30 @@ public final class EnvKeys {
         return orDefault("MILVUS_COLLECTION", "question_bank");
     }
 
+    public static String mysqlUrl() {
+        return orDefault("MYSQL_URL",
+                "jdbc:mysql://localhost:3306/interview?createDatabaseIfNotExist=true"
+                        + "&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai");
+    }
+
+    public static String mysqlUsername() {
+        return orDefault("MYSQL_USERNAME", "root");
+    }
+
+    public static String mysqlPassword() {
+        String password = load().get("MYSQL_PASSWORD");
+        if (password == null || password.isBlank()) {
+            throw new IllegalStateException(
+                    "未找到 MYSQL_PASSWORD：请在 backend/.env 填入本机 MySQL 的密码"
+                            + "（MYSQL_USERNAME 默认 root，容器 mysql 时改 MYSQL_URL 端口）");
+        }
+        return password.trim();
+    }
+
+    public static String redisUri() {
+        return orDefault("REDIS_URI", "redis://localhost:6379");
+    }
+
     private static String orDefault(String key, String fallback) {
         String value = load().get(key);
         return value == null || value.isBlank() ? fallback : value.trim();

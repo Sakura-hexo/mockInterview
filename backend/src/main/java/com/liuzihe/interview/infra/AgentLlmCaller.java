@@ -14,7 +14,7 @@ import java.util.UUID;
  */
 public final class AgentLlmCaller implements LlmCaller {
 
-    private static final Duration TIMEOUT = Duration.ofSeconds(60);
+    private static final Duration TIMEOUT = Duration.ofSeconds(120);
 
     @Override
     public String complete(String systemPrompt, String userPrompt) {
