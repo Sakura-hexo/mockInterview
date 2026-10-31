@@ -4,7 +4,9 @@ import com.sakura.interview.infra.LlmCaller;
 import com.sakura.interview.infra.StructuredOutputInvoker;
 import com.sakura.interview.session.ContextAssembler;
 import com.sakura.interview.session.ContextCompressor;
+import com.sakura.interview.session.FakeReportStore;
 import com.sakura.interview.session.FakeSessionStore;
+import com.sakura.interview.session.ReportService;
 import com.sakura.interview.session.SessionSummary;
 import com.sakura.interview.session.StoredMessage;
 import org.junit.jupiter.api.Test;
@@ -39,14 +41,19 @@ class LongSessionTest {
         return "候选人第" + round + "轮回答，细节是" + "高并发场景下的处理方案".repeat(40);
     }
 
+    private static Supervisor newSupervisor(FakeAgentRuntime runtime, FakeSessionStore store) {
+        return new Supervisor(runtime, new StructuredOutputInvoker(branchingCaller()),
+                store, new ContextCompressor((sys, user) -> "前情：候选人依次谈了并发、JVM、Redis等话题"),
+                new ReportService(store, new FakeReportStore()));
+    }
+
     @Test
     void 五十轮输入预算平稳早期内容进摘要() {
         AtomicInteger questionNo = new AtomicInteger();
         FakeAgentRuntime runtime = new FakeAgentRuntime(
                 c -> "面试官问题" + questionNo.incrementAndGet() + "：请谈谈Redis持久化");
         FakeSessionStore store = new FakeSessionStore();
-        Supervisor supervisor = new Supervisor(runtime, new StructuredOutputInvoker(branchingCaller()),
-                store, new ContextCompressor((sys, user) -> "前情：候选人依次谈了并发、JVM、Redis等话题"));
+        Supervisor supervisor = newSupervisor(runtime, store);
         String sessionId = supervisor.createSession("我的简历", "招 Java 后端").sessionId();
 
         for (int round = 1; round <= 50; round++) {
@@ -79,8 +86,7 @@ class LongSessionTest {
         FakeSessionStore store = new FakeSessionStore();
         AtomicInteger qNo = new AtomicInteger();
         FakeAgentRuntime first = new FakeAgentRuntime(c -> "面试官问题" + qNo.incrementAndGet());
-        Supervisor previous = new Supervisor(first, new StructuredOutputInvoker(branchingCaller()),
-                store, new ContextCompressor((sys, user) -> "前情：谈过并发"));
+        Supervisor previous = newSupervisor(first, store);
         String sessionId = previous.createSession("我的简历", "招 Java 后端").sessionId();
         for (int round = 1; round <= 25; round++) {
             previous.chat(sessionId, answer(round));
@@ -88,8 +94,7 @@ class LongSessionTest {
 
         AtomicInteger qNo2 = new AtomicInteger(25);
         FakeAgentRuntime second = new FakeAgentRuntime(c -> "面试官问题" + qNo2.incrementAndGet());
-        Supervisor resumed = new Supervisor(second, new StructuredOutputInvoker(branchingCaller()),
-                store, new ContextCompressor((sys, user) -> "前情：谈过并发"));
+        Supervisor resumed = newSupervisor(second, store);
 
         Supervisor.SupervisorReply reply = resumed.chat(sessionId, answer(26));
 

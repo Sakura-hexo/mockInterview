@@ -24,10 +24,19 @@ public interface SessionStore {
     /** seq 大于 afterSeq 的最早 limit 条消息，升序，供压缩器取批。 */
     List<StoredMessage> readBatch(String sessionId, int afterSeq, int limit);
 
+    /** 全量消息升序，供报告评估阶段整体读取（不受窗口限制）。 */
+    List<StoredMessage> readAll(String sessionId);
+
     Optional<SessionSummary> loadSummary(String sessionId);
 
     void saveSummary(String sessionId, String text, int coveredSeq);
 
     /** 删除会话全部数据（元数据、消息、摘要），供自检清理。 */
     void deleteSession(String sessionId);
+
+    /** 结束会话：置 ENDED 与结束时间（报告提交时调用）。 */
+    void endSession(String sessionId);
+
+    /** 首末消息时间差（毫秒），无消息返回 0（报告时长统计用）。 */
+    long durationMs(String sessionId);
 }
