@@ -74,7 +74,7 @@ sequenceDiagram
 - 版本差异可控：本机 MySQL 8.0.16 对容器 8.4、memurai 对 Redis 7，本项目仅用基础 SQL 与 Redis 结构，初版前用容器栈回归一次即可
 - 模型源策略（2026-10-31 用户确认）：开发期主力智谱 GLM（bigmodel.cn，OpenAI 兼容接入），正式评测与简历口径仍为百炼 qwen-plus，本地 Ollama 作零成本冒烟通道；三路 provider 经 MODEL_PROVIDER 环境变量切换，改动清单见 2026-10-31 模型Provider接入方案
 
-本机参考实现：`D:\travelScope` 是一个 AgentScope-Java 2.0.3 的完整项目（其简历描述写 Spring AI Alibaba，与实际代码不符，本项目以实际代码为准），步骤 2 与步骤 4 的开发指令将引用其 RAG 双路检索、Middleware 链、agent_spawn 编排作为 API 用法参照。两个技术差异不照搬：它用 pgvector 加 ES 双存储并自写 RRF 融合（其核验结论：AgentScope 2.0.3 无 fusion 与 rerank API，rag.model 已标记移除），本项目按本方案用 Milvus 原生稀疏稠密混合检索；步骤 2 开始前需核验 AgentScope-Java 是否提供 Milvus 存储扩展，无则经 Milvus Java SDK 自封装检索层（travelScope 自写 EsBm25Client 的先例证明此路可行）。
+本机参考实现：`D:\travelScope` 是一个 AgentScope-Java 2.0.3 的完整项目（其简历描述写 Spring AI Alibaba，与实际代码不符，本项目以实际代码为准），步骤 2 与步骤 4 的开发指令将引用其 RAG 双路检索、Middleware 链、agent_spawn 编排作为 API 用法参照。两个技术差异不照搬：它用 pgvector 加 ES 双存储并自写 RRF 融合（其核验结论：AgentScope 2.0.3 无 fusion 与 rerank API，rag.model 已标记移除），本项目按本方案用 Milvus 原生稀疏稠密混合检索。前置核验已完成（2026-10-31）：AgentScope rag-simple 提供 MilvusStore 但为纯稠密单路检索，混合检索按本方案经 milvus-sdk-java 2.6.17 自封装；EmbeddingModel 三路实现（DashScope、OpenAI、Ollama）随 rag-simple 提供，直接复用不自研。
 
 ## 3 模块设计
 
@@ -96,7 +96,7 @@ flowchart LR
 - 入库流程：Markdown 题库解析、按题切分、通义 Embedding 向量化、写入 Milvus
 - 入库幂等：题库重建导入时按题目 id 先删后插，重复导入跳过已存在题目，防止向量库累积重复数据
 - 混合召回：Milvus 稀疏向量走关键词匹配，稠密向量走语义相似，RRF 融合取 topK
-- Embedding 结果按内容哈希缓存进 Redis，题库不变不重算
+- Embedding 结果按内容哈希缓存进 Redis，题库不变不重算（Redis 缓存随步骤 5 落地；步骤 2 依赖入库幂等防止重复向量化）
 
 ### 3.2 工具模块
 
