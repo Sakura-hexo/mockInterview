@@ -2,13 +2,13 @@
 
 作者:开发执行 AI（ZCode）| 创建时间:2026-10-31 18:10
 
-对应输入：用户提供的个人笔记（`D:\八股总结` 目录 11 个 XMind 思维导图）与《小假八股(高频版)》PDF（222 页，约 150 题）。
+对应输入：用户提供的个人笔记（`D:\八股总结` 目录 11 个 XMind 思维导图）与付费八股合集 PDF（222 页，约 150 题）。
 
 ## 1 本批次做了什么
 
 - 题库导入升级为**目录多文件**：`question-bank/*.md` 全量解析聚合，跨文件题号查重（重复即抛异常）
 - 新增 `--sparse-only` 检索开关（`MilvusQuestionStore.sparseSearch`），供隔离诊断 BM25 路与步骤 9 评测
-- 新增题库文件 `question-bank/ai-agent.md`：**40 题**（agent 篇 18、RAG 篇 16、LLM 应用篇 6，原文四道重叠的"区别题"合并为两道），要点为答案转写浓缩，来源标注「小假八股引用」
+- 新增题库文件 `question-bank/ai-agent.md`：**40 题**（agent 篇 18、RAG 篇 16、LLM 应用篇 6，原文四道重叠的"区别题"合并为两道），要点为答案转写浓缩，来源标注「付费笔记」
 - PDF 文本提取管线：pypdf 与 PyMuPDF 均可用（PyMuPDF 更佳）；注意 Windows 下 Python 需 `-X utf8` 否则 stdout 显示乱码（文件本身是好的）；XMind 用 content.json 程序化提取（脚本已验证）
 
 ## 2 验证记录
