@@ -134,6 +134,19 @@ public final class MilvusQuestionStore implements AutoCloseable {
         return toHits(resp);
     }
 
+    /** 纯稀疏 BM25 检索，供诊断中文分词与稀疏路的独立表现。 */
+    public List<SearchHit> sparseSearch(String query, int topK) {
+        SearchResp resp = client.search(SearchReq.builder()
+                .collectionName(collection)
+                .annsField(F_SPARSE)
+                .data(List.of(new EmbeddedText(query)))
+                .metricType(IndexParam.MetricType.BM25)
+                .topK(topK)
+                .outputFields(List.of(F_ID, F_QUESTION, F_TAGS, F_SOURCE))
+                .build());
+        return toHits(resp);
+    }
+
     @Override
     public void close() {
         client.close();
