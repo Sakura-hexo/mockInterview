@@ -30,8 +30,11 @@
 - 编译：`mvn -q compile` 退出码 0，BUILD SUCCESS
 - Ollama 路 3 轮对话（`MODEL_PROVIDER=ollama mvn -q compile exec:java`，管道输入三问后 exit）：启动行显示「模型源 ollama / qwen2.5:7b」；三轮均正常回复，第 3 轮出现真实追问（对 HashMap 线程安全回答给出"正确但不全面"评价并追问包装机制）；每轮打印输入输出 token 与耗时（261/26/1020ms、307/36/855ms、361/77/1656ms），输入 token 随轮次递增证明 stateStore 多轮记忆生效
 - 密钥安全：`git grep -r "sk-" -- backend/` 无结果；`backend/.env` 不存在（真实密钥仍未产生，智谱与百炼注册后由用户自建）
-- 智谱路与 DashScope 路：待用户注册取得密钥后按方案 §4 步骤 2、3 执行
+- 中转站路（智谱路最终形态）3 轮对话验证通过：用户粘贴的智谱 key 实为 OpenAI 兼容中转站 key（sk- 格式 51 字符，智谱原生 key 为带点号 49 字符），直连智谱返回 401；经 key 形状盲查与盲测 curl 确认代码链路无误、仅 key 归属不符（诊断全程不接触密钥值）。按用户提供的 OpenAI 兼容中转站接入，OPENAI_BASE_URL 指向中转站 v1 端点，经 v1/models 查询可用模型后选 qwen3.8-max（与正式口径 qwen 同家族）。3 轮正常回复，模型对答非所问输入保持面试官控场并逐次细化追问，输入 token 284、443、762 递增，多轮记忆生效
+- 顺带核验中转站模型列表含 qwen3-embedding-4b 与 text-embedding-v3，记为步骤 2 RAG 的 embedding 备选项（选型仍按方案走通义）
+- DashScope 路：留待百炼注册后验证，正式评测与简历口径不变
 
 ## 4 提交记录
 
-- 待智谱路验证通过后，与既有步骤 1 代码一并提交：`step1: 模型provider三路接入与环境本地化`（含本批次全部改动）
+- `docs: 后端架构修订、接口契约补充与模型provider方案`（技术方案、接口文档、后端架构方案、provider 方案、README）
+- `step1: 模型provider三路接入与环境本地化`（backend 全部改动与本目录实现记录）
