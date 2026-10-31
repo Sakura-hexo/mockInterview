@@ -38,7 +38,7 @@ import java.util.Set;
  * 生成稀疏向量（入库只写文本），检索经 RRF 融合两路排名。
  * 入库按题号幂等；换 embedding 模型维度会变，必须 rebuild。
  */
-public final class MilvusQuestionStore implements AutoCloseable {
+public final class MilvusQuestionStore implements AutoCloseable, QuestionSearcher {
 
     private static final int RRF_K = 60;
     private static final Duration EMBED_TIMEOUT = Duration.ofSeconds(60);
@@ -107,6 +107,12 @@ public final class MilvusQuestionStore implements AutoCloseable {
             client.insert(InsertReq.builder().collectionName(collection).data(rows).build());
         }
         return rows.size();
+    }
+
+    /** 检索端口实现：应用层与工具层经 QuestionSearcher 调用，内部走混合检索。 */
+    @Override
+    public List<SearchHit> search(String query, int topK) {
+        return hybridSearch(query, topK);
     }
 
     /** 混合检索：稠密 COSINE 加稀疏 BM25，RRF 融合。 */
