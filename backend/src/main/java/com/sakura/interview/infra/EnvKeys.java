@@ -61,6 +61,26 @@ public final class EnvKeys {
         return orDefault("OLLAMA_MODEL", "qwen2.5:7b");
     }
 
+    public static String openAiEmbeddingModel() {
+        return orDefault("OPENAI_EMBEDDING_MODEL", "text-embedding-v3");
+    }
+
+    public static String dashScopeEmbeddingModel() {
+        return orDefault("DASHSCOPE_EMBEDDING_MODEL", "text-embedding-v3");
+    }
+
+    public static String ollamaEmbeddingModel() {
+        return orDefault("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text");
+    }
+
+    public static String milvusUri() {
+        return orDefault("MILVUS_URI", "http://localhost:19530");
+    }
+
+    public static String milvusCollection() {
+        return orDefault("MILVUS_COLLECTION", "question_bank");
+    }
+
     private static String orDefault(String key, String fallback) {
         String value = load().get(key);
         return value == null || value.isBlank() ? fallback : value.trim();
