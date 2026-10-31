@@ -11,9 +11,9 @@ import java.util.Map;
  */
 public final class SearchTiers {
 
-    static final int SHORT_QUERY_MAX_CHARS = 12;
-    static final int SHORT_TOPK = 3;
-    static final int LONG_TOPK = 5;
+    public static final int SHORT_QUERY_MAX_CHARS = 12;
+    public static final int SHORT_TOPK = 3;
+    public static final int LONG_TOPK = 5;
 
     private SearchTiers() {
     }
