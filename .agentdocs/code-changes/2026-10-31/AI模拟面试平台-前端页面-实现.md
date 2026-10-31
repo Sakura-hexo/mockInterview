@@ -247,3 +247,43 @@
 ### 提交记录
 
 - F6 提交于 `frontend` 分支（按钮样式补齐 + 流式计数 + 类型检查修复）
+
+## F7 生产构建集成 Spring Boot static（2026-10-31）
+
+### 做了什么
+
+- **`frontend/vite.config.ts`**：`build.outDir` 直指 `../backend/src/main/resources/static`（方案第 2 节"产物拷到 static"的零拷贝实现），`emptyOutDir` 显式开启
+- **`.gitignore`**：忽略 `backend/src/main/resources/static/`（构建产物不入库，部署时构建生成）
+- **SPA 路由回退**：属于后端 Java 配置，为避免与并行后端会话混提交，本步不直接改后端代码，交接片段见下节，由后端会话在步骤 7 落地
+
+### 验证记录
+
+1. `npm run build` 成功：294 模块，index.html 0.4kB + CSS 13.87kB（gzip 3.3）+ JS 446.98kB（gzip 139.57，含 react/react-router/react-markdown），产物落 `backend/src/main/resources/static/`，git status 干净（忽略生效）
+2. `vite preview`（4173）生产包冒烟：`/login` 完整渲染；静态资源 JS/CSS 均 200；**直路由 `/interview/abc` 返回 200**，应用启动后 RequireAuth 无 token 正确弹回 `/login`——静态资源、SPA 回退、客户端守卫全链路正常
+
+### 交接后端会话：SPA 路由回退配置（步骤 7 落地）
+
+验收项"刷新任意路由不 404"需要 Spring 把非 `/api` 的前端路由请求转发到 index.html。推荐实现（显式路由列表，不用通配符，避免与 REST 映射冲突）：
+
+```java
+// backend/src/main/java/com/sakura/interview/web/SpaForwardController.java
+package com.sakura.interview.web;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+/** 前端 SPA 路由回退：刷新 /login /new /interview/x /report/x 不 404（前端页面方案验收项） */
+@Controller
+public class SpaForwardController {
+    @GetMapping({"/", "/login", "/new", "/interview/**", "/report/**"})
+    public String spa() {
+        return "forward:/index.html";
+    }
+}
+```
+
+前置条件：后端重建重启后 static 产物即在 classpath 生效。`/api/**` 由 REST 控制器处理，不受影响；生产构建命令为 `cd frontend && npm run build`。
+
+### 提交记录
+
+- F7 提交于 `frontend` 分支（构建目录集成 + gitignore + 交接文档）；"8080 直接服务 + 刷新不 404"的最终验收待后端会话重建后补录
