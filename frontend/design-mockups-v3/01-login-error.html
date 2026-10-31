@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>01b 令牌输入页（错误态） - AI 模拟面试平台 V3</title>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+<div class="login-page">
+  <div class="login-card">
+    <h2>AI 模拟面试平台</h2>
+    <div class="login-rule"></div>
+    <div class="login-sub">多智能体技术面试练习系统</div>
+
+    <label>
+      访问令牌（APP_TOKEN）
+      <input class="login-input" type="password" value="wrong_token" style="border-color: var(--red);">
+    </label>
+
+    <div class="login-error">令牌无效，请检查后重试（401 Unauthorized）</div>
+
+    <button class="login-btn">进入系统</button>
+
+    <div class="login-tip">
+      令牌从后端 <code>.env</code> 文件的 <code>APP_TOKEN</code> 复制<br>
+      本地部署 · 仅限本机访问
+    </div>
+  </div>
+</div>
+
+<div class="mockup-nav"><a href="index.html">← 返回设计稿导航</a></div>
+</body>
+</html>

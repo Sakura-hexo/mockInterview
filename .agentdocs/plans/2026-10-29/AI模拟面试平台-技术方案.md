@@ -59,13 +59,20 @@ sequenceDiagram
 | 语言与运行时 | Java 21 | AgentScope-Java 要求 17 以上，简历口径统一 21，本机需装 JDK 21 |
 | 应用框架 | Spring Boot 3.4 | 单体分层，内嵌智能体引擎 |
 | 智能体引擎 | AgentScope-Java 2.0 | 备选 Spring AI Alibaba，只换引擎不换模块设计 |
-| 模型 | 通义千问 | 主力 qwen-plus，降级 qwen-turbo，密钥走环境变量 |
+| 模型 | 通义千问 与 智谱GLM | 正式评测与简历口径 qwen-plus 降级 qwen-turbo，开发期主力智谱 GLM，MODEL_PROVIDER 环境变量切换，密钥不落明文 |
 | 向量库 | Milvus 2.6 | 原生支持稀疏加稠密混合检索 |
-| 缓存 | Redis 7 | 容器运行，本机无 Redis |
-| 数据库 | MySQL 8 | 容器运行，本机 8.0.16 作备用 |
+| 缓存 | Redis 7 | 开发期用本机 memurai（6379），初版部署切容器 |
+| 数据库 | MySQL 8 | 开发期用本机 8.0.16（3306），初版部署切容器 |
 | 韧性 | Resilience4j | 重试、熔断、降级 |
 | 监控 | Prometheus 加 Grafana | 本机 prometheus-3.13.5 备用，压测用本机 JMeter 5.6.3 |
-| 部署 | Docker Compose | 面试官可一键复现 |
+| 部署 | Docker Compose | 初版一键复现形态，开发期不依赖 |
+
+两阶段运行时策略（2026-10-31 用户确认）：
+
+- 开发期本地优先：应用与 MySQL、Redis 全部本机运行，Docker Desktop 平时无需启动。Milvus 是唯一例外（Windows 无原生版），步骤 2 起按需执行 docker compose up -d milvus，自动带起 etcd 与 minio
+- 初版部署（步骤 8、9）：恢复完整 Compose 五容器，新增应用镜像与 Prometheus、Grafana，用容器栈做全量回归，验证面试官一键复现
+- 版本差异可控：本机 MySQL 8.0.16 对容器 8.4、memurai 对 Redis 7，本项目仅用基础 SQL 与 Redis 结构，初版前用容器栈回归一次即可
+- 模型源策略（2026-10-31 用户确认）：开发期主力智谱 GLM（bigmodel.cn，OpenAI 兼容接入），正式评测与简历口径仍为百炼 qwen-plus，本地 Ollama 作零成本冒烟通道；三路 provider 经 MODEL_PROVIDER 环境变量切换，改动清单见 2026-10-31 模型Provider接入方案
 
 本机参考实现：`D:\travelScope` 是一个 AgentScope-Java 2.0.3 的完整项目（其简历描述写 Spring AI Alibaba，与实际代码不符，本项目以实际代码为准），步骤 2 与步骤 4 的开发指令将引用其 RAG 双路检索、Middleware 链、agent_spawn 编排作为 API 用法参照。两个技术差异不照搬：它用 pgvector 加 ES 双存储并自写 RRF 融合（其核验结论：AgentScope 2.0.3 无 fusion 与 rerank API，rag.model 已标记移除），本项目按本方案用 Milvus 原生稀疏稠密混合检索；步骤 2 开始前需核验 AgentScope-Java 是否提供 Milvus 存储扩展，无则经 Milvus Java SDK 自封装检索层（travelScope 自写 EsBm25Client 的先例证明此路可行）。
 
@@ -241,7 +248,7 @@ flowchart LR
 | 6 | 复盘报告与结构化评分 | 结束面试返回合法评分 JSON |
 | 7 | 后端 REST 全套与 SSE；前端 React 工程 | 浏览器完整跑一场面试 |
 | 8 | Resilience4j、异步化、Prometheus 加 Grafana | 手动断网触发熔断降级；Grafana 出监控面板 |
-| 9 | 评测集对比、压测记录、README 完善 | 混合召回对比纯向量召回的命中率报告；P95 数据 |
+| 9 | 评测集对比、压测记录、应用镜像化与 Compose 一键复现、README 完善 | 混合召回对比纯向量召回的命中率报告；P95 数据；compose up 后浏览器完整复现一场面试 |
 
 ## 9 明确不做
 

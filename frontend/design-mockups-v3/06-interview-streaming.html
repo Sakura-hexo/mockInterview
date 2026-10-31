@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>06 面试聊天页（流式中间态） - AI 模拟面试平台 V3</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  /* 流式提示条：面试官正在作答 */
+  .stream-strip {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 28px;
+    background: var(--paper-2);
+    border-bottom: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--ink-2);
+  }
+  .stream-strip .dot {
+    width: 7px; height: 7px;
+    background: var(--red);
+    border-radius: 1px;
+    animation: blink 1s infinite;
+  }
+  .stream-strip .m { font-family: var(--f-mono); }
+  /* 红笔光标 */
+  .pen-cursor { color: var(--red); font-weight: bold; animation: blink 1s infinite; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="name">AI 模拟面试</div>
+      <div class="sub">本地部署 · 单用户模式</div>
+    </div>
+    <button class="new-btn">＋ 新建面试</button>
+
+    <div class="side-scroll">
+      <div class="side-label">进行中</div>
+      <div class="hist-item active">
+        <div class="hist-l1">
+          <span class="dir">Java 后端 · 中等</span>
+          <span class="tag tag-live">进行中</span>
+        </div>
+        <div class="hist-l2"><span>第 4/10 题</span><span>刚刚</span></div>
+      </div>
+    </div>
+
+    <div class="side-foot">
+      <span class="mono">LOCAL</span>
+      <button class="link-btn">退出</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="title">面试中 · Java 后端 · 中等难度 <span class="tag tag-live mono">IN_PROGRESS</span></div>
+      <div class="spacer"></div>
+      <div class="qtrack">
+        <span class="qcell done">1</span>
+        <span class="qcell done">2</span>
+        <span class="qcell done">3</span>
+        <span class="qcell cur">4</span>
+        <span class="qcell">5</span>
+        <span class="qcell">6</span>
+        <span class="qcell">7</span>
+        <span class="qcell">8</span>
+        <span class="qcell">9</span>
+        <span class="qcell">10</span>
+        <span class="qsum">第 4 / 10 题</span>
+      </div>
+      <button class="btn btn-danger">结束面试</button>
+    </header>
+
+    <div class="stream-strip">
+      <span class="dot"></span>
+      <span>面试官正在回复…已生成 <span class="m">142</span> tokens · 用时 <span class="m">3.4s</span></span>
+    </div>
+
+    <div class="main-body">
+      <div class="transcript">
+
+        <!-- 历史：第 4 题提问 -->
+        <div class="turn">
+          <div class="turn-head">
+            <span class="qbox">4</span>
+            <span class="turn-label">第 4 题</span>
+            <span class="turn-time">09:41</span>
+          </div>
+          <div class="turn-content">
+            好的。看到你在项目里用 RocketMQ 做异步下单，<strong>如果下游库存服务消费失败导致超卖，你怎么保证消息的最终一致性？</strong>
+          </div>
+          <div class="turn-foot">tokens: 312 · 3.5s</div>
+        </div>
+
+        <!-- 历史：候选人作答 -->
+        <div class="answer">
+          <div class="answer-head">
+            <span class="answer-time">09:44</span>
+            <span class="answer-mark">答</span>
+          </div>
+          <div class="answer-text">
+            我会用本地消息表 + 定时任务补偿。下单时在同一个本地事务里写订单表和消息表，然后异步把消息表的数据推到 MQ。如果消费失败，MQ 会重试，重试多次还失败就进死信队列，定时任务扫描死信消息做人工介入。
+          </div>
+        </div>
+
+        <!-- 当前流式中的追问 -->
+        <div class="turn">
+          <div class="turn-head">
+            <span class="qbox followup">4</span>
+            <span class="turn-label">追问</span>
+            <span class="turn-time">streaming…</span>
+          </div>
+          <div class="turn-content">
+            方案讲得比较完整。那你刚才提到了<strong>本地消息表</strong>，我追一个问题：<br><br>
+            如果本地事务提交成功了，但应用进程在<strong>推送 MQ 之前宕机</strong>了，这条消息会不会丢？你怎么保证它最终被投递？<span class="pen-cursor">▌</span>
+          </div>
+          <div class="activity">
+            <button class="act-toggle">Agent 活动（4）▾</button>
+            <div class="act-items">
+              <div class="act-item faded">
+                <span class="act-dot ok"></span>
+                <span class="who">router</span>
+                <span>识别意图：面试中</span>
+              </div>
+              <div class="act-item faded">
+                <span class="act-dot ok"></span>
+                <span class="who">supervisor</span>
+                <span>调度面试官智能体</span>
+              </div>
+              <div class="act-item">
+                <span class="act-dot ok"></span>
+                <span class="who">interviewer</span>
+                <span>评估回答质量：7.5/10 可深挖</span>
+              </div>
+              <div class="act-item">
+                <span class="act-dot running"></span>
+                <span class="who">interviewer</span>
+                <span>生成追问中…</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="input-area">
+      <textarea placeholder="面试官正在回复，请稍候…" rows="2" disabled></textarea>
+      <button class="stop-btn">停止</button>
+    </div>
+  </main>
+</div>
+
+<div class="mockup-nav"><a href="index.html">← 返回设计稿导航</a></div>
+</body>
+</html>

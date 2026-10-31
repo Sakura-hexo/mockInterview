@@ -4,6 +4,8 @@
 
 本文档定义 REST 接口边界与数据结构，供开发步骤 7 实现全量接口、步骤 6 提前定义报告结构。SSE 流式协议在步骤 7 落地时如需微调，回架构师确认后修订本文档。
 
+> 2026-10-31 修订：第 1 节补充跨域接入策略；4.3 补充 error 事件与断线恢复契约；新增 4.9 报告重试与 4.10 删除会话两个待确认接口。
+
 ## 1 通用约定
 
 - Base URL：`http://localhost:8080`
@@ -12,6 +14,7 @@
 - 统一响应体：`{"code": 0, "message": "ok", "data": ...}`，code 非 0 表示业务错误
 - 错误码：401 未认证、404 会话不存在、409 状态冲突、413 内容超限、500 内部错误
 - 前后端分离：前端为独立 React 加 Vite 工程（仓库 frontend 目录），本文档即前后端对接契约，后端不渲染任何页面
+- 跨域接入（2026-10-31 补充）：开发期前端经 Vite dev server 的 proxy 将全部 /api 请求与 SSE 流代理到 8080，浏览器视角同源；后端不开启 CORS，避免鉴权头跨域暴露。初版容器化部署采用同域反代，同样无跨域（需用户确认）
 
 ## 2 会话状态机
 
@@ -69,9 +72,14 @@ event: message   data: {"delta": "面试官回复增量文本"}
 event: action    data: {"type": "QUESTION 或 FOLLOW_UP 或 NEXT"}
 event: metrics   data: {"inputTokens": 0, "outputTokens": 0, "latencyMs": 0}
 event: done      data: {"round": 3}
+event: error     data: {"message": "错误描述"}
 ```
 
+error 事件（2026-10-31 补充，对齐前端架构方案 4.2）：本轮生成失败时发出 error 并终结本流，不再发 done；前端气泡尾部红条提示并允许重发同一回答。
+
 前端注意：使用 fetch 流式读取响应，不要使用 EventSource——EventSource 无法携带 Authorization 请求头，鉴权会失败。本接口与普通接口一样走 Bearer 鉴权拦截器。
+
+断线与恢复（2026-10-31 补充，对齐前端架构方案 4.3）：用户点停止或连接意外中断时，后端不取消本轮生成，写完即止，已生成部分照常写入消息存储；前端通过会话详情接口每 3 秒轮询恢复该轮结果。不做 SSE 续传（Last-Event-ID 式恢复）。
 
 ### 4.4 结束面试（实现于步骤 7）
 
@@ -103,6 +111,18 @@ GET /api/interviews/{id}
 GET /actuator/prometheus
 
 不走 Bearer 鉴权，仅本机暴露，暴露 QPS、P95 延迟、Token 消耗、召回命中率指标。
+
+### 4.9 报告重试（待确认，依赖后端架构方案第 11 节事项 1 与 2）
+
+POST /api/interviews/{id}/report/retry
+
+前置：报告状态 FAILED。作用：将报告任务置回 GENERATING 重新入队，会话状态回到 ENDED。出参：`data: { "reportStatus": "GENERATING" }`。后端架构方案第 6 节已要求"失败可手动重试"，本接口为其落地形态，待报告任务化方案确认后定形。
+
+### 4.10 删除会话（P1 建议，待确认）
+
+DELETE /api/interviews/{id}
+
+历史列表的删除入口，同时清理该会话消息与报告数据。P0 不实现，列入 P1 候选。
 
 ## 5 安全相关约束（实现时必须满足，来源技术方案第 4 节）
 

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>05 复盘报告 · AI 模拟面试</title>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="seal">面</div>
+      <div>
+        <div class="brand-name">AI 模拟面试</div>
+        <div class="brand-sub mono">MOCK INTERVIEW</div>
+      </div>
+    </div>
+    <button class="new-btn">
+      <svg class="ic" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M8 3v10M3 8h10"/></svg>
+      新建面试
+    </button>
+    <div class="side-scroll">
+      <div class="side-label mono">已归档 · Archive</div>
+      <div class="hist-item active">
+        <div class="hist-l1"><span>Java 后端 · 困难</span><span class="status st-done"><i></i>已出报告</span></div>
+        <div class="hist-l2 mono"><span>10 题 · 综合 7.8</span><span>昨天</span></div>
+      </div>
+      <div class="hist-item">
+        <div class="hist-l1"><span>Java 后端 · 简单</span><span class="status st-done"><i></i>已出报告</span></div>
+        <div class="hist-l2 mono"><span>5 题 · 综合 8.4</span><span>3 天前</span></div>
+      </div>
+      <div class="hist-item">
+        <div class="hist-l1"><span>Java 后端 · 中等</span><span class="status st-done"><i></i>已出报告</span></div>
+        <div class="hist-l2 mono"><span>10 题 · 综合 6.5</span><span>1 周前</span></div>
+      </div>
+    </div>
+    <div class="side-foot"><span class="mono">LOCAL · v0.1</span><button class="link-btn">退出</button></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="crumbs">
+        复盘报告
+        <span class="sep">/</span>
+        <span class="light">Java 后端 · 困难</span>
+      </div>
+      <span class="pill pill-done"><i></i>已完成</span>
+      <div class="spacer"></div>
+      <button class="btn btn-ghost">
+        <svg class="ic" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 1.5h5.5L12 4v10.5H4z"/><path d="M9.5 1.5V4H12"/></svg>
+        查看对话记录
+      </button>
+    </header>
+
+    <div class="main-body">
+      <div class="report-wrap">
+
+        <!-- 头部：元信息 + 评分环 -->
+        <div class="r-head">
+          <div class="r-head-info">
+            <h1>面试复盘报告</h1>
+            <div class="r-head-meta mono">
+              <span>日期 <b>2026-10-28</b></span>
+              <span>时长 <b>32:18</b></span>
+              <span>题数 <b>10</b></span>
+              <span>难度 <b>困难</b></span>
+            </div>
+            <div class="r-head-meta" style="margin-top:8px;">
+              <span>结论：<b style="color:var(--text);">整体扎实，表达结构清晰；MySQL 索引与分布式组件底层是当前短板</b></span>
+            </div>
+          </div>
+          <div class="r-ring">
+            <svg width="116" height="116" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="52" fill="none" stroke="var(--surface-2)" stroke-width="9"/>
+              <circle cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="9"
+                stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="72"
+                transform="rotate(-90 60 60)"/>
+            </svg>
+            <div class="num"><b>7.8</b><span>综合 / 10</span></div>
+          </div>
+        </div>
+
+        <!-- 四维评分 -->
+        <div class="r-card">
+          <h3>能力维度</h3>
+          <div class="dim-row">
+            <div class="dim-name">综合表现</div>
+            <div class="dim-track"><div class="dim-bar" style="width:78%"></div></div>
+            <div class="dim-val mono">7.8</div>
+          </div>
+          <div class="dim-row">
+            <div class="dim-name">技术深度</div>
+            <div class="dim-track"><div class="dim-bar" style="width:75%"></div></div>
+            <div class="dim-val mono">7.5</div>
+          </div>
+          <div class="dim-row">
+            <div class="dim-name">表达沟通</div>
+            <div class="dim-track"><div class="dim-bar" style="width:82%"></div></div>
+            <div class="dim-val mono">8.2</div>
+          </div>
+          <div class="dim-row">
+            <div class="dim-name">追问应对</div>
+            <div class="dim-track"><div class="dim-bar" style="width:74%"></div></div>
+            <div class="dim-val mono">7.4</div>
+          </div>
+        </div>
+
+        <!-- 逐题回顾 -->
+        <div class="r-card">
+          <h3>逐题回顾 <span class="count mono">QUESTION BY QUESTION</span></h3>
+
+          <details class="qa" open>
+            <summary>
+              <span class="q-no">1</span>
+              <span class="q-title">Spring Boot 自动装配原理</span>
+              <span class="q-score mono">8.5</span>
+            </summary>
+            <div class="q-body">
+              <section>
+                <h5>题目</h5>
+                <p>请讲讲 Spring Boot 的自动装配原理，它是怎么实现的？</p>
+              </section>
+              <section>
+                <h5>回答摘要</h5>
+                <p>通过 @EnableAutoConfiguration 扫描 META-INF/spring.factories，结合 @ConditionalOnClass 等条件注解按需加载。</p>
+              </section>
+              <section>
+                <h5>面试官评语</h5>
+                <p class="q-comment">核心机制讲得清楚。但缺少对 @Import 与 ImportSelector 的展开，对 Spring Boot 3 改用 AutoConfiguration.imports 的变化不熟，建议补齐。</p>
+              </section>
+            </div>
+          </details>
+
+          <details class="qa">
+            <summary>
+              <span class="q-no">2</span>
+              <span class="q-title">Redis 缓存穿透 / 击穿 / 雪崩</span>
+              <span class="q-score mono">7.0</span>
+            </summary>
+            <div class="q-body">
+              <section>
+                <h5>面试官评语</h5>
+                <p class="q-comment">概念区分准确、方案标准。但被追问"布隆过滤器误判率如何权衡"时回答模糊，对底层 bitmap 与哈希函数数量计算理解不深。</p>
+              </section>
+            </div>
+          </details>
+
+          <details class="qa">
+            <summary>
+              <span class="q-no">3</span>
+              <span class="q-title">MySQL 索引下推与最左前缀</span>
+              <span class="q-score mono">6.5</span>
+            </summary>
+            <div class="q-body">
+              <section>
+                <h5>面试官评语</h5>
+                <p class="q-comment">最左前缀答对一半；ICP 停留在名字层面，没说清"存储引擎层过滤 vs 服务层过滤"的本质差异，MySQL 8 的 Skip Scan 完全没提。</p>
+              </section>
+            </div>
+          </details>
+
+          <details class="qa">
+            <summary>
+              <span class="q-no">4</span>
+              <span class="q-title">JVM G1 与 Mixed GC</span>
+              <span class="q-score mono">7.2</span>
+            </summary>
+            <div class="q-body">
+              <section>
+                <h5>面试官评语</h5>
+                <p class="q-comment">Region 划分与 Remembered Set 讲得清，但 Mixed GC 触发条件（InitiatingHeapOccupancyPercent）记忆模糊。</p>
+              </section>
+            </div>
+          </details>
+
+          <details class="qa">
+            <summary>
+              <span class="q-no">5</span>
+              <span class="q-title">线程池参数与拒绝策略</span>
+              <span class="q-score mono">8.8</span>
+            </summary>
+            <div class="q-body">
+              <section>
+                <h5>面试官评语</h5>
+                <p class="q-comment">本场最佳。参数、队列选择、拒绝策略都能结合项目场景，被追问阿里规约为何禁用 Executors 工厂方法时答到了 OOM 风险。</p>
+              </section>
+            </div>
+          </details>
+
+          <details class="qa">
+            <summary>
+              <span class="q-no">6</span>
+              <span class="q-title">Seata AT 模式与全局锁</span>
+              <span class="q-score mono">6.0</span>
+            </summary>
+            <div class="q-body">
+              <section>
+                <h5>面试官评语</h5>
+                <p class="q-comment">能说出基于 undo_log 的两阶段提交，但被追问"全局锁如何保证写隔离"时卡在 TC / TM / RM 交互时序。</p>
+              </section>
+            </div>
+          </details>
+
+          <details class="qa">
+            <summary>
+              <span class="q-no">7</span>
+              <span class="q-title">Spring 循环依赖与三级缓存</span>
+              <span class="q-score mono">8.0</span>
+            </summary>
+          </details>
+
+          <details class="qa">
+            <summary>
+              <span class="q-no">8</span>
+              <span class="q-title">RocketMQ 顺序消息与幂等</span>
+              <span class="q-score mono">7.5</span>
+            </summary>
+          </details>
+
+          <details class="qa">
+            <summary>
+              <span class="q-no">9</span>
+              <span class="q-title">技术选型：Milvus vs PGVector</span>
+              <span class="q-score mono">8.3</span>
+            </summary>
+          </details>
+
+          <details class="qa">
+            <summary>
+              <span class="q-no">10</span>
+              <span class="q-title">高并发限流方案</span>
+              <span class="q-score mono">7.0</span>
+            </summary>
+          </details>
+        </div>
+
+        <!-- 改进建议 -->
+        <div class="r-card">
+          <h3>改进建议 <span class="count mono">ACTION ITEMS</span></h3>
+          <ul class="sug-list">
+            <li><span class="n">1</span><span><b>MySQL 索引原理</b>：最左前缀 + ICP + Skip Scan 是高频考点，结合 EXPLAIN 实跑 5 个 case 加深理解</span></li>
+            <li><span class="n">2</span><span><b>分布式组件底层</b>：Seata 全局锁、Sentinel LeapArray 属于"用过但说不清"，各整理一页小抄</span></li>
+            <li><span class="n">3</span><span><b>追问深度训练</b>：每个标准答案预埋一个"底层追问"，练习从概念退到数据结构与源码层</span></li>
+          </ul>
+          <div style="margin-top:16px; padding:12px 14px; border:1px dashed var(--border-2); border-radius:9px; font-size:12.5px; color:var(--text-2);">
+            <b style="color:var(--text);">继续保持：</b>回答结构清晰（首先 / 其次 / 最后）；开放题能结合自身项目真实选型，是明确加分项。
+          </div>
+        </div>
+
+        <div class="r-foot mono">
+          <span>TOKEN 12,847</span>
+          <span>DURATION 32:18</span>
+          <span>MODEL qwen-plus</span>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="mockup-nav"><a href="index.html">
+  <svg class="ic" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg>
+  返回导航</a></div>
+</body>
+</html>

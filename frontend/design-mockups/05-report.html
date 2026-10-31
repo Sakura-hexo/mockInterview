@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>05 复盘报告页 - AI 模拟面试平台</title>
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-brand">AI 模拟面试</div>
+    <button class="new-chat-btn">＋ 新建面试</button>
+
+    <div class="sidebar-section">已结束</div>
+    <div class="conversation-list">
+      <div class="conversation-item active">
+        <div class="conversation-title">
+          <span>Java 后端 · 困难</span>
+          <span class="badge badge-green">已出报告</span>
+        </div>
+        <div class="conversation-meta"><span>10题 · 综合 7.8</span><span>昨天</span></div>
+      </div>
+      <div class="conversation-item">
+        <div class="conversation-title"><span>Java 后端 · 简单</span><span class="badge badge-green">已出报告</span></div>
+        <div class="conversation-meta"><span>5题 · 综合 8.4</span><span>3天前</span></div>
+      </div>
+      <div class="conversation-item">
+        <div class="conversation-title"><span>Java 后端 · 中等</span><span class="badge badge-green">已出报告</span></div>
+        <div class="conversation-meta"><span>10题 · 综合 6.5</span><span>1周前</span></div>
+      </div>
+    </div>
+
+    <div class="sidebar-footer"><span>本机模式</span><button>退出</button></div>
+  </aside>
+
+  <main class="main">
+    <header class="chat-header">
+      <div class="title">复盘报告 · Java 后端 · 困难</div>
+      <div class="actions">
+        <a class="btn btn-ghost" href="04-interview.html" style="text-decoration:none;">查看消息记录</a>
+      </div>
+    </header>
+
+    <div class="main-body">
+      <div class="report-container">
+
+        <!-- 综合评分卡 -->
+        <div class="report-header-card">
+          <div>
+            <h1>面试复盘报告</h1>
+            <div class="meta">
+              <span>2026-10-28 14:30</span>
+              <span>用时 32 分 18 秒</span>
+              <span>共 10 题</span>
+            </div>
+          </div>
+          <div class="score-display">
+            <div class="score-number">7.8</div>
+            <div class="score-label">综合评分 / 10</div>
+          </div>
+        </div>
+
+        <!-- 四维评分 -->
+        <div class="report-card">
+          <h3>能力维度评分</h3>
+          <div class="score-row">
+            <div class="score-name">综合表现</div>
+            <div class="score-bar-wrap"><div class="score-bar" style="width:78%"></div></div>
+            <div class="score-value">7.8</div>
+          </div>
+          <div class="score-row">
+            <div class="score-name">技术深度</div>
+            <div class="score-bar-wrap"><div class="score-bar" style="width:75%"></div></div>
+            <div class="score-value">7.5</div>
+          </div>
+          <div class="score-row">
+            <div class="score-name">表达沟通</div>
+            <div class="score-bar-wrap"><div class="score-bar" style="width:82%"></div></div>
+            <div class="score-value">8.2</div>
+          </div>
+          <div class="score-row">
+            <div class="score-name">追问应对</div>
+            <div class="score-bar-wrap"><div class="score-bar" style="width:74%"></div></div>
+            <div class="score-value">7.4</div>
+          </div>
+        </div>
+
+        <!-- 逐题回顾 -->
+        <div class="report-card">
+          <h3>逐题回顾（10 题）</h3>
+
+          <details class="report-accordion" open>
+            <summary>
+              <span class="q-num">1</span>
+              <span class="q-title">Spring Boot 自动装配原理</span>
+              <span class="q-score">8.5 / 10</span>
+            </summary>
+            <div class="q-body">
+              <section>
+                <h5>题目</h5>
+                <p>请你说说 Spring Boot 的自动装配原理，它是怎么实现的？</p>
+              </section>
+              <section>
+                <h5>你的回答摘要</h5>
+                <p>通过 @EnableAutoConfiguration 扫描 META-INF/spring.factories，结合 @ConditionalOnClass 等条件注解按需加载。</p>
+              </section>
+              <section>
+                <h5>面试官评语</h5>
+                <div class="q-comment">
+                  核心机制讲得清楚，能提到 spring.factories 和条件注解。但缺少对 @Import 和 ImportSelector 的深入展开，对 Spring Boot 3 的 AutoConfiguration.imports 新文件路径不熟悉，建议补充。
+                </div>
+              </section>
+            </div>
+          </details>
+
+          <details class="report-accordion">
+            <summary>
+              <span class="q-num">2</span>
+              <span class="q-title">Redis 缓存穿透 / 击穿 / 雪崩</span>
+              <span class="q-score">7.0 / 10</span>
+            </summary>
+            <div class="q-body">
+              <section>
+                <h5>题目</h5>
+                <p>说说缓存穿透、缓存击穿、缓存雪崩的区别，以及项目里怎么解决的？</p>
+              </section>
+              <section>
+                <h5>你的回答摘要</h5>
+                <p>穿透用布隆过滤器拦截非法 key；击穿用互斥锁重建缓存；雪崩设置过期时间加随机值。</p>
+              </section>
+              <section>
+                <h5>面试官评语</h5>
+                <div class="q-comment">
+                  概念区分准确，方案也是标准答案。但被追问"布隆过滤器误判率如何权衡"时回答较模糊，暴露出对布隆过滤器底层 bitmap 与 hash 函数数量计算理解不深。
+                </div>
+              </section>
+            </div>
+          </details>
+
+          <details class="report-accordion">
+            <summary>
+              <span class="q-num">3</span>
+              <span class="q-title">MySQL 索引下推与最左前缀</span>
+              <span class="q-score">6.5 / 10</span>
+            </summary>
+            <div class="q-body">
+              <section>
+                <h5>题目</h5>
+                <p>解释索引下推（ICP）和最左前缀原则，联合索引 (a,b,c) 在 where a=1 and c=3 中能用到哪些列？</p>
+              </section>
+              <section>
+                <h5>你的回答摘要</h5>
+                <p>最左前缀要求从最左列开始匹配，跳列会失效。联合索引中 a 能用，c 不能。</p>
+              </section>
+              <section>
+                <h5>面试官评语</h5>
+                <div class="q-comment">
+                  最左前缀答对了一半，但对 ICP 的理解停留在名字层面，没说清"在存储引擎层过滤 vs 在服务层过滤"的本质差异。MySQL 8 的 Skip Scan 完全没提到。
+                </div>
+              </section>
+            </div>
+          </details>
+
+          <details class="report-accordion">
+            <summary>
+              <span class="q-num">4</span>
+              <span class="q-title">JVM G1 垃圾回收器与 Mixed GC</span>
+              <span class="q-score">7.2 / 10</span>
+            </summary>
+            <div class="q-body">
+              <section>
+                <h5>面试官评语</h5>
+                <div class="q-comment">
+                  能讲清 Region 划分和 Remembered Set 的作用，但对 Mixed GC 触发条件（-XX:InitiatingHeapOccupancyPercent）记忆模糊，建议过一遍 G1 调参实战。
+                </div>
+              </section>
+            </div>
+          </details>
+
+          <details class="report-accordion">
+            <summary>
+              <span class="q-num">5</span>
+              <span class="q-title">线程池参数与拒绝策略</span>
+              <span class="q-score">8.8 / 10</span>
+            </summary>
+            <div class="q-body">
+              <section>
+                <h5>面试官评语</h5>
+                <div class="q-comment">
+                  本题答得最好。核心/最大线程数、阻塞队列选择、四种拒绝策略都能结合项目场景说明，被追问"为什么阿里规约禁止 Executors 工厂方法"时也答到了 OOM 风险点。
+                </div>
+              </section>
+            </div>
+          </details>
+
+          <details class="report-accordion">
+            <summary>
+              <span class="q-num">6</span>
+              <span class="q-title">分布式事务 Seata AT 模式</span>
+              <span class="q-score">6.0 / 10</span>
+            </summary>
+            <div class="q-body">
+              <section>
+                <h5>面试官评语</h5>
+                <div class="q-comment">
+                  能说出 AT 模式基于 undo_log 的两阶段提交，但被追问"全局锁如何保证写隔离"时卡在 TC/TM/RM 三个角色的交互时序。
+                </div>
+              </section>
+            </div>
+          </details>
+
+          <details class="report-accordion">
+            <summary>
+              <span class="q-num">7</span>
+              <span class="q-title">Spring 循环依赖与三级缓存</span>
+              <span class="q-score">8.0 / 10</span>
+            </summary>
+            <div class="q-body">
+              <section>
+                <h5>面试官评语</h5>
+                <div class="q-comment">
+                  三级缓存各自的作用讲得清晰，能指出"为什么需要第三级缓存（AOP 代理提前暴露）"。构造器注入无法解决循环依赖也答对了。
+                </div>
+              </section>
+            </div>
+          </details>
+
+          <details class="report-accordion">
+            <summary>
+              <span class="q-num">8</span>
+              <span class="q-title">RocketMQ 顺序消息与消息幂等</span>
+              <span class="q-score">7.5 / 10</span>
+            </summary>
+            <div class="q-body">
+              <section>
+                <h5>面试官评语</h5>
+                <div class="q-comment">
+                  顺序消息答案标准（单队列 + 单线程消费），幂等用业务唯一键 + Redis 去重也合理。被追问"消息堆积如何排查"时缺少监控指标维度的思路。
+                </div>
+              </section>
+            </div>
+          </details>
+
+          <details class="report-accordion">
+            <summary>
+              <span class="q-num">9</span>
+              <span class="q-title">项目架构设计：为什么选 Milvus 而不是 PGVector</span>
+              <span class="q-score">8.3 / 10</span>
+            </summary>
+            <div class="q-body">
+              <section>
+                <h5>面试官评语</h5>
+                <div class="q-comment">
+                  能结合"稀疏 + 稠密混合检索原生支持"和"团队熟悉度"两个维度说明，体现出对技术选型的真实思考，不是背八股。这是本场最好的一道开放题。
+                </div>
+              </section>
+            </div>
+          </details>
+
+          <details class="report-accordion">
+            <summary>
+              <span class="q-num">10</span>
+              <span class="q-title">高并发下的限流方案</span>
+              <span class="q-score">7.0 / 10</span>
+            </summary>
+            <div class="q-body">
+              <section>
+                <h5>面试官评语</h5>
+                <div class="q-comment">
+                  能讲令牌桶 vs 漏桶差异。但被追问"Sentinel 滑动窗口统计的底层数据结构"时没答上来，建议结合 Sentinel 源码看 LeapArray 的实现。
+                </div>
+              </section>
+            </div>
+          </details>
+        </div>
+
+        <!-- 改进建议 -->
+        <div class="report-card">
+          <h3>改进建议</h3>
+          <div style="font-size:13px; line-height:1.8;">
+            <p><strong>重点补强方向（按优先级）：</strong></p>
+            <ol style="padding-left:20px; margin-top:8px;">
+              <li><strong>MySQL 索引原理</strong>：最左前缀 + ICP + Skip Scan 是高频考点，建议结合 <code>EXPLAIN</code> 实际跑 5 个 case 加深理解</li>
+              <li><strong>分布式组件底层</strong>：Seata 全局锁、Sentinel LeapArray 这类"用过但没说清"的点，建议各小抄</li>
+            </ol>
+            <p style="margin-top:12px;"><strong>继续保持：</strong></p>
+            <ul style="padding-left:20px; margin-top:8px;">
+              <li>表达结构清晰，能主动用"首先 / 其次 / 最后"</li>
+              <li>开放题能结合自己项目真实选型讲，这是加分项</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 元信息 -->
+        <div class="report-footer-meta">
+          <span>Token 消耗：12,847</span>
+          <span>面试时长：32 分 18 秒</span>
+          <span>模型：qwen-plus</span>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="mockup-nav"><a href="index.html">← 返回设计稿导航</a></div>
+</body>
+</html>
