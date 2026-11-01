@@ -23,12 +23,18 @@ import com.sakura.interview.session.SessionStore;
 import com.sakura.interview.tool.QuestionBankTool;
 import com.sakura.interview.tool.QuestionBankTool;
 import com.zaxxer.hikari.HikariDataSource;
+import io.github.resilience4j.micrometer.tagged.TaggedCircuitBreakerMetrics;
+import io.github.resilience4j.ratelimiter.RateLimiterConfig;
+import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -128,6 +134,25 @@ public class AppConfig {
         return new TransactionTemplate(txManager);
     }
 
+    /** 业务指标接线：模型调用计时与熔断器状态挂到统一注册表。 */
+    @Bean
+    public MeterRegistryCustomizer<MeterRegistry> metricsBinding() {
+        return registry -> {
+            ChatModels.bindMeterRegistry(registry);
+            TaggedCircuitBreakerMetrics.ofCircuitBreakerRegistry(ChatModels.circuitBreakerRegistry())
+                    .bindTo(registry);
+        };
+    }
+
+    /** 每用户每分钟 10 轮对话的限流注册表。 */
+    @Bean
+    public RateLimiterRegistry rateLimiterRegistry() {
+        return RateLimiterRegistry.of(RateLimiterConfig.custom()
+                .limitForPeriod(10)
+                .limitRefreshPeriod(Duration.ofMinutes(1))
+                .build());
+    }
+
     @Bean
     public ReportGenerator reportGenerator(StructuredOutputInvoker mainInvoker,
                                             SessionStore sessionStore) {
@@ -136,8 +161,9 @@ public class AppConfig {
 
     @Bean(initMethod = "start", destroyMethod = "close")
     public ReportWorker reportWorker(MySqlReportStore reportStore, ReportGenerator generator,
-                                     SessionStore sessionStore, TransactionTemplate txTemplate) {
-        return new ReportWorker(reportStore, generator, sessionStore, txTemplate);
+                                     SessionStore sessionStore, TransactionTemplate txTemplate,
+                                     MeterRegistry meterRegistry) {
+        return new ReportWorker(reportStore, generator, sessionStore, txTemplate, meterRegistry);
     }
 
     /** 压缩后台单线程：天然串行避免同会话摘要互相覆盖，守护线程不阻塞退出。 */
@@ -177,8 +203,10 @@ public class AppConfig {
 
     @Bean
     public ChatStreamService chatStreamService(Supervisor supervisor, SessionStore sessionStore,
-                                               ExecutorService chatStreamExecutor) {
-        return new ChatStreamService(supervisor, sessionStore, chatStreamExecutor);
+                                           ExecutorService chatStreamExecutor, MeterRegistry meterRegistry,
+                                           RateLimiterRegistry rateLimiters) {
+        return new ChatStreamService(supervisor, sessionStore, chatStreamExecutor,
+                meterRegistry, rateLimiters);
     }
 
     @Bean
