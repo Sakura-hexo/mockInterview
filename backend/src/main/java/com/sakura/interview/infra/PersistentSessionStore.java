@@ -89,6 +89,11 @@ public final class PersistentSessionStore implements SessionStore, AutoCloseable
     }
 
     @Override
+    public int countQuestions(String sessionId) {
+        return mysql.countQuestions(sessionId);
+    }
+
+    @Override
     public Optional<SessionSummary> loadSummary(String sessionId) {
         try {
             String cached = redis.readSummary(sessionId);

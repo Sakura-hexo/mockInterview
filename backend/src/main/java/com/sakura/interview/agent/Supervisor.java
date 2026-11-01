@@ -110,10 +110,16 @@ public final class Supervisor {
             case REPORT -> new SupervisorReply(intent, reportService.handle(sessionId), 0, 0, null);
             case CHAT -> agentTurn(state, Intent.CHAT,
                     AgentRuntime.ROLE_CHAT, Prompts.CHAT_SYSTEM, userText, listener);
-            case INTERVIEW -> agentTurn(state, Intent.INTERVIEW,
-                    AgentRuntime.ROLE_INTERVIEWER,
-                    Prompts.interviewerSystem(state, candidatesFor(state, userText)),
-                    userText, listener);
+            case INTERVIEW -> {
+                // 问满计划题数后收尾：不再预检索候选题，提示词切换为总结引导
+                int asked = store.countQuestions(sessionId);
+                String candidates = asked < state.config().questionCount()
+                        ? candidatesFor(state, userText) : "";
+                yield agentTurn(state, Intent.INTERVIEW,
+                        AgentRuntime.ROLE_INTERVIEWER,
+                        Prompts.interviewerSystem(state, asked, candidates),
+                        userText, listener);
+            }
         };
     }
 

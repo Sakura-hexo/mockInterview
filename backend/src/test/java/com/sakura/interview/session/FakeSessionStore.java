@@ -87,6 +87,14 @@ public final class FakeSessionStore implements SessionStore {
     }
 
     @Override
+    public int countQuestions(String sessionId) {
+        return (int) messages.getOrDefault(sessionId, List.of()).stream()
+                .filter(message -> "interviewer".equals(message.role())
+                        && ("QUESTION".equals(message.action()) || "NEXT".equals(message.action())))
+                .count();
+    }
+
+    @Override
     public List<SessionOverview> listOverviews(Long userId, int page, int size) {
         return sessions.values().stream()
                 .filter(state -> userId == null || userId.equals(state.userId()))

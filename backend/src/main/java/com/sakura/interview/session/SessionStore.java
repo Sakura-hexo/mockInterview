@@ -39,6 +39,9 @@ public interface SessionStore {
     /** 全量消息升序，供报告评估与会话详情整体读取（不受窗口限制）。 */
     List<StoredMessage> readAll(String sessionId);
 
+    /** 已问题数：interviewer 角色且 action 为 QUESTION 或 NEXT 的消息数（开场白计入）。 */
+    int countQuestions(String sessionId);
+
     /** 按 userId 分页的历史会话概览，倒序；userId 为 null 时返回全部（CLI 自检用）。 */
     List<SessionOverview> listOverviews(Long userId, int page, int size);
 
