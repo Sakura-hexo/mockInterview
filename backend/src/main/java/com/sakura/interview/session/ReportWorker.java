@@ -1,15 +1,19 @@
 package com.sakura.interview.session;
 
 import com.google.gson.Gson;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.transaction.support.TransactionOperations;
 
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 报告 Worker：虚拟线程单并发，固定间隔轮询任务表领任务执行。
  * 启动时先把残留 RUNNING 重置回 GENERATING（进程重启恢复）；
  * 单任务异常经 fail 记账不外泄，绝不中断轮询。
- * complete 与会话推进 REPORTED 两写可注入 TransactionOperations 同事务提交。
+ * complete 与会话推进 REPORTED 两写可注入 TransactionOperations 同事务提交；
+ * 任务耗时经可注入的 MeterRegistry 记 report_task_seconds。
  */
 public final class ReportWorker implements AutoCloseable {
 
@@ -20,38 +24,48 @@ public final class ReportWorker implements AutoCloseable {
     private final ReportGenerator generator;
     private final SessionStore sessionStore;
     private final TransactionOperations txOps;
+    private final MeterRegistry meterRegistry;
     private final Duration pollInterval;
     private final Gson gson = new Gson();
     private final Thread thread;
     private volatile boolean running = true;
 
     public ReportWorker(ReportStore reportStore, ReportGenerator generator) {
-        this(reportStore, generator, null, null, DEFAULT_POLL_INTERVAL);
+        this(reportStore, generator, null, null, null, DEFAULT_POLL_INTERVAL);
     }
 
     /** Web 装配用：完成任务时把会话推进到 REPORTED；sessionStore 为空则跳过（CLI 口径）。 */
     public ReportWorker(ReportStore reportStore, ReportGenerator generator,
                         SessionStore sessionStore) {
-        this(reportStore, generator, sessionStore, null, DEFAULT_POLL_INTERVAL);
+        this(reportStore, generator, sessionStore, null, null, DEFAULT_POLL_INTERVAL);
     }
 
     /** Web 装配用：两写同事务提交（注入 TransactionTemplate）。 */
     public ReportWorker(ReportStore reportStore, ReportGenerator generator,
                         SessionStore sessionStore, TransactionOperations txOps) {
-        this(reportStore, generator, sessionStore, txOps, DEFAULT_POLL_INTERVAL);
+        this(reportStore, generator, sessionStore, txOps, null, DEFAULT_POLL_INTERVAL);
+    }
+
+    /** Web 装配用：两写同事务并记录任务耗时。 */
+    public ReportWorker(ReportStore reportStore, ReportGenerator generator,
+                        SessionStore sessionStore, TransactionOperations txOps,
+                        MeterRegistry meterRegistry) {
+        this(reportStore, generator, sessionStore, txOps, meterRegistry, DEFAULT_POLL_INTERVAL);
     }
 
     /** 测试用：可注入更短的轮询间隔。 */
     ReportWorker(ReportStore reportStore, ReportGenerator generator, Duration pollInterval) {
-        this(reportStore, generator, null, null, pollInterval);
+        this(reportStore, generator, null, null, null, pollInterval);
     }
 
     private ReportWorker(ReportStore reportStore, ReportGenerator generator,
-                        SessionStore sessionStore, TransactionOperations txOps, Duration pollInterval) {
+                        SessionStore sessionStore, TransactionOperations txOps,
+                        MeterRegistry meterRegistry, Duration pollInterval) {
         this.reportStore = reportStore;
         this.generator = generator;
         this.sessionStore = sessionStore;
         this.txOps = txOps;
+        this.meterRegistry = meterRegistry;
         this.pollInterval = pollInterval;
         this.thread = Thread.ofVirtual().name("report-worker").unstarted(this::loop);
     }
@@ -82,6 +96,7 @@ public final class ReportWorker implements AutoCloseable {
     }
 
     private void process(ReportTask task) {
+        long start = System.nanoTime();
         try {
             InterviewReport report = generator.generate(task.sessionId());
             // 两写同事务：中途崩溃不留"报告完成但会话停在 ENDED"的漂移
@@ -99,6 +114,11 @@ public final class ReportWorker implements AutoCloseable {
         } catch (RuntimeException e) {
             System.err.printf("[报告Worker] 任务 %s 失败：%s%n", task.taskId(), e.getMessage());
             reportStore.fail(task.taskId(), e.getMessage());
+        } finally {
+            if (meterRegistry != null) {
+                Timer.builder("report_task_seconds").register(meterRegistry)
+                        .record(System.nanoTime() - start, TimeUnit.NANOSECONDS);
+            }
         }
     }
 

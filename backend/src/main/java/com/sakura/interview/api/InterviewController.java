@@ -116,7 +116,7 @@ public final class InterviewController {
         if (!SessionState.IN_PROGRESS.equals(state.status())) {
             throw ApiException.conflict("面试未开始或已结束，无法继续对话");
         }
-        return chatStream.chat(sessionId, content);
+        return chatStream.chat(sessionId, userId, content);
     }
 
     /** 4.4 结束面试：幂等，已有任务直接回状态，失败任务自动重提。 */

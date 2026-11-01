@@ -32,6 +32,10 @@ public final class ApiException extends RuntimeException {
         return new ApiException(413, message);
     }
 
+    public static ApiException tooManyRequests(String message) {
+        return new ApiException(429, message);
+    }
+
     public int httpStatus() {
         return httpStatus;
     }

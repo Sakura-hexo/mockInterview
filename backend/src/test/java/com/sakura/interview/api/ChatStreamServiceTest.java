@@ -10,8 +10,12 @@ import com.sakura.interview.session.FakeSessionStore;
 import com.sakura.interview.session.ReportService;
 import com.sakura.interview.session.SessionState;
 import com.sakura.interview.session.StoredMessage;
+import io.github.resilience4j.ratelimiter.RateLimiterConfig;
+import io.github.resilience4j.ratelimiter.RateLimiterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -162,5 +166,36 @@ class ChatStreamServiceTest {
         queued.forEach(Runnable::run); // 跑完释放 in-flight
         guarded.chat(sessionId, "第三条");
         assertThat(queued).hasSize(2);
+    }
+
+    @Test
+    void 同用户超限被限流拒绝返回429() {
+        String sessionId = supervisor.createSession(null, "我的简历", "招 Java 后端", null).sessionId();
+        sessions.updateStatus(sessionId, SessionState.IN_PROGRESS);
+        RateLimiterRegistry onePerMinute = RateLimiterRegistry.of(RateLimiterConfig.custom()
+                .limitForPeriod(1)
+                .limitRefreshPeriod(Duration.ofMinutes(1))
+                .build());
+        ChatStreamService limited = new ChatStreamService(supervisor, sessions, Runnable::run,
+                null, onePerMinute);
+
+        limited.chat(sessionId, 42L, "第一条");
+        assertThatThrownBy(() -> limited.chat(sessionId, 42L, "第二条"))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("发送过于频繁");
+    }
+
+    @Test
+    void 轮次完成后记录业务指标() {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        ChatStreamService monitored = new ChatStreamService(supervisor, sessions, Runnable::run,
+                registry, null);
+        String sessionId = supervisor.createSession(null, "我的简历", "招 Java 后端", null).sessionId();
+        sessions.updateStatus(sessionId, SessionState.IN_PROGRESS);
+
+        monitored.runTurn(new Recording(), sessionId, "我先自我介绍");
+
+        assertThat(registry.get("interview_turn_seconds").tag("action", "QUESTION")
+                .timer().count()).isEqualTo(1);
     }
 }
