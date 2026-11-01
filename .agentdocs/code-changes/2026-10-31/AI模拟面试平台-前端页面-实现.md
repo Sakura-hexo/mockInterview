@@ -287,3 +287,17 @@ public class SpaForwardController {
 ### 提交记录
 
 - F7 提交于 `frontend` 分支（构建目录集成 + gitignore + 交接文档）；"8080 直接服务 + 刷新不 404"的最终验收待后端会话重建后补录
+
+## 迭代二 2026-11-01 活动流跨轮重复修复
+
+用户实测反馈：面试页 Agent 活动流出现"interviewer 生成回复中… / 回复完成"两轮叠加共四条，且旧状态一直挂着不变。
+
+**根因**：`useInterviewStream` 的 `pushActivity` 只做"保留最近 4 条"的截断，`send()` 开启新一轮流式时不清空上一轮条目——上一轮的"生成回复中…/回复完成"原样留存，与本轮新推的成对叠加。另发现页面方案 4.2 规定的"更旧淡出"当时漏实现，所有条目同等亮度，最新状态不突出。
+
+**修复**：
+
+1. `useInterviewStream.ts`：`send()` 轮次开始时 `setActivities([])` 重置，活动流只反映当前轮
+2. `ActivityStream.tsx`：非最新条目追加 `faded` 类（补齐页面方案 4.2 的"更旧淡出"）
+3. `InterviewPage.css`：`.activity-item.faded` 半透明样式
+
+验证：tsc 零报错、单测 19/19 过；行为验证依赖用户在真实后端会话继续作答观察（HMR 即时生效）。

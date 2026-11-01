@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ActivityItem } from '../hooks/useInterviewStream';
 
-// Agent 活动流：气泡下方灰色小字，最近 4 条、可折叠（页面方案 4.2）
+// Agent 活动流：气泡下方灰色小字，最近 4 条、更旧淡出、可折叠（页面方案 4.2）
 // P0 事件较少（发送/生成/失败），标题为纯文字
 
 export default function ActivityStream({ items }: { items: ActivityItem[] }) {
@@ -16,8 +16,11 @@ export default function ActivityStream({ items }: { items: ActivityItem[] }) {
         </button>
         {open && (
           <div className="activity-items">
-            {items.map((item) => (
-              <div key={item.id} className="activity-item">
+            {items.map((item, i) => (
+              <div
+                key={item.id}
+                className={`activity-item${i < items.length - 1 ? ' faded' : ''}`}
+              >
                 <span className={`activity-dot dot-${item.state}`} />
                 <span className="activity-who">{item.who}</span>
                 <span>{item.text}</span>
