@@ -43,6 +43,7 @@ mvn compile exec:java     # 命令行最小面试官：只依赖模型密钥，�
 # MySQL 8 与 Redis 需在运行（本机或 docker compose up -d mysql），首启自动建表与迁移
 MYSQL_USERNAME=root MYSQL_PASSWORD=本机密码 mvn spring-boot:run   # 默认 8080 端口
 
+# 角色分级：辅助调用（摘要路由解析等）走 OPENAI_MODEL_FAST 指定的快档模型，未配置回退主档
 # 前端开发模式（另开终端）：vite 5173 起，/api 代理到 8080
 cd frontend && npm install && npm run dev
 # 生产部署：前端构建产物直接落 Spring Boot static（零拷贝，同 8080 服务）
@@ -52,6 +53,13 @@ cd frontend && npm run build
 mvn compile exec:java -Dexec.mainClass=com.sakura.interview.session.SessionCliRunner -Dexec.args="selfcheck"   # 持久化全链路自检
 mvn compile exec:java -Dexec.mainClass=com.sakura.interview.session.SessionCliRunner -Dexec.args="reset-data"  # 清空业务数据（账号保留）
 
-# 初版部署（步骤 8、9）：一键启动全部容器
+# 开发期：只起中间件容器（MySQL 3308、Redis 6380、Milvus 19530），应用跑本机
 docker compose up -d
+
+# 监控栈（可选）：Prometheus 抓 /actuator/prometheus，Grafana 3000 预置面板（admin/admin）
+docker compose --profile monitoring up -d
+
+# 初版部署：宿主机构建镜像后起完整栈（应用容器 + 中间件 + 监控）
+mvn package -DskipTests
+docker compose --profile deploy --profile monitoring up -d
 ```

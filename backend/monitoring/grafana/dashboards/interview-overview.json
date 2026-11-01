@@ -1,0 +1,96 @@
+{
+  "title": "AI 模拟面试平台概览",
+  "uid": "interview-overview",
+  "schemaVersion": 39,
+  "editable": true,
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "面试轮时延（按题型 p50 与 p95）",
+      "datasource": { "type": "prometheus", "uid": "prom" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, action) (rate(interview_turn_seconds_bucket[5m])))",
+          "legendFormat": "{{action}} p95"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum by (le, action) (rate(interview_turn_seconds_bucket[5m])))",
+          "legendFormat": "{{action}} p50"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "LLM 调用速率（按档位）",
+      "datasource": { "type": "prometheus", "uid": "prom" },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+      "targets": [
+        {
+          "expr": "sum by (tier) (rate(llm_call_seconds_count[5m]))",
+          "legendFormat": "{{tier}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "LLM 失败与熔断拒绝（每 5 分钟增量）",
+      "datasource": { "type": "prometheus", "uid": "prom" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom" } },
+      "targets": [
+        {
+          "expr": "sum by (outcome) (increase(llm_call_seconds_count{outcome!=\"ok\"}[5m]))",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "熔断器状态（1 关闭 2 打开 3 半开）",
+      "datasource": { "type": "prometheus", "uid": "prom" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "targets": [
+        {
+          "expr": "resilience4j_circuitbreaker_state{name=~\"llm-.*\"}",
+          "legendFormat": "{{name}}"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 8 }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "进行中的对话轮",
+      "datasource": { "type": "prometheus", "uid": "prom" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "targets": [{ "expr": "sse_active", "legendFormat": "active" }],
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 8 }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "报告生成时延 p95",
+      "datasource": { "type": "prometheus", "uid": "prom" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(report_task_seconds_bucket[5m])) by (le))",
+          "legendFormat": "report p95"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 }
+    }
+  ]
+}
