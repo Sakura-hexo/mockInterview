@@ -30,24 +30,28 @@ mockInterview/
 
 ## 技术栈（后端）
 
-Java 21、Spring Boot 3.4、AgentScope-Java 2.0、MySQL 8（容器映射 3307）、Redis 7（容器映射 6380）、Milvus 2.6、Resilience4j、Prometheus 加 Grafana、Docker Compose、通义千问（DashScope）
+Java 21、Spring Boot 3.4、AgentScope-Java 2.0、MySQL 8（容器映射 3308）、Redis 7、Milvus 2.6、Resilience4j（步骤 8）、Prometheus 加 Grafana（步骤 8）、Docker Compose、通义千问（DashScope）
 
 ## 快速开始（后端）
 
 ```bash
 cd backend
-cp .env.example .env      # 填入 DASHSCOPE_API_KEY 与 APP_TOKEN
+cp .env.example .env      # 填入模型密钥（如 DASHSCOPE_API_KEY 或 OPENAI_API_KEY）
 mvn compile exec:java     # 命令行最小面试官：只依赖模型密钥，无需任何中间件
 
-# 开发模式：中间件用本机服务（MySQL 3306 / Redis 6379）
-# 本机 MySQL 需先建 interview 库，凭据经环境变量传入
-MYSQL_USERNAME=root MYSQL_PASSWORD=本机密码 mvn spring-boot:run
+# Web 完整服务：注册登录在页面完成，无需配置令牌
+# MySQL 8 与 Redis 需在运行（本机或 docker compose up -d mysql），首启自动建表与迁移
+MYSQL_USERNAME=root MYSQL_PASSWORD=本机密码 mvn spring-boot:run   # 默认 8080 端口
 
-# 会话持久化（步骤 5 起）：建表 + 全链路自检（需 MySQL 与 Redis 在运行）
-mvn compile exec:java -Dexec.mainClass=com.sakura.interview.session.SessionCliRunner -Dexec.args="init-db"
-mvn compile exec:java -Dexec.mainClass=com.sakura.interview.session.SessionCliRunner -Dexec.args="selfcheck"
+# 前端开发模式（另开终端）：vite 5173 起，/api 代理到 8080
+cd frontend && npm install && npm run dev
+# 生产部署：前端构建产物直接落 Spring Boot static（零拷贝，同 8080 服务）
+cd frontend && npm run build
+
+# 运维子命令
+mvn compile exec:java -Dexec.mainClass=com.sakura.interview.session.SessionCliRunner -Dexec.args="selfcheck"   # 持久化全链路自检
+mvn compile exec:java -Dexec.mainClass=com.sakura.interview.session.SessionCliRunner -Dexec.args="reset-data"  # 清空业务数据（账号保留）
 
 # 初版部署（步骤 8、9）：一键启动全部容器
 docker compose up -d
-# 开发期仅需 Milvus 时（步骤 2 起）：docker compose up -d milvus
 ```

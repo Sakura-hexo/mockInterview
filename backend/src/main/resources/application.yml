@@ -1,14 +1,16 @@
 spring:
   application:
     name: ai-mock-interview
-  datasource:
-    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/interview?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai}
-    username: ${MYSQL_USERNAME:root}
-    password: ${MYSQL_PASSWORD:interview123}
+  # 数据源不在本文件配置：后端一律经 EnvKeys 读 .env 或环境变量（单一事实源）
+  # actuator 的 db 健康检查复用 AppConfig 装配的连接池
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
 
 server:
   port: 8080
@@ -21,7 +23,7 @@ management:
   endpoint:
     health:
       show-details: always
-
-dashscope:
-  api-key: ${DASHSCOPE_API_KEY:}
-  model: ${DASHSCOPE_MODEL:qwen-plus}
+  health:
+    elasticsearch:
+      # Milvus SDK 传递依赖引入 ES 客户端，本项目无 Elasticsearch，关闭该健康检查
+      enabled: false

@@ -1,6 +1,9 @@
 package com.sakura.interview.session;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,10 +19,12 @@ public final class FakeSessionStore implements SessionStore {
     public final Map<String, List<StoredMessage>> messages = new HashMap<>();
     public final Map<String, SessionSummary> summaries = new HashMap<>();
     public final List<String> endedSessions = new ArrayList<>();
+    public final Map<String, String> statuses = new HashMap<>();
 
     @Override
     public void saveSession(SessionState state) {
         sessions.put(state.sessionId(), state);
+        statuses.putIfAbsent(state.sessionId(), state.status());
     }
 
     @Override
@@ -28,11 +33,23 @@ public final class FakeSessionStore implements SessionStore {
     }
 
     @Override
+    public void updateStatus(String sessionId, String status) {
+        statuses.put(sessionId, status);
+        SessionState state = sessions.get(sessionId);
+        if (state != null) {
+            sessions.put(sessionId, new SessionState(state.sessionId(), state.userId(),
+                    state.resumeDigest(), state.jdProfile(), state.config(), status,
+                    state.createdAt(), state.askedQuestions(), state.round()));
+        }
+    }
+
+    @Override
     public int appendMessage(String sessionId, String role, String text,
-                             long inputTokens, long outputTokens) {
+                             long inputTokens, long outputTokens, String action) {
         List<StoredMessage> list = messages.computeIfAbsent(sessionId, key -> new ArrayList<>());
         int seq = list.size() + 1;
-        list.add(new StoredMessage(seq, role, text, inputTokens, outputTokens));
+        list.add(new StoredMessage(seq, role, text, inputTokens, outputTokens, action,
+                DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(LocalDateTime.now())));
         return seq;
     }
 
@@ -59,6 +76,24 @@ public final class FakeSessionStore implements SessionStore {
     }
 
     @Override
+    public List<SessionOverview> listOverviews(Long userId, int page, int size) {
+        return sessions.values().stream()
+                .filter(state -> userId == null || userId.equals(state.userId()))
+                .sorted(Comparator.comparing(SessionState::sessionId))
+                .skip((long) Math.max(0, page - 1) * size)
+                .limit(size)
+                .map(SessionState::overview)
+                .toList();
+    }
+
+    @Override
+    public long countOverviews(Long userId) {
+        return sessions.values().stream()
+                .filter(state -> userId == null || userId.equals(state.userId()))
+                .count();
+    }
+
+    @Override
     public Optional<SessionSummary> loadSummary(String sessionId) {
         return Optional.ofNullable(summaries.get(sessionId));
     }
@@ -78,6 +113,7 @@ public final class FakeSessionStore implements SessionStore {
     @Override
     public void endSession(String sessionId) {
         endedSessions.add(sessionId);
+        updateStatus(sessionId, SessionState.ENDED);
     }
 
     @Override

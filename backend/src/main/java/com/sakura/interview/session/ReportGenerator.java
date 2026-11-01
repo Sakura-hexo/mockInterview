@@ -49,7 +49,7 @@ public final class ReportGenerator {
     }
 
     /** 配对规则：interviewer 为题目，其后连续 user 消息拼为回答；chat 跳过；首题前的 user 不计。 */
-    static List<QaPair> pairUp(List<StoredMessage> messages) {
+    public static List<QaPair> pairUp(List<StoredMessage> messages) {
         List<QaPair> pairs = new ArrayList<>();
         String question = null;
         StringBuilder answer = new StringBuilder();
