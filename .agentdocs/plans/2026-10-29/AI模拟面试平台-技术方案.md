@@ -4,6 +4,8 @@
 
 本方案承接同目录《AI模拟面试平台-需求文档》，回答"怎么实现"：架构、模块设计、安全设计、数据设计、接口清单、开发步骤拆分。需求边界以需求文档第 3 节为准，本文不重述。
 
+> 2026-11-01 修订：认证由 APP_TOKEN 单用户模式升级为账号密码会话模式（开源产品定位，原 4.2 预留升级路径转正），涉及 4.1、4.2、5、6、8、9 节。方案全文见 `.agentdocs/plans/2026-11-01/用户认证-账号密码改造方案.md`。
+
 ## 1 总体架构
 
 ```mermaid
@@ -140,7 +142,7 @@ flowchart LR
 
 ### 4.1 密钥管理 不落明文
 
-- `DASHSCOPE_API_KEY` 与 `APP_TOKEN` 只存 `.env` 文件，`.gitignore` 列入 `.env` 与 `application-local.yml`，仓库永不出现真实密钥
+- `DASHSCOPE_API_KEY` 等模型密钥只存 `.env` 文件，`.gitignore` 列入 `.env` 与 `application-local.yml`，仓库永不出现真实密钥；`APP_TOKEN` 已于 2026-11-01 认证改造中退役，不再属于密钥管理范畴
 - 仓库只提交 `.env.example` 模板：键名齐全、值为空
 - `application.yml` 用占位符引用环境变量，代码与配置零明文
 - Docker Compose 通过 `env_file` 注入，不把密钥写进编排文件
@@ -148,9 +150,10 @@ flowchart LR
 
 ### 4.2 接口鉴权
 
-- 本地单用户模式：随机生成 `APP_TOKEN` 存 `.env`，所有 `/api` 接口走 `Authorization Bearer` 校验，未带 token 返回 401
-- 目的：防本机其他程序或网页跨站调接口刷模型费用
-- 多用户升级路径：若扩展账号体系，升级为 Redis Token 模式——登录发放不透明 token 存 Redis、带 TTL 并对活跃请求续期，禁用账号即删 token 立即失效
+- 账号密码会话模式（2026-11-01 修订，开源产品定位）：`/api/auth/register` 与 `/api/auth/login` 发放 32 字节随机不透明 token，存 Redis `auth:session:{token}`，TTL 24 小时并对每次有效请求滑动续期；`/api/auth/logout` 删除会话即刻失效
+- 所有 `/api` 接口走 `Authorization Bearer` 会话令牌校验，未带或无效返回 401；拦截器校验通过后注入 userId，面试数据一律按 userId 过滤
+- 密码安全：BCrypt 散列落库、日志与出参不回显、登录接口同用户名连续失败 5 次锁 1 分钟；明确不做"前端先加密再传输"（伪安全），传输防线为部署侧 TLS——本地 localhost 回环无需，公网部署由 nginx 或 caddy 反代承担
+- 目的：防匿名调用刷模型费用；简历等敏感数据按用户边界隔离
 
 ### 4.3 提示注入防护
 
@@ -168,10 +171,12 @@ flowchart LR
 
 ```text
 MySQL:
-- t_session     面试会话: id 状态 配置 简历文本 JD文本 创建时间
+- t_user        用户: id 用户名唯一 密码BCrypt散列 创建时间
+- t_session     面试会话: id 用户id 状态 配置 简历文本 JD文本 创建时间
 - t_message     消息记录: id 会话id 角色 内容 token消耗 创建时间
 - t_report      复盘报告: id 会话id 评分 结论建议 创建时间
 Redis:
+- auth:session:{token}  登录会话令牌 TTL 24小时滑动续期
 - session:active:{id}   活跃会话消息列表 TTL 24小时
 - ctx:summary:{id}      压缩摘要
 - embed:cache:{hash}    Embedding 结果缓存
@@ -184,6 +189,9 @@ Milvus:
 详细入出参在《接口文档》中定义，此处定边界：
 
 ```text
+POST /api/auth/register         注册即登录 发放会话令牌
+POST /api/auth/login            登录 发放会话令牌
+POST /api/auth/logout           登出 删除会话
 POST /api/interviews               新建面试 简历 JD 配置
 POST /api/interviews/{id}/start    开始面试 返回第一题
 POST /api/interviews/{id}/chat     发送回答 SSE 流式返回
@@ -192,7 +200,7 @@ GET  /api/interviews/{id}/report   获取复盘报告
 GET  /api/interviews               历史会话列表
 GET  /api/interviews/{id}          会话详情
 GET  /actuator/prometheus          监控指标暴露
-全部 /api 接口需 Bearer Token 鉴权
+全部 /api 接口需 Bearer Token 鉴权 注册与登录两个发放入口除外
 ```
 
 ## 7 工程结构
@@ -250,9 +258,11 @@ flowchart LR
 | 8 | Resilience4j、异步化、Prometheus 加 Grafana | 手动断网触发熔断降级；Grafana 出监控面板 |
 | 9 | 评测集对比、压测记录、应用镜像化与 Compose 一键复现、README 完善 | 混合召回对比纯向量召回的命中率报告；P95 数据；compose up 后浏览器完整复现一场面试 |
 
+认证改造排期（2026-11-01）：后端 A1 与 A2（用户表、认证三接口、Redis 会话、拦截器注入 userId、面试数据按用户隔离）建议在步骤 7 动工前或与步骤 7 合并实施，避免 REST 接口按无用户模型开发后返工；步骤拆分与验证标准见 `.agentdocs/plans/2026-11-01/用户认证-账号密码改造方案.md` 第 4 节。前端 A3 已于 2026-11-01 完成。
+
 ## 9 明确不做
 
-微服务拆分、分布式部署、用户注册登录体系、移动端、华丽前端、语音作答（P1 后置）。
+微服务拆分、分布式部署、复杂权限体系（角色分级、邀请制、OAuth、找回密码）、移动端、华丽前端、语音作答（P1 后置）。基础用户注册登录已纳入 P0（2026-11-01 修订）。
 
 ## 10 已确认事项（2026-10-29 用户确认）
 

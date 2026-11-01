@@ -1,4 +1,4 @@
-/* 登录页样式（V1 定稿设计稿 01），由 LoginPage.tsx 引入 */
+/* 登录/注册页样式（V1 定稿设计稿 01 + 认证改造方案 2026-11-01），由 LoginPage.tsx 引入 */
 
 .login-page {
   display: flex;
@@ -46,7 +46,6 @@
   border: 1px solid #d5dbe6;
   border-radius: 8px;
   font-size: 14px;
-  font-family: Consolas, monospace;
 }
 
 .login-card input:focus {
@@ -54,7 +53,57 @@
   border-color: #3b82f6;
 }
 
-.login-card button {
+/* 登录/注册切换：文字平铺页签，激活态主蓝 */
+.mode-tabs {
+  display: flex;
+  border: 1px solid #d5dbe6;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mode-tabs button {
+  flex: 1;
+  padding: 9px;
+  background: #fff;
+  border: none;
+  font-size: 14px;
+  color: #7d8ba1;
+  cursor: pointer;
+}
+
+.mode-tabs button.active {
+  background: #3b82f6;
+  color: #fff;
+}
+
+/* 密码行：输入框 + 文字型显示切换（V1 风格禁图标） */
+.field-row {
+  display: flex;
+  gap: 8px;
+}
+
+.field-row input {
+  flex: 1;
+}
+
+.show-toggle {
+  white-space: nowrap;
+  padding: 0 14px;
+  background: #fff;
+  border: 1px solid #d5dbe6;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #555;
+  cursor: pointer;
+}
+
+.show-toggle:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+/* 主提交按钮：仅 submit 类型用主蓝，页签与显示切换保持中性色 */
+.login-card button[type='submit'] {
   padding: 11px;
   background: #3b82f6;
   color: #fff;
@@ -64,11 +113,11 @@
   cursor: pointer;
 }
 
-.login-card button:hover:not(:disabled) {
+.login-card button[type='submit']:hover:not(:disabled) {
   background: #2563eb;
 }
 
-.login-card button:disabled {
+.login-card button[type='submit']:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
