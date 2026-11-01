@@ -177,6 +177,44 @@ class SupervisorTest {
     }
 
     @Test
+    void 未问满时提示词保持出题规则() {
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "好的。下一题：谈谈 JVM。\n选题");
+        Wiring wiring = newSupervisor(runtime);
+        String sessionId = wiring.supervisor().createSession("我的简历", "招 Java 后端").sessionId();
+        wiring.sessions().appendMessage(sessionId, "interviewer", "开场白", 0, 0, "QUESTION");
+
+        wiring.supervisor().chat(sessionId, "回答一");
+
+        String prompt = runtime.calls().get(0).systemPrompt();
+        assertThat(prompt)
+                .contains("计划 10 道题，已问 1 道")
+                .contains("出新题的回复必须")
+                .contains("最后一道题")
+                .doesNotContain("已问满");
+    }
+
+    @Test
+    void 问满计划题数后提示词切换为收尾规则() {
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "本场总结：整体表现良好。");
+        Wiring wiring = newSupervisor(runtime);
+        String sessionId = wiring.supervisor().createSession("我的简历", "招 Java 后端").sessionId();
+        for (int i = 1; i <= 10; i++) {
+            wiring.sessions().appendMessage(sessionId, "interviewer", "第" + i + "题",
+                    0, 0, i == 1 ? "QUESTION" : "NEXT");
+        }
+
+        wiring.supervisor().chat(sessionId, "回答最后一题");
+
+        String prompt = runtime.calls().get(0).systemPrompt();
+        assertThat(prompt)
+                .contains("计划 10 道题，已问 10 道")
+                .contains("已问满")
+                .contains("复盘报告")
+                .doesNotContain("出新题的回复必须")
+                .doesNotContain("候选题都不合适");
+    }
+
+    @Test
     void 预检索候选题注入面试官系统提示词() {
         FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "好的。下一题：谈谈索引失效场景。\n选题");
         FakeSessionStore sessions = new FakeSessionStore();

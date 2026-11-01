@@ -136,6 +136,15 @@ public final class MySqlSessionStore implements SessionStore {
     }
 
     @Override
+    public int countQuestions(String sessionId) {
+        Integer count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM t_message WHERE session_id = ? AND role = 'interviewer'"
+                        + " AND action IN ('QUESTION', 'NEXT')",
+                Integer.class, sessionId);
+        return count == null ? 0 : count;
+    }
+
+    @Override
     public List<StoredMessage> readWindow(String sessionId, int limit) {
         List<StoredMessage> desc = jdbc.query(
                 "SELECT " + MESSAGE_COLUMNS + " FROM t_message"
