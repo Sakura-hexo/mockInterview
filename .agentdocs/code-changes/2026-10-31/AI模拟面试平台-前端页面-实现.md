@@ -184,3 +184,106 @@
 ### 提交记录
 
 - F4 提交于 `frontend` 分支（SSE 聊天页全套 + 单测 + 两个 bug 修复）
+
+## F5 复盘报告页（2026-10-31）
+
+### 做了什么
+
+- **`src/lib/reportProgress.ts`（23 行）+ 单测 5 例**：轮询节奏纯函数（前 5 次 3 秒、之后退避 10 秒封顶）、阶段推导（每 2 次轮询推进一阶段：面试消息汇总 → 逐题评分 → 生成改进建议 → 汇总输出）、`formatDuration`（毫秒 → "N 分 N 秒"）
+- **`src/api/http.ts`**：`apiFetch` 增加可选 `acceptCodes` 参数——报告接口 202 生成中是业务正常态，不能走"code 非 0 即抛错"通道
+- **`src/api/interview.ts`**：补 `getReport`（接口文档 4.5），返回可判别联合 `GENERATING | DONE`；类型补齐 ReportScore/ReportItem/InterviewReport
+- **`src/hooks/useReportPolling.ts`（67 行）**：轮询 hook——生成中按节奏调度、阶段推进、真实错误（404 等）停止轮询、卸载清理
+- **`src/pages/ReportPage.tsx`（190 行）+ ReportPage.css（297 行）**：按 V1 设计稿 05/07 还原——生成中态（旋转圆环 + 四步勾选进度）、完整报告（白底评分卡大号蓝色综合分 + 一句话结论、四维纯色进度条、逐题 details 手风琴首题默认展开、蓝竖线评语引用、编号建议列表、底部等宽字体元信息）、顶栏"查看消息记录"入口
+- **`src/pages/InterviewPage.tsx` 只读回看**：ENDED/REPORTED 会话不再重定向报告页（否则与"查看消息记录"入口互相弹回），改为只读模式——标题"面试记录"、状态徽章（已出报告绿/已结束黄）、隐藏结束按钮与输入区，转写正常渲染
+- **动画统一**：`@keyframes` blink/spin 提升至 App.css 全局，各页 css 删除重复定义
+
+### 验证记录（8081 临时 mock E2E）
+
+1. 单测 19/19（新增 reportProgress 5 例）
+2. 生成中态：黄色"报告生成中"徽章、智能体提示文案、阶段 0"面试消息汇总中…"运行、四步齐全
+3. 两轮 3 秒轮询后自动出完整报告：大分数 7.8、顶栏"复盘报告 · Java 后端 · 困难"、四维行、3 个手风琴（首个展开显示题目/摘要/评语）、建议列表、底部"Token 消耗：12,847 · 面试时长：32 分 18 秒"
+4. "查看消息记录" → 只读回看：标题"面试记录"、绿徽章"已出报告"、无结束按钮、无输入区、转写含追问徽章
+
+### 方案偏离备注
+
+| 偏离 | 原因 |
+|---|---|
+| 方案 4.3 的"继续保持"虚线框未实现 | 接口文档 InterviewReport 无对应字段（suggestions 之外无保持项数据源），已列入契约缺口 |
+| 报告页底部无"模型：qwen-plus"元信息 | InterviewReport 无模型字段，同上 |
+| 面试页对已结束会话从"重定向报告页"改为"只读回看" | 重定向会与方案 4.3 要求的"查看消息记录"入口形成死循环，只读模式同时满足 3.1 的"仅进行中可作答"约束 |
+
+### 契约缺口追加（转后端）
+
+| 缺口 | 说明 |
+|---|---|
+| InterviewReport 无"继续保持"字段 | 方案 4.3 的保持项无数据源，需接口文档定义或并入 suggestions |
+| InterviewReport 无模型名字段 | 报告底部元信息无法显示模型，需接口文档补充 |
+
+### 提交记录
+
+- F5 提交于 `frontend` 分支（报告页 + 轮询 hook + 只读回看 + 全局动画统一）
+
+## F6 走查与样式打磨（2026-10-31）
+
+### 做了什么
+
+- **补齐三个漏定义的样式类**（走查发现的真问题，DOM 断言测不出来）：`.btn-danger`（红底白字，结束面试按钮此前无底色）、`.btn-ghost`（透明底细边框，取消/查看消息记录按钮）、`.mono` 工具类（IN_PROGRESS 徽章此前非等宽）。均按 V1 定稿 shared.css 值补入 App.css
+- **流式提示条计数**：按 V1 设计稿 06 补"已生成 N 字 · Ns"——字数取当前流式消息内容长度，用时由 hook 新增的 `streamStart` 时间戳推导，流结束归零
+- **`src/vite-env.d.ts`**：F0 漏建的 Vite 模板标配文件（CSS 副作用导入类型声明），修复 `tsc --noEmit` 的 6 个 TS2882 错误
+- 新增 `npx tsc --noEmit` 通过（严格模式全量类型检查零错误）
+
+### 验证记录
+
+1. 单测 19/19、`tsc --noEmit` 零错误
+2. 计算样式比对（8081 临时 mock）：`.btn-danger` 背景 `rgb(239,68,68)` 白字；`.badge-blue.mono` 等宽字体生效；`.btn-ghost` 边框 `#d5dbe6` 透明底
+3. 流式计数：发送后提示条显示"面试官正在回复…已生成 38 字 · 0s"，随增量增长，流结束消失
+4. 四页走查：登录页表单完整；首页侧栏数据 + 空态引导；新建页表单完整；**报告页/面试页错误态**（未知会话 → "报告加载失败"/"会话加载失败"）——加载态与错误态此前已在 F4/F5 实现，本步补齐走查覆盖
+
+### 遗留决策项（非代码，待用户/架构师）
+
+- 页面方案 3.2 侧栏"难度筛选下拉"：定稿设计稿无此元素，F2 起按设计稿未实现，需拍板
+- 侧栏列表项"第 N/M 题 / 综合 X.X"：等接口文档 4.6 补字段（F2 已记录）
+
+### 提交记录
+
+- F6 提交于 `frontend` 分支（按钮样式补齐 + 流式计数 + 类型检查修复）
+
+## F7 生产构建集成 Spring Boot static（2026-10-31）
+
+### 做了什么
+
+- **`frontend/vite.config.ts`**：`build.outDir` 直指 `../backend/src/main/resources/static`（方案第 2 节"产物拷到 static"的零拷贝实现），`emptyOutDir` 显式开启
+- **`.gitignore`**：忽略 `backend/src/main/resources/static/`（构建产物不入库，部署时构建生成）
+- **SPA 路由回退**：属于后端 Java 配置，为避免与并行后端会话混提交，本步不直接改后端代码，交接片段见下节，由后端会话在步骤 7 落地
+
+### 验证记录
+
+1. `npm run build` 成功：294 模块，index.html 0.4kB + CSS 13.87kB（gzip 3.3）+ JS 446.98kB（gzip 139.57，含 react/react-router/react-markdown），产物落 `backend/src/main/resources/static/`，git status 干净（忽略生效）
+2. `vite preview`（4173）生产包冒烟：`/login` 完整渲染；静态资源 JS/CSS 均 200；**直路由 `/interview/abc` 返回 200**，应用启动后 RequireAuth 无 token 正确弹回 `/login`——静态资源、SPA 回退、客户端守卫全链路正常
+
+### 交接后端会话：SPA 路由回退配置（步骤 7 落地）
+
+验收项"刷新任意路由不 404"需要 Spring 把非 `/api` 的前端路由请求转发到 index.html。推荐实现（显式路由列表，不用通配符，避免与 REST 映射冲突）：
+
+```java
+// backend/src/main/java/com/sakura/interview/web/SpaForwardController.java
+package com.sakura.interview.web;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+/** 前端 SPA 路由回退：刷新 /login /new /interview/x /report/x 不 404（前端页面方案验收项） */
+@Controller
+public class SpaForwardController {
+    @GetMapping({"/", "/login", "/new", "/interview/**", "/report/**"})
+    public String spa() {
+        return "forward:/index.html";
+    }
+}
+```
+
+前置条件：后端重建重启后 static 产物即在 classpath 生效。`/api/**` 由 REST 控制器处理，不受影响；生产构建命令为 `cd frontend && npm run build`。
+
+### 提交记录
+
+- F7 提交于 `frontend` 分支（构建目录集成 + gitignore + 交接文档）；"8080 直接服务 + 刷新不 404"的最终验收待后端会话重建后补录

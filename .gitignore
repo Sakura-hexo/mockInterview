@@ -6,8 +6,9 @@ application-local.yml
 target/
 dist/
 
-# 前端依赖
+# 前端依赖与构建产物（vite build 直出至 backend static，见 frontend/vite.config.ts）
 node_modules/
+backend/src/main/resources/static/
 
 # IDE
 .idea/

@@ -19,6 +19,7 @@ export default function InterviewPage() {
     annotated,
     phase,
     streaming,
+    streamStart,
     recovering,
     loaded,
     loadError,
@@ -38,12 +39,8 @@ export default function InterviewPage() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [annotated]);
 
-  // 非进行中的会话不留在聊天页（页面方案 3.1：仅 IN_PROGRESS 可进入）
-  useEffect(() => {
-    if (session && session.status !== 'IN_PROGRESS' && session.status !== 'CREATED') {
-      navigate(`/report/${id}`, { replace: true });
-    }
-  }, [session, id, navigate]);
+  // 已结束会话只读回看：报告页"查看消息记录"入口（页面方案 4.3），
+  // 不再重定向报告页（否则与该入口互相弹回）
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -73,8 +70,17 @@ export default function InterviewPage() {
     return <div className="home-placeholder">会话加载中…</div>;
   }
 
+  const readOnly = !!session && (session.status === 'ENDED' || session.status === 'REPORTED');
+  const statusBadge = readOnly ? (
+    <span className={`badge ${session!.status === 'REPORTED' ? 'badge-green' : 'badge-yellow'}`}>
+      {session!.status === 'REPORTED' ? '已出报告' : '已结束'}
+    </span>
+  ) : (
+    <span className="badge badge-blue mono">IN_PROGRESS</span>
+  );
+
   const title = [
-    session ? `面试中 · ${DIRECTION_LABEL[session.direction] ?? session.direction}` : '面试中',
+    session ? `${readOnly ? '面试记录' : '面试中'} · ${DIRECTION_LABEL[session.direction] ?? session.direction}` : '面试中',
     session ? `${DIFFICULTY_LABEL[session.difficulty] ?? session.difficulty}难度` : '',
     phase.progressText,
   ]
@@ -86,22 +92,24 @@ export default function InterviewPage() {
       <header className="chat-header">
         <div className="title">
           {title}
-          <span className="badge badge-blue mono">IN_PROGRESS</span>
+          {statusBadge}
         </div>
         <div className="actions">
-          <button className="btn btn-danger" onClick={handleEnd} disabled={ending}>
-            {ending ? '结束中…' : '结束面试'}
-          </button>
+          {!readOnly && (
+            <button className="btn btn-danger" onClick={handleEnd} disabled={ending}>
+              {ending ? '结束中…' : '结束面试'}
+            </button>
+          )}
         </div>
       </header>
 
-      {(streaming || recovering) && (
+      {!readOnly && (streaming || recovering) && (
         <div className="streaming-hint">
           <span className="pulse" />
           <span>
             {recovering
               ? '面试官回复生成中，自动同步中（每 3 秒）…'
-              : '面试官正在回复…'}
+              : `面试官正在回复…已生成 ${annotated.find((m) => m.streaming)?.content.length ?? 0} 字 · ${Math.floor((Date.now() - streamStart) / 1000)}s`}
           </span>
         </div>
       )}
@@ -117,36 +125,38 @@ export default function InterviewPage() {
         </div>
       </div>
 
-      <div className="input-area">
-        <textarea
-          placeholder={
-            streaming ? '面试官正在回复，请稍候…' : '输入你的回答…（Enter 发送，Shift+Enter 换行）'
-          }
-          rows={2}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={streaming}
-        />
-        {streaming ? (
-          <button className="stop-btn" onClick={stop}>
-            停止
-          </button>
-        ) : (
-          <button
-            className="send-btn"
-            onClick={() => {
-              if (draft.trim()) {
-                send(draft);
-                setDraft('');
-              }
-            }}
-            disabled={!draft.trim()}
-          >
-            发送
-          </button>
-        )}
-      </div>
+      {!readOnly && (
+        <div className="input-area">
+          <textarea
+            placeholder={
+              streaming ? '面试官正在回复，请稍候…' : '输入你的回答…（Enter 发送，Shift+Enter 换行）'
+            }
+            rows={2}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={streaming}
+          />
+          {streaming ? (
+            <button className="stop-btn" onClick={stop}>
+              停止
+            </button>
+          ) : (
+            <button
+              className="send-btn"
+              onClick={() => {
+                if (draft.trim()) {
+                  send(draft);
+                  setDraft('');
+                }
+              }}
+              disabled={!draft.trim()}
+            >
+              发送
+            </button>
+          )}
+        </div>
+      )}
     </>
   );
 }

@@ -27,6 +27,7 @@ export function useInterviewStream(sessionId: string) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [session, setSession] = useState<(InterviewSummary & { questionCount?: number }) | null>(null);
   const [streaming, setStreaming] = useState(false);
+  const [streamStart, setStreamStart] = useState(0); // 流式起始时间戳，提示条显示用时
   const [recovering, setRecovering] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState('');
@@ -135,6 +136,7 @@ export function useInterviewStream(sessionId: string) {
         { id: STREAMING_ID, role: 'INTERVIEWER', content: '', streaming: true },
       ]);
       setStreaming(true);
+      setStreamStart(Date.now());
       pushActivity('interviewer', '生成回复中…', 'running');
 
       const ctl = new AbortController();
@@ -173,7 +175,10 @@ export function useInterviewStream(sessionId: string) {
         // 去光标，并换掉流式专用 id：否则下一轮的补丁会命中历史消息
         const finalId = `iv-${Date.now()}`;
         patchStreaming((m) => ({ ...m, id: finalId, streaming: false }));
-        if (aliveRef.current) setStreaming(false);
+        if (aliveRef.current) {
+          setStreaming(false);
+          setStreamStart(0);
+        }
         abortRef.current = null;
       }
     },
@@ -192,6 +197,7 @@ export function useInterviewStream(sessionId: string) {
     annotated,
     phase,
     streaming,
+    streamStart,
     recovering,
     loaded,
     loadError,

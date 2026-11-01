@@ -13,6 +13,7 @@
 | 10-29 | 技术方案存储节 | 三表草图：t_session、t_message、t_report |
 | 10-31 步骤 5 | 开发指令 + session-schema.sql | t_session、t_message 细化为 DDL，新增 t_context_summary |
 | 10-31 步骤 6 | 开发指令 + report-schema.sql | t_report 任务表化，增加状态机与重试次数字段 |
+| 11-01 | 用户认证-账号密码改造方案 | 规划：新增 t_user 表，t_session 增 user_id 列与索引，Redis 增 auth:session 键（后端待实施，落地时更新本文） |
 
 草图到落地的三处演进：t_session 存简历摘要与 JD 要点而非原文；t_message 主键从
 自增 id 改为会话内序号联合主键并新增 token 两列；t_report 从纯结果表改为
@@ -126,4 +127,5 @@ flowchart LR
 ## 七 后续演进
 
 - 步骤 9 评测若引入评测集与命中记录，按增量 DDL 新增 eval 类表，届时更新本文
+- 认证改造（2026-11-01 方案已确认未落地）：新增 t_user、t_session 增 user_id 列、Redis 增 `auth:session:{token}` 会话键；开发期无真实数据，存量 t_session 直接清库不做通用迁移（用户已确认）
 - 多实例部署（步骤 8 课题）时的 seq 分配与 Worker 抢占并发化，见第五节问答 5

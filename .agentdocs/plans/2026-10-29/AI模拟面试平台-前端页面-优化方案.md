@@ -2,6 +2,8 @@
 
 作者:Sakura | 创建时间:2026-10-29 22:35 | 视觉定稿:2026-10-29（用户确认 travelScope 简约风、全站无 emoji；2026-10-31 复审维持）
 
+> 2026-11-01 修订：登录页由令牌输入改为账号密码登录/注册（认证改造），涉及 1.1、2、3.1、3.2、4.5、5、7、8 节。
+
 承接《AI模拟面试平台-技术方案》第 7 节"Web 层：自写极简页面（对话流、简历上传、报告展示），SSE 流式渲染"，《AI模拟面试平台-接口文档》第 4 节接口清单。本方案只覆盖**前端工程**，对应开发步骤 7 中"REST 全套 SSE 与极简 Web 页面"的 Web 部分。视觉与交互风格沿用同机参考项目 `D:\travelScope\TravelScope\frontend`（React 19 + Vite + TypeScript + 纯 CSS、左侧栏 + 主聊天区 + SSE 流式气泡 + Markdown 渲染 + Agent 活动流）。
 
 ## 1 目标与边界
@@ -26,7 +28,7 @@ flowchart LR
 2. **面试聊天页** `/interview/:id`：核心页面，SSE 流式渲染面试官提问、用户作答、追问、换题，顶栏提供"结束面试"按钮
 3. **复盘报告页** `/report/:id`：结构化评分、逐题回顾、改进建议
 4. **历史会话列表** `/`：左侧栏形式的历史会话入口（沿用 travelScope 布局），主区为空状态引导
-5. **令牌输入页** `/login`：输入 `APP_TOKEN` 存 localStorage，对应接口文档第 1 节 Bearer 鉴权（本地单用户，全局仅一个 APP_TOKEN）
+5. **登录/注册页** `/login`：用户名密码登录与注册（注册即登录），存会话令牌到 localStorage，对应接口文档 4.0 认证接口（2026-11-01 修订，替代原令牌输入页）
 
 ### 1.2 明确不做
 
@@ -44,7 +46,7 @@ flowchart LR
 | Markdown | react-markdown + remark-gfm | 复用 travelScope 的 sanitize 逻辑 |
 | 样式 | 纯 CSS（`App.css` 单文件） | 不引 Tailwind / antd，与 travelScope 一致 |
 | HTTP | 原生 fetch + 手写 SSE 解析 | 复用 travelScope `parseSse`（接口文档明确要求 fetch 而非 EventSource） |
-| 鉴权 | localStorage 存 `APP_TOKEN`，apiFetch 自动加 `Authorization: Bearer` | 复用 travelScope 的 auth.ts 模式 |
+| 鉴权 | localStorage 存会话令牌（键沿用 `APP_TOKEN`）与用户名，apiFetch 自动加 `Authorization: Bearer` | 注册/登录/登出走 auth.ts（2026-11-01 修订） |
 | 图表 | 不引库，评分用 CSS 表格 + 进度条 | 极简 |
 
 工程位置：项目根新增 `frontend/` 子目录，与后端 `src/` 平级。开发期 Vite 起 5173 端口，proxy 转发 `/api` 到 `http://localhost:8080`；生产期 `vite build` 产物拷到 `src/main/resources/static/`，由 Spring Boot 直接服务，docker-compose 单容器即可演示。
@@ -54,7 +56,7 @@ flowchart LR
 ### 3.1 路由
 
 ```text
-/login                令牌输入
+/login                登录与注册
 /                     历史会话列表（左侧栏布局，主区显示空状态引导）
 /new                  新建面试
 /interview/:id        面试聊天（仅 IN_PROGRESS 状态可进入）
@@ -83,7 +85,7 @@ flowchart TB
 
 - 顶部：品牌文字"AI 模拟面试"（纯文字，无图标）+ "＋ 新建面试"虚线按钮（travelScope 的 `new-chat-btn`）
 - 中部：会话列表，每项两行——"方向 · 难度"与"第 N/M 题 · 时间 + 状态徽章"；点击按状态路由（IN_PROGRESS → `/interview/:id`；ENDED/REPORTED → `/report/:id`）
-- 底部：难度筛选下拉 + 退出登录（清 token）
+- 底部：当前用户名 + 退出登录（调登出接口并清本地令牌，2026-11-01 修订；难度筛选下拉仍为待确认项）
 
 **顶栏（主区顶部）**：
 
@@ -179,14 +181,17 @@ flowchart TB
 - 点击：IN_PROGRESS → `/interview/:id`；ENDED 与 REPORTED → `/report/:id`（轮询兜底）
 - 主区空状态为纯文字引导 + "新建面试"主按钮（无插画）
 
-### 4.5 令牌输入页 `/login`
+### 4.5 登录/注册页 `/login`（2026-11-01 修订：认证改造）
 
 travelScope 的 `login-card` 居中卡片：
 
 - 标题"AI 模拟面试平台" + 副标题（纯文字，无 logo 图形）
-- 一个密码输入框 `APP_TOKEN`（等宽字体）
-- 提交后写入 localStorage，调 `GET /api/interviews?page=1&size=1` 验证 token（401 显示"令牌无效"红色提示），成功跳 `/`
-- 底部小字提示：令牌从后端 `.env` 文件的 `APP_TOKEN` 复制
+- 顶部"登录 / 注册"文字页签切换，激活态主蓝
+- 表单为用户名 + 密码双输入框；密码框 `type="password"` 全程掩码，旁置文字型"显示/隐藏"切换（V1 风格禁图标）
+- autocomplete 语义标注：用户名 `username`、登录 `current-password`、注册 `new-password`
+- 客户端校验：用户名 2-20 位、注册时密码至少 8 位
+- 提交调 `POST /api/auth/login` 或 `POST /api/auth/register`（注册即登录），成功存会话令牌与用户名跳 `/`；401"用户名或密码错误"、409"用户名已被占用"、429"失败次数过多"红色提示
+- 底部小字：注册即登录，无需邮箱验证；自部署开源项目 · 数据只保存在自己的机器上
 
 ## 5 状态与数据流
 
@@ -205,6 +210,7 @@ flowchart LR
 | 状态 | 存放位置 | 生命周期 |
 |---|---|---|
 | `token` | localStorage | 全局，退出清空 |
+| `username` | localStorage | 全局，退出清空，供侧栏展示（2026-11-01 修订新增） |
 | `conversations` | Sidebar 组件 state | 会话级，路由切换刷新 |
 | `messages` | InterviewPage useState | 进入页面拉取 + SSE 增量 |
 | `streaming` | InterviewPage useState | 单次 SSE 期间 true |
@@ -256,7 +262,7 @@ frontend/
     ├── index.css              reset + 全局
     ├── types.ts               Interview/Report/SSE 类型
     ├── api/
-    │   ├── auth.ts            token 存取 + apiFetch
+    │   ├── auth.ts            register login logout 与用户名存取
     │   └── interview.ts       createInterview/start/chat/end/report/list
     ├── pages/
     │   ├── LoginPage.tsx
@@ -277,6 +283,9 @@ frontend/
 
 | 前端调用 | 后端接口 | 何时 |
 |---|---|---|
+| `POST /api/auth/register` | 接口文档 4.0 | 登录页注册提交 |
+| `POST /api/auth/login` | 接口文档 4.0 | 登录页登录提交 |
+| `POST /api/auth/logout` | 接口文档 4.0 | 侧栏退出 |
 | `POST /api/interviews` | 接口文档 4.1 | 新建面试页提交 |
 | `POST /api/interviews/{id}/start` | 4.2 | 新建成功后立即 |
 | `POST /api/interviews/{id}/chat` SSE | 4.3 | 面试聊天页发送 |
