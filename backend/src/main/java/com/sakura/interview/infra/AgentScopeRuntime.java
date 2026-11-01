@@ -83,10 +83,14 @@ public final class AgentScopeRuntime implements AgentRuntime {
     }
 
     private ReActAgent buildAgent(String role, String systemPrompt) {
+        // 角色分级：面试官走主力档，闲聊走快档；两档互挂 fallbackModel 降级
+        String tier = AgentRuntime.ROLE_INTERVIEWER.equals(role)
+                ? ChatModels.TIER_MAIN : ChatModels.TIER_FAST;
         return ReActAgent.builder()
                 .name(role)
                 .sysPrompt(systemPrompt)
-                .model(ChatModels.chat())
+                .model(ChatModels.chat(tier))
+                .fallbackModel(ChatModels.chat(ChatModels.otherTier(tier)))
                 .stateStore(new InMemoryAgentStateStore())
                 .maxIters(1) // 单轮生成：无工具可调，出题靠预检索注入
                 .enableMetaTool(false)

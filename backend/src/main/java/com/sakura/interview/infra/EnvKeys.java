@@ -31,6 +31,11 @@ public final class EnvKeys {
         return load().getOrDefault("DASHSCOPE_MODEL", "qwen-plus");
     }
 
+    /** 快档模型：未配置时回退主档模型，保持单模型环境天然兼容。 */
+    public static String dashScopeModelFast() {
+        return orDefault("DASHSCOPE_MODEL_FAST", dashScopeModel());
+    }
+
     public static String modelProvider() {
         return orDefault("MODEL_PROVIDER", "dashscope").toLowerCase();
     }
@@ -53,12 +58,22 @@ public final class EnvKeys {
         return orDefault("OPENAI_MODEL", "glm-4-flash");
     }
 
+    /** 快档模型：未配置时回退主档模型，保持单模型环境天然兼容。 */
+    public static String openAiModelFast() {
+        return orDefault("OPENAI_MODEL_FAST", openAiModel());
+    }
+
     public static String ollamaBaseUrl() {
         return orDefault("OLLAMA_BASE_URL", "http://localhost:11434");
     }
 
     public static String ollamaModel() {
         return orDefault("OLLAMA_MODEL", "qwen2.5:7b");
+    }
+
+    /** 快档模型：未配置时回退主档模型。 */
+    public static String ollamaModelFast() {
+        return orDefault("OLLAMA_MODEL_FAST", ollamaModel());
     }
 
     public static String openAiEmbeddingModel() {

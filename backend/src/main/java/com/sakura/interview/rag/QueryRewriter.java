@@ -34,7 +34,7 @@ final class QueryRewriter {
             agent = ReActAgent.builder()
                     .name("query-rewriter")
                     .sysPrompt(SYSTEM_PROMPT)
-                    .model(ChatModels.chat())
+                    .model(ChatModels.chat(ChatModels.TIER_FAST))
                     .stateStore(new InMemoryAgentStateStore())
                     .build();
         }

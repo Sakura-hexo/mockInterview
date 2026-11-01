@@ -4,6 +4,7 @@ import com.sakura.interview.agent.AgentRuntime;
 import com.sakura.interview.agent.Supervisor;
 import com.sakura.interview.infra.AgentLlmCaller;
 import com.sakura.interview.infra.AgentScopeRuntime;
+import com.sakura.interview.infra.ChatModels;
 import com.sakura.interview.infra.EmbeddingModels;
 import com.sakura.interview.infra.EnvKeys;
 import com.sakura.interview.infra.MySqlDb;
@@ -80,14 +81,25 @@ public class AppConfig {
         return new MilvusQuestionStore(EmbeddingModels.embedding());
     }
 
+    /** 档位装配：主力档供面试官与报告，快档供摘要路由简历 JD 解析。 */
     @Bean
-    public AgentLlmCaller agentLlmCaller() {
+    public AgentLlmCaller mainLlmCaller() {
         return new AgentLlmCaller();
     }
 
     @Bean
-    public StructuredOutputInvoker invoker(AgentLlmCaller caller) {
-        return new StructuredOutputInvoker(caller);
+    public AgentLlmCaller fastLlmCaller() {
+        return new AgentLlmCaller(ChatModels.TIER_FAST);
+    }
+
+    @Bean
+    public StructuredOutputInvoker mainInvoker(AgentLlmCaller mainLlmCaller) {
+        return new StructuredOutputInvoker(mainLlmCaller);
+    }
+
+    @Bean
+    public StructuredOutputInvoker fastInvoker(AgentLlmCaller fastLlmCaller) {
+        return new StructuredOutputInvoker(fastLlmCaller);
     }
 
     @Bean
@@ -101,8 +113,8 @@ public class AppConfig {
     }
 
     @Bean
-    public ContextCompressor contextCompressor(AgentLlmCaller caller) {
-        return new ContextCompressor(caller);
+    public ContextCompressor contextCompressor(AgentLlmCaller fastLlmCaller) {
+        return new ContextCompressor(fastLlmCaller);
     }
 
     @Bean
@@ -117,9 +129,9 @@ public class AppConfig {
     }
 
     @Bean
-    public ReportGenerator reportGenerator(StructuredOutputInvoker invoker,
+    public ReportGenerator reportGenerator(StructuredOutputInvoker mainInvoker,
                                             SessionStore sessionStore) {
-        return new ReportGenerator(invoker, sessionStore);
+        return new ReportGenerator(mainInvoker, sessionStore);
     }
 
     @Bean(initMethod = "start", destroyMethod = "close")
@@ -139,11 +151,11 @@ public class AppConfig {
     }
 
     @Bean
-    public Supervisor supervisor(AgentRuntime runtime, StructuredOutputInvoker invoker,
+    public Supervisor supervisor(AgentRuntime runtime, StructuredOutputInvoker fastInvoker,
                                  SessionStore sessionStore, ContextCompressor compressor,
                                  ReportService reportService, QuestionBankTool questionBank,
                                  ExecutorService compressionExecutor) {
-        return new Supervisor(runtime, invoker, sessionStore, compressor, reportService,
+        return new Supervisor(runtime, fastInvoker, sessionStore, compressor, reportService,
                 questionBank, compressionExecutor);
     }
 
