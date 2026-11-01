@@ -28,14 +28,25 @@ export function useInterviewStream(sessionId: string) {
   const [session, setSession] = useState<(InterviewSummary & { questionCount?: number }) | null>(null);
   const [streaming, setStreaming] = useState(false);
   const [streamStart, setStreamStart] = useState(0); // 流式起始时间戳，提示条显示用时
+  const [streamNow, setStreamNow] = useState(0); // 每秒跳动的时间戳：无增量到达时提示条也能走秒
   const [recovering, setRecovering] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState('');
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const abortRef = useRef<AbortController | null>(null);
+  const completedRef = useRef(false); // 是否已收到 done 或 error 终态事件
   const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const aliveRef = useRef(true);
   const actIdRef = useRef(0);
+
+  // 流式期间每秒强制重渲染：等待首字或工具检索阶段没有增量事件，
+  // 提示条的计时不能冻结（实测秒数停在 0 会被误认为死机）
+  useEffect(() => {
+    if (!streaming) return;
+    setStreamNow(Date.now());
+    const timer = setInterval(() => setStreamNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [streaming]);
 
   const pushActivity = useCallback((who: string, text: string, state: ActivityItem['state']) => {
     setActivities((prev) => [
@@ -130,6 +141,7 @@ export function useInterviewStream(sessionId: string) {
       const text = content.trim();
       if (!text || streaming) return;
       stopRecovery();
+      completedRef.current = false;
       setMessages((prev) => [
         ...prev,
         { id: `me-${Date.now()}`, role: 'CANDIDATE', content: text },
@@ -137,10 +149,15 @@ export function useInterviewStream(sessionId: string) {
       ]);
       setStreaming(true);
       setStreamStart(Date.now());
+      setStreamNow(Date.now());
       pushActivity('interviewer', '生成回复中…', 'running');
 
       const ctl = new AbortController();
       abortRef.current = ctl;
+      const completeTurn = () => {
+        pushActivity('interviewer', '回复完成', 'ok');
+        window.dispatchEvent(new Event('interviews-changed')); // 通知侧栏刷新（页面方案 4.2 done 事件）
+      };
       try {
         await streamChat(
           sessionId,
@@ -150,26 +167,43 @@ export function useInterviewStream(sessionId: string) {
             onAction: (type) => patchStreaming((m) => ({ ...m, action: type })),
             onMetrics: (metrics) =>
               patchStreaming((m) => ({ ...m, tokens: metrics.outputTokens, latencyMs: metrics.latencyMs })),
-            onDone: () => undefined, // 收流即结束，统一在下方收尾
+            // 终态事件一到就主动断开读取：清理不依赖后端 emitter 与代理的连接关闭传播
+            onDone: () => {
+              completedRef.current = true;
+              ctl.abort();
+            },
             onErrorEvent: (message) => {
+              completedRef.current = true;
               patchStreaming((m) => ({ ...m, error: message }));
               pushActivity('interviewer', '生成失败', 'failed');
+              ctl.abort();
             },
           },
           ctl.signal,
         );
-        pushActivity('interviewer', '回复完成', 'ok');
-        window.dispatchEvent(new Event('interviews-changed')); // 通知侧栏刷新（页面方案 4.2 done 事件）
+        if (completedRef.current) {
+          completeTurn();
+        } else {
+          // 流关闭但终态事件缺失：后端可能仍在生成，转恢复轮询等落库
+          pushActivity('interviewer', '连接中断，自动同步中', 'failed');
+          startRecovery();
+        }
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') {
-          // 用户主动停止：保留已生成部分（架构方案 4.2）
-          pushActivity('interviewer', '已停止生成', 'failed');
+          if (completedRef.current) {
+            completeTurn(); // onDone 主动 abort 的正常路径
+          } else {
+            // 用户主动停止：保留已生成部分，后端仍会落库，轮询自动同步
+            pushActivity('interviewer', '已停止显示，回复完成后自动同步', 'failed');
+            startRecovery();
+          }
         } else {
           patchStreaming((m) => ({
             ...m,
             error: err instanceof Error ? err.message : '网络异常',
           }));
-          pushActivity('interviewer', '连接异常', 'failed');
+          pushActivity('interviewer', '连接异常，自动同步中', 'failed');
+          startRecovery();
         }
       } finally {
         // 去光标，并换掉流式专用 id：否则下一轮的补丁会命中历史消息
@@ -182,7 +216,7 @@ export function useInterviewStream(sessionId: string) {
         abortRef.current = null;
       }
     },
-    [sessionId, streaming, patchStreaming, pushActivity, stopRecovery],
+    [sessionId, streaming, patchStreaming, pushActivity, stopRecovery, startRecovery],
   );
 
   const stop = useCallback(() => {
@@ -198,6 +232,7 @@ export function useInterviewStream(sessionId: string) {
     phase,
     streaming,
     streamStart,
+    streamNow,
     recovering,
     loaded,
     loadError,
