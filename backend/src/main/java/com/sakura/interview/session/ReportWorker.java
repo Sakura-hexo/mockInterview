@@ -16,19 +16,32 @@ public final class ReportWorker implements AutoCloseable {
 
     private final ReportStore reportStore;
     private final ReportGenerator generator;
+    private final SessionStore sessionStore;
     private final Duration pollInterval;
     private final Gson gson = new Gson();
     private final Thread thread;
     private volatile boolean running = true;
 
     public ReportWorker(ReportStore reportStore, ReportGenerator generator) {
-        this(reportStore, generator, DEFAULT_POLL_INTERVAL);
+        this(reportStore, generator, null, DEFAULT_POLL_INTERVAL);
+    }
+
+    /** Web 装配用：完成任务时把会话推进到 REPORTED；sessionStore 为空则跳过（CLI 口径）。 */
+    public ReportWorker(ReportStore reportStore, ReportGenerator generator,
+                        SessionStore sessionStore) {
+        this(reportStore, generator, sessionStore, DEFAULT_POLL_INTERVAL);
     }
 
     /** 测试用：可注入更短的轮询间隔。 */
     ReportWorker(ReportStore reportStore, ReportGenerator generator, Duration pollInterval) {
+        this(reportStore, generator, null, pollInterval);
+    }
+
+    private ReportWorker(ReportStore reportStore, ReportGenerator generator,
+                         SessionStore sessionStore, Duration pollInterval) {
         this.reportStore = reportStore;
         this.generator = generator;
+        this.sessionStore = sessionStore;
         this.pollInterval = pollInterval;
         this.thread = Thread.ofVirtual().name("report-worker").unstarted(this::loop);
     }
@@ -62,6 +75,9 @@ public final class ReportWorker implements AutoCloseable {
         try {
             InterviewReport report = generator.generate(task.sessionId());
             reportStore.complete(task.taskId(), gson.toJson(report));
+            if (sessionStore != null) {
+                sessionStore.updateStatus(task.sessionId(), SessionState.REPORTED);
+            }
         } catch (RuntimeException e) {
             System.err.printf("[报告Worker] 任务 %s 失败：%s%n", task.taskId(), e.getMessage());
             reportStore.fail(task.taskId(), e.getMessage());

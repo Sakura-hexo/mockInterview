@@ -1,5 +1,6 @@
 package com.sakura.interview.agent;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
@@ -12,7 +13,18 @@ public interface AgentRuntime {
     String ROLE_INTERVIEWER = "interviewer";
     String ROLE_CHAT = "chat";
 
-    Mono<AgentReply> generate(String role, String sessionId, String systemPrompt, String userInput);
+    /** 流式生成：产出若干 Delta 与恰好一个 Final。 */
+    Flux<StreamChunk> streamGenerate(String role, String sessionId, String systemPrompt, String userInput);
+
+    /** 整段生成：默认实现取流式结果的最后一个 Final，CLI 与单测沿用旧口径。 */
+    default Mono<AgentReply> generate(String role, String sessionId, String systemPrompt, String userInput) {
+        return streamGenerate(role, sessionId, systemPrompt, userInput)
+                .ofType(StreamChunk.Final.class)
+                .reduce((first, second) -> second)
+                .map(finalChunk -> new AgentReply(finalChunk.fullText(),
+                        finalChunk.inputTokens(), finalChunk.outputTokens()))
+                .defaultIfEmpty(new AgentReply("", 0, 0));
+    }
 
     String modelName(String role);
 }

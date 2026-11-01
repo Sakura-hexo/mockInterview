@@ -28,15 +28,18 @@ public final class MySqlDb {
         return ds;
     }
 
-    /** 执行建表脚本（幂等），供 init-db 子命令与首启使用。 */
+    /** 执行建表脚本（幂等），并把存量库补齐到最新列集。 */
     public static void init(DataSource dataSource) {
         try (Connection connection = dataSource.getConnection()) {
             ScriptUtils.executeSqlScript(connection,
                     new ClassPathResource("sql/session-schema.sql"));
             ScriptUtils.executeSqlScript(connection,
                     new ClassPathResource("sql/report-schema.sql"));
+            ScriptUtils.executeSqlScript(connection,
+                    new ClassPathResource("sql/auth-schema.sql"));
         } catch (SQLException e) {
             throw new IllegalStateException("初始化会话表失败：", e);
         }
+        SchemaMigrations.migrate(dataSource);
     }
 }

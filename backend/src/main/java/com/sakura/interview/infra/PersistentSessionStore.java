@@ -1,12 +1,15 @@
 package com.sakura.interview.infra;
 
 import com.google.gson.Gson;
+import com.sakura.interview.session.SessionOverview;
 import com.sakura.interview.session.SessionState;
 import com.sakura.interview.session.SessionStore;
 import com.sakura.interview.session.SessionSummary;
 import com.sakura.interview.session.StoredMessage;
 
 import javax.sql.DataSource;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,11 +41,15 @@ public final class PersistentSessionStore implements SessionStore, AutoCloseable
 
     @Override
     public int appendMessage(String sessionId, String role, String text,
-                             long inputTokens, long outputTokens) {
-        int seq = mysql.appendMessage(sessionId, role, text, inputTokens, outputTokens);
+                             long inputTokens, long outputTokens, String action) {
+        // 同一秒级时间戳写两处：MySQL 行与缓存 JSON 内容一致，缓存命中与回源读取等价
+        LocalDateTime createdAt = LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        int seq = mysql.appendMessage(sessionId, role, text, inputTokens, outputTokens,
+                action, createdAt);
         try {
-            redis.appendMessage(sessionId,
-                    gson.toJson(new StoredMessage(seq, role, text, inputTokens, outputTokens)));
+            redis.appendMessage(sessionId, gson.toJson(new StoredMessage(seq, role, text,
+                    inputTokens, outputTokens, action,
+                    DateTimeFormatter.ISO_LOCAL_DATE_TIME.format(createdAt))));
         } catch (RuntimeException e) {
             warnAndEvict(sessionId, e);
         }
@@ -120,6 +127,21 @@ public final class PersistentSessionStore implements SessionStore, AutoCloseable
         } catch (RuntimeException e) {
             System.err.printf("[会话缓存] 清理失败可容忍：%s%n", e.getMessage());
         }
+    }
+
+    @Override
+    public void updateStatus(String sessionId, String status) {
+        mysql.updateStatus(sessionId, status);
+    }
+
+    @Override
+    public List<SessionOverview> listOverviews(Long userId, int page, int size) {
+        return mysql.listOverviews(userId, page, size);
+    }
+
+    @Override
+    public long countOverviews(Long userId) {
+        return mysql.countOverviews(userId);
     }
 
     @Override

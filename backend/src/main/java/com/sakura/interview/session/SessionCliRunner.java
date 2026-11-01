@@ -25,17 +25,33 @@ public final class SessionCliRunner {
     public static void main(String[] args) {
         if (args.length < 1) {
             System.err.println("用法：init-db（建库建表） | selfcheck（全链路自检，需 MySQL 与 Redis 在运行）"
-                    + " | report show 会话id | report recover");
+                    + " | report show 会话id | report recover | reset-data（清空业务表，账号保留）");
             System.exit(2);
         }
         switch (args[0]) {
             case "init-db" -> initDb();
             case "selfcheck" -> selfcheck();
             case "report" -> report(args);
+            case "reset-data" -> resetData();
             default -> {
                 System.err.println("未知子命令：" + args[0]);
                 System.exit(2);
             }
+        }
+    }
+
+    /** 存量清库（认证改造方案 2026-11-01 已确认）：清四张业务表，账号与题库保留。 */
+    private static void resetData() {
+        String[] tables = {"t_message", "t_context_summary", "t_report", "t_session"};
+        try (HikariDataSource ds = MySqlDb.dataSource();
+             java.sql.Connection connection = ds.getConnection();
+             java.sql.Statement statement = connection.createStatement()) {
+            for (String table : tables) {
+                statement.executeUpdate("TRUNCATE TABLE " + table);
+            }
+            System.out.println("已清空：" + String.join("、", tables));
+        } catch (java.sql.SQLException e) {
+            throw new IllegalStateException("清库失败：", e);
         }
     }
 
@@ -88,7 +104,7 @@ public final class SessionCliRunner {
     private static void initDb() {
         try (HikariDataSource ds = MySqlDb.dataSource()) {
             MySqlDb.init(ds);
-            System.out.println("表已就绪：t_session、t_message、t_context_summary、t_report");
+            System.out.println("表已就绪：t_session、t_message、t_context_summary、t_report、t_user");
         }
     }
 

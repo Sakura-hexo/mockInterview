@@ -7,7 +7,11 @@ import com.sakura.interview.session.FakeReportStore;
 import com.sakura.interview.session.FakeSessionStore;
 import com.sakura.interview.session.ReportService;
 import com.sakura.interview.session.ReportTask;
+import com.sakura.interview.session.StoredMessage;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -141,5 +145,42 @@ class SupervisorTest {
         assertThatThrownBy(() -> wiring.supervisor().chat("s-none", "你好"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("会话不存在");
+    }
+
+    @Test
+    void 题型按工具信号推导_首题追问与换题() {
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "题目内容");
+        runtime.toolCallsPerCall(1);
+        Wiring wiring = newSupervisor(runtime);
+        String sessionId = wiring.supervisor().createSession("我的简历", "招 Java 后端").sessionId();
+
+        // 首轮（round 0）带工具调用记 QUESTION，之后带工具调用记 NEXT
+        assertThat(wiring.supervisor().chat(sessionId, "回答一").action())
+                .isEqualTo(Supervisor.ACTION_QUESTION);
+        assertThat(wiring.supervisor().chat(sessionId, "回答二").action())
+                .isEqualTo(Supervisor.ACTION_NEXT);
+        List<StoredMessage> messages = wiring.sessions().readAll(sessionId);
+        assertThat(messages.get(1).action()).isEqualTo("QUESTION");
+        assertThat(messages.get(3).action()).isEqualTo("NEXT");
+
+        // 无工具调用视为追问
+        runtime.toolCallsPerCall(0);
+        assertThat(wiring.supervisor().chat(sessionId, "回答三").action())
+                .isEqualTo(Supervisor.ACTION_FOLLOW_UP);
+    }
+
+    @Test
+    void 流式监听逐段收到文本增量() {
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "请讲讲HashMap的底层。");
+        Wiring wiring = newSupervisor(runtime);
+        String sessionId = wiring.supervisor().createSession("我的简历", "招 Java 后端").sessionId();
+
+        List<String> deltas = new ArrayList<>();
+        Supervisor.SupervisorReply reply =
+                wiring.supervisor().chat(sessionId, "回答一", deltas::add);
+
+        // 假运行时按两段下发：增量拼接恒等于回复全文（SSE 与落库一致口径）
+        assertThat(deltas).containsExactly("请讲", "讲HashMap的底层。");
+        assertThat(String.join("", deltas)).isEqualTo(reply.reply());
     }
 }
