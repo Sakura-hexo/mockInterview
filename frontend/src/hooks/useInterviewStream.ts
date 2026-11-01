@@ -9,6 +9,12 @@ import type { ChatMessage, InterviewSummary } from '../types';
 
 const STREAMING_ID = '__streaming__';
 const RECOVERY_POLL_MS = 3000; // 恢复轮询间隔（架构方案 4.3）
+// 出题标记行仅做题型判定：后端落库前剥除，前端流式期间同步剥除避免闪现
+const PICK_LINE_RE = /\n?选题[^\n]*$/;
+
+function stripPickLine(text: string): string {
+  return text.replace(PICK_LINE_RE, '');
+}
 
 export interface ActivityItem {
   id: number;
@@ -165,7 +171,8 @@ export function useInterviewStream(sessionId: string) {
           sessionId,
           text,
           {
-            onDelta: (delta) => patchStreaming((m) => ({ ...m, content: m.content + delta })),
+            onDelta: (delta) =>
+              patchStreaming((m) => ({ ...m, content: stripPickLine(m.content + delta) })),
             onAction: (type) => patchStreaming((m) => ({ ...m, action: type })),
             onMetrics: (metrics) =>
               patchStreaming((m) => ({ ...m, tokens: metrics.outputTokens, latencyMs: metrics.latencyMs })),

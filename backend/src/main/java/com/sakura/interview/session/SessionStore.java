@@ -17,6 +17,9 @@ public interface SessionStore {
     /** 推进状态机：CREATED、IN_PROGRESS、ENDED、REPORTED。 */
     void updateStatus(String sessionId, String status);
 
+    /** 条件更新状态：仅当当前状态等于 from 才更新为 to，成功返回 true（挡并发双击）。 */
+    boolean casStatus(String sessionId, String from, String to);
+
     /** 追加一条消息（无题型标注），返回分配到的会话内序号。 */
     default int appendMessage(String sessionId, String role, String text,
                                long inputTokens, long outputTokens) {

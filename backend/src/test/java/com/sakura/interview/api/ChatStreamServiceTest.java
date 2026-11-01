@@ -8,14 +8,17 @@ import com.sakura.interview.session.ContextCompressor;
 import com.sakura.interview.session.FakeReportStore;
 import com.sakura.interview.session.FakeSessionStore;
 import com.sakura.interview.session.ReportService;
+import com.sakura.interview.session.SessionState;
 import com.sakura.interview.session.StoredMessage;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ChatStreamServiceTest {
 
@@ -24,7 +27,10 @@ class ChatStreamServiceTest {
 
     private final FakeSessionStore sessions = new FakeSessionStore();
     private final FakeReportStore reports = new FakeReportStore();
-    private final FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "请讲讲HashMap的底层实现。");
+    // 流式文本可按用例切换：默认带出题标记（驱动 QUESTION 推导），追问用例改写
+    private final AtomicReference<String> replyText =
+            new AtomicReference<>("请讲讲HashMap的底层实现。\n选题");
+    private final FakeAgentRuntime runtime = new FakeAgentRuntime(c -> replyText.get());
     private final Supervisor supervisor = new Supervisor(runtime,
             new StructuredOutputInvoker(branchingCaller()),
             sessions, new ContextCompressor((sys, user) -> "合并摘要"),
@@ -59,32 +65,34 @@ class ChatStreamServiceTest {
 
     @Test
     void 面试轮事件顺序为消息增量动作指标与完成() {
-        runtime.toolCallsPerCall(1);
         String sessionId = supervisor.createSession(null, "我的简历", "招 Java 后端", null).sessionId();
+        sessions.updateStatus(sessionId, SessionState.IN_PROGRESS);
         Recording sender = new Recording();
 
         service.runTurn(sender, sessionId, "我先自我介绍");
 
         assertThat(sender.events).containsExactly(
                 "message", "message", "action", "metrics", "done");
-        // 前两段增量拼接等于回复全文（SSE 与落库一致口径）
+        // 前两段增量拼接等于模型原始全文（含出题标记行，前端负责剥除）
         String first = (String) ((Map<?, ?>) sender.payloads.get(0)).get("delta");
         String second = (String) ((Map<?, ?>) sender.payloads.get(1)).get("delta");
-        assertThat(first + second).isEqualTo("请讲讲HashMap的底层实现。");
+        assertThat(first + second).isEqualTo("请讲讲HashMap的底层实现。\n选题");
         assertThat(((Map<?, ?>) sender.payloads.get(2)).get("type")).isEqualTo("QUESTION");
         Map<?, ?> metrics = (Map<?, ?>) sender.payloads.get(3);
         assertThat((long) metrics.get("outputTokens")).isEqualTo(10);
         assertThat((long) metrics.get("latencyMs")).isGreaterThanOrEqualTo(0);
         assertThat(((Map<?, ?>) sender.payloads.get(4)).get("round")).isEqualTo(1);
-        // 题型随消息落库，会话详情可还原徽章
+        // 题型随消息落库且标记行已剥除，会话详情可还原徽章
         StoredMessage interviewer = sessions.readAll(sessionId).get(1);
         assertThat(interviewer.action()).isEqualTo("QUESTION");
+        assertThat(interviewer.text()).isEqualTo("请讲讲HashMap的底层实现。");
     }
 
     @Test
-    void 追问轮无工具调用标注FOLLOW_UP不推进题号() {
-        runtime.toolCallsPerCall(0);
+    void 追问轮无标记标注FOLLOW_UP不推进题号() {
+        replyText.set("追问：能再讲讲负载因子的作用吗？");
         String sessionId = supervisor.createSession(null, "我的简历", "招 Java 后端", null).sessionId();
+        sessions.updateStatus(sessionId, SessionState.IN_PROGRESS);
 
         service.runTurn(new Recording(), sessionId, "回答一");
         Recording second = new Recording();
@@ -97,6 +105,7 @@ class ChatStreamServiceTest {
     @Test
     void 复盘意图无流式增量时整段补发一次消息() {
         String sessionId = supervisor.createSession(null, "我的简历", "招 Java 后端", null).sessionId();
+        sessions.updateStatus(sessionId, SessionState.IN_PROGRESS);
         sessions.appendMessage(sessionId, "interviewer", "第一题", 0, 0);
         sessions.appendMessage(sessionId, "user", "回答一", 0, 0);
         sessions.appendMessage(sessionId, "interviewer", "第二题", 0, 0);
@@ -121,5 +130,37 @@ class ChatStreamServiceTest {
         assertThat(sender.events).containsExactly("error");
         assertThat(((Map<?, ?>) sender.payloads.get(0)).get("message"))
                 .asString().contains("会话不存在");
+    }
+
+    @Test
+    void 已结束会话发错误事件且不发完成() {
+        String sessionId = supervisor.createSession(null, "我的简历", "招 Java 后端", null).sessionId();
+        sessions.updateStatus(sessionId, SessionState.ENDED);
+        Recording sender = new Recording();
+
+        service.runTurn(sender, sessionId, "你好");
+
+        assertThat(sender.events).containsExactly("error");
+        assertThat(((Map<?, ?>) sender.payloads.get(0)).get("message"))
+                .asString().contains("面试未开始或已结束");
+    }
+
+    @Test
+    void 同会话并发第二条被单飞守卫拒绝() {
+        String sessionId = supervisor.createSession(null, "我的简历", "招 Java 后端", null).sessionId();
+        sessions.updateStatus(sessionId, SessionState.IN_PROGRESS);
+        List<Runnable> queued = new ArrayList<>();
+        ChatStreamService guarded = new ChatStreamService(supervisor, sessions, queued::add);
+
+        guarded.chat(sessionId, "第一条");
+        assertThat(queued).hasSize(1); // 任务仅排队未执行，in-flight 未释放
+
+        assertThatThrownBy(() -> guarded.chat(sessionId, "第二条"))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("上一条");
+
+        queued.forEach(Runnable::run); // 跑完释放 in-flight
+        guarded.chat(sessionId, "第三条");
+        assertThat(queued).hasSize(2);
     }
 }

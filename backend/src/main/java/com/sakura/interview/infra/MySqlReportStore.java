@@ -2,6 +2,7 @@ package com.sakura.interview.infra;
 
 import com.sakura.interview.session.ReportStore;
 import com.sakura.interview.session.ReportTask;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 
@@ -12,7 +13,7 @@ import java.util.UUID;
 
 /**
  * ReportStore 的 MySQL 实现：任务表即持久队列，进程重启不丢任务。
- * claim 用条件更新保证单领取（单并发 Worker 下加双保险）。
+ * claim 用条件更新保证单领取；submit 撞唯一键回读已有任务，并发双击幂等。
  */
 public final class MySqlReportStore implements ReportStore {
 
@@ -39,8 +40,13 @@ public final class MySqlReportStore implements ReportStore {
             return task;
         }
         String taskId = "r-" + UUID.randomUUID().toString().substring(0, 8);
-        jdbc.update("INSERT INTO t_report (task_id, session_id, status) VALUES (?, ?, 'GENERATING')",
-                taskId, sessionId);
+        try {
+            jdbc.update("INSERT INTO t_report (task_id, session_id, status) VALUES (?, ?, 'GENERATING')",
+                    taskId, sessionId);
+        } catch (DataIntegrityViolationException e) {
+            // 并发双击撞 session_id 唯一键：另一请求已建任务，回读复用不报错
+            return loadBySession(sessionId).orElseThrow(() -> e);
+        }
         return new ReportTask(taskId, sessionId, ReportTask.GENERATING, 0, null, null);
     }
 

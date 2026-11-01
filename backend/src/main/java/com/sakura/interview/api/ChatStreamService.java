@@ -8,6 +8,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 
 /**
@@ -15,6 +17,7 @@ import java.util.concurrent.Executor;
  * 推送，异常发 error 事件。事件构造集中在本类，SseSender 只做传输，
  * 单测注入记录型 sender 即可断言事件顺序与载荷，无需起 Web 容器。
  * 客户端断线不取消生成：发送失败静默吞掉，落库照常，前端靠 3 秒轮询恢复。
+ * 会话级单飞守卫：同会话上一条仍在生成时拒绝新请求，防 MAX 加 1 的 seq 撞主键。
  */
 public final class ChatStreamService {
 
@@ -24,6 +27,7 @@ public final class ChatStreamService {
     private final Supervisor supervisor;
     private final SessionStore store;
     private final Executor executor;
+    private final Set<String> inFlight = ConcurrentHashMap.newKeySet();
 
     public ChatStreamService(Supervisor supervisor, SessionStore store, Executor executor) {
         this.supervisor = supervisor;
@@ -39,6 +43,9 @@ public final class ChatStreamService {
     }
 
     public SseEmitter chat(String sessionId, String content) {
+        if (!inFlight.add(sessionId)) {
+            throw ApiException.conflict("上一条回复仍在生成中，请稍候再发送");
+        }
         SseEmitter emitter = new SseEmitter(EMITTER_TIMEOUT_MILLIS);
         SseSender sender = (event, data) ->
                 emitter.send(SseEmitter.event().name(event).data(data));
@@ -46,17 +53,28 @@ public final class ChatStreamService {
             try {
                 runTurn(sender, sessionId, content);
             } finally {
+                inFlight.remove(sessionId);
                 completeQuietly(emitter);
             }
         });
         return emitter;
     }
 
-    /** 单轮推送（包级可见供单测直调）：增量转发与收尾事件的全部顺序逻辑。 */
+    /** 单轮推送（包级可见供单测直调）：状态复检、增量转发与收尾事件的全部顺序逻辑。 */
     void runTurn(SseSender sender, String sessionId, String content) {
         long start = System.nanoTime();
         boolean[] streamed = {false};
         try {
+            // 状态复检：控制器校验后到线程池执行前的窗口里，会话可能已被结束
+            String status = store.loadSession(sessionId).map(SessionState::status).orElse(null);
+            if (status == null) {
+                sendQuietly(sender, "error", Map.of("message", "会话不存在：" + sessionId));
+                return;
+            }
+            if (!SessionState.IN_PROGRESS.equals(status)) {
+                sendQuietly(sender, "error", Map.of("message", "面试未开始或已结束，无法继续对话"));
+                return;
+            }
             Supervisor.SupervisorReply reply = supervisor.chat(sessionId, content, delta -> {
                 streamed[0] = true;
                 sendQuietly(sender, "message", Map.of("delta", delta));
