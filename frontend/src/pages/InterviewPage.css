@@ -136,6 +136,11 @@
   color: #6b7688;
 }
 
+/* 本轮内更早的条目淡出，突出最新状态（页面方案 4.2） */
+.activity-item.faded {
+  opacity: 0.55;
+}
+
 .activity-who { color: #475569; }
 
 .activity-dot {

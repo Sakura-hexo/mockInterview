@@ -150,6 +150,8 @@ export function useInterviewStream(sessionId: string) {
       setStreaming(true);
       setStreamStart(Date.now());
       setStreamNow(Date.now());
+      // 活动流按轮次重置：上一轮的终态条目留到本轮，会叠加成"重复且状态不变"的观感
+      setActivities([]);
       pushActivity('interviewer', '生成回复中…', 'running');
 
       const ctl = new AbortController();
