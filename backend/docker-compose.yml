@@ -98,9 +98,66 @@ services:
       timeout: 20s
       retries: 5
 
+  # ---- 监控栈（profile monitoring）：抓宿主机后端指标 + 预置面板 ----
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: interview-prometheus
+    restart: unless-stopped
+    profiles: ["monitoring"]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    container_name: interview-grafana
+    restart: unless-stopped
+    profiles: ["monitoring"]
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+  # ---- 应用容器（profile deploy）：初版部署一键栈，密钥经 .env 注入 ----
+
+  app:
+    build: .
+    image: interview-backend:latest
+    container_name: interview-app
+    restart: unless-stopped
+    profiles: ["deploy"]
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      # 容器网络内改指服务名，覆盖 .env 的本机地址
+      MYSQL_URL: jdbc:mysql://mysql:3306/interview?createDatabaseIfNotExist=true&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+      MYSQL_USERNAME: root
+      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD:-interview123}
+      REDIS_URI: redis://redis:6379
+      MILVUS_URI: http://milvus:19530
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      milvus:
+        condition: service_healthy
+
 volumes:
   mysql-data:
   redis-data:
   etcd-data:
   minio-data:
   milvus-data:
+  grafana-data:

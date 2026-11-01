@@ -5,8 +5,8 @@ spring:
   # actuator 的 db 健康检查复用 AppConfig 装配的连接池
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+      # 与 EnvKeys.redisUri 同源：容器内 REDIS_URI 指向服务名，健康检查随之生效
+      url: ${REDIS_URI:redis://localhost:6379}
   servlet:
     multipart:
       max-file-size: 5MB
