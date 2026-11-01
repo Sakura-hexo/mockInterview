@@ -23,7 +23,7 @@ import java.util.Optional;
 
 /**
  * SessionStore 的 MySQL 实现：会话数据的事实源，先写本库、后写缓存。
- * seq 由 MAX 加 1 分配，单进程单写者无并发竞争。
+ * seq 由 MAX 加 1 分配，同会话的并发发送由 SSE 层单飞守卫挡住，不并发追加。
  * upsert 不改写 status 与 user_id——状态机由接口层显式推进，归属创建后不可变。
  */
 public final class MySqlSessionStore implements SessionStore {
@@ -99,6 +99,12 @@ public final class MySqlSessionStore implements SessionStore {
     @Override
     public void updateStatus(String sessionId, String status) {
         jdbc.update("UPDATE t_session SET status = ? WHERE session_id = ?", status, sessionId);
+    }
+
+    @Override
+    public boolean casStatus(String sessionId, String from, String to) {
+        return jdbc.update("UPDATE t_session SET status = ? WHERE session_id = ? AND status = ?",
+                to, sessionId, from) > 0;
     }
 
     @Override

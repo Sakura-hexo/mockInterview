@@ -2,16 +2,19 @@ package com.sakura.interview.agent;
 
 import com.sakura.interview.infra.LlmCaller;
 import com.sakura.interview.infra.StructuredOutputInvoker;
+import com.sakura.interview.rag.SearchHit;
 import com.sakura.interview.session.ContextCompressor;
 import com.sakura.interview.session.FakeReportStore;
 import com.sakura.interview.session.FakeSessionStore;
 import com.sakura.interview.session.ReportService;
 import com.sakura.interview.session.ReportTask;
 import com.sakura.interview.session.StoredMessage;
+import com.sakura.interview.tool.QuestionBankTool;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -70,8 +73,9 @@ class SupervisorTest {
         assertThat(call.systemPrompt())
                 .contains("三年 Java 后端")
                 .contains("Spring")
-                .contains("search_question_bank")
-                .contains("禁止重复");
+                .contains("选题")
+                .contains("禁止重复")
+                .doesNotContain("search_question_bank");
         assertThat(call.userInput()).contains("我先自我介绍，三年经验");
     }
 
@@ -148,25 +152,45 @@ class SupervisorTest {
     }
 
     @Test
-    void 题型按工具信号推导_首题追问与换题() {
-        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "题目内容");
-        runtime.toolCallsPerCall(1);
+    void 题型按选题标记推导_首题追问与换题() {
+        AtomicInteger mode = new AtomicInteger(1);
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> mode.get() == 1
+                ? "很好。下一题：谈谈 JVM 调优。\n选题" : "追问：能结合项目再具体一点吗？");
         Wiring wiring = newSupervisor(runtime);
         String sessionId = wiring.supervisor().createSession("我的简历", "招 Java 后端").sessionId();
 
-        // 首轮（round 0）带工具调用记 QUESTION，之后带工具调用记 NEXT
+        // 首轮（round 0）带出题标记记 QUESTION，之后带标记记 NEXT，标记行从落库剥除
         assertThat(wiring.supervisor().chat(sessionId, "回答一").action())
                 .isEqualTo(Supervisor.ACTION_QUESTION);
         assertThat(wiring.supervisor().chat(sessionId, "回答二").action())
                 .isEqualTo(Supervisor.ACTION_NEXT);
         List<StoredMessage> messages = wiring.sessions().readAll(sessionId);
         assertThat(messages.get(1).action()).isEqualTo("QUESTION");
+        assertThat(messages.get(1).text()).isEqualTo("很好。下一题：谈谈 JVM 调优。");
         assertThat(messages.get(3).action()).isEqualTo("NEXT");
 
-        // 无工具调用视为追问
-        runtime.toolCallsPerCall(0);
-        assertThat(wiring.supervisor().chat(sessionId, "回答三").action())
-                .isEqualTo(Supervisor.ACTION_FOLLOW_UP);
+        // 无标记视为追问
+        mode.set(0);
+        Supervisor.SupervisorReply followUp = wiring.supervisor().chat(sessionId, "回答三");
+        assertThat(followUp.action()).isEqualTo(Supervisor.ACTION_FOLLOW_UP);
+        assertThat(followUp.reply()).doesNotContain("选题");
+    }
+
+    @Test
+    void 预检索候选题注入面试官系统提示词() {
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "好的。下一题：谈谈索引失效场景。\n选题");
+        FakeSessionStore sessions = new FakeSessionStore();
+        QuestionBankTool bank = new QuestionBankTool((query, topK) -> List.of(
+                new SearchHit("QB-001", "索引失效的场景有哪些", "MySQL", "seed", 0.9f)));
+        Supervisor supervisor = new Supervisor(runtime, new StructuredOutputInvoker(branchingCaller()),
+                sessions, new ContextCompressor((sys, user) -> "合并摘要"),
+                new ReportService(sessions, new FakeReportStore()), bank, Runnable::run);
+        String sessionId = supervisor.createSession("我的简历", "招 Java 后端").sessionId();
+
+        supervisor.chat(sessionId, "我讲了项目里的慢查询优化");
+
+        assertThat(runtime.calls().get(0).systemPrompt())
+                .contains("候选题").contains("QB-001").contains("索引失效");
     }
 
     @Test
@@ -182,5 +206,30 @@ class SupervisorTest {
         // 假运行时按两段下发：增量拼接恒等于回复全文（SSE 与落库一致口径）
         assertThat(deltas).containsExactly("请讲", "讲HashMap的底层。");
         assertThat(String.join("", deltas)).isEqualTo(reply.reply());
+    }
+
+    @Test
+    void 压缩移出关键路径由后台执行器承担() {
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "面试官问题");
+        FakeSessionStore sessions = new FakeSessionStore();
+        AtomicInteger compressCalls = new AtomicInteger();
+        List<Runnable> background = new ArrayList<>();
+        Supervisor supervisor = new Supervisor(runtime, new StructuredOutputInvoker(branchingCaller()),
+                sessions, new ContextCompressor((sys, user) -> {
+                    compressCalls.incrementAndGet();
+                    return "合并摘要";
+                }), new ReportService(sessions, new FakeReportStore()), null, background::add);
+        String sessionId = supervisor.createSession("我的简历", "招 Java 后端").sessionId();
+
+        for (int i = 1; i <= 15; i++) {
+            supervisor.chat(sessionId, "回答" + i);
+        }
+
+        // 关键路径零压缩调用：30 条消息已满足触发条件，但摘要模型未被调用
+        assertThat(compressCalls.get()).isZero();
+        // 后台任务已排队，放行后压缩执行并落摘要
+        background.forEach(Runnable::run);
+        assertThat(compressCalls.get()).isGreaterThanOrEqualTo(1);
+        assertThat(sessions.summaries.get(sessionId)).isNotNull();
     }
 }

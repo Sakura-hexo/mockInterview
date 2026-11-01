@@ -135,6 +135,11 @@ public final class PersistentSessionStore implements SessionStore, AutoCloseable
     }
 
     @Override
+    public boolean casStatus(String sessionId, String from, String to) {
+        return mysql.casStatus(sessionId, from, to);
+    }
+
+    @Override
     public List<SessionOverview> listOverviews(Long userId, int page, int size) {
         return mysql.listOverviews(userId, page, size);
     }

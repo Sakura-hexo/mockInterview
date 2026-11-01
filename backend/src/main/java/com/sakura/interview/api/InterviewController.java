@@ -89,10 +89,10 @@ public final class InterviewController {
             @RequestAttribute(AuthInterceptor.USER_ID_ATTRIBUTE) Long userId,
             @PathVariable String sessionId) {
         SessionState state = owned(userId, sessionId);
-        if (!SessionState.CREATED.equals(state.status())) {
+        // 条件更新挡住双击并发：只有 CREATED 能推进到 IN_PROGRESS
+        if (!store.casStatus(sessionId, SessionState.CREATED, SessionState.IN_PROGRESS)) {
             throw ApiException.conflict("面试已开始或已结束，无法重复开始");
         }
-        store.updateStatus(sessionId, SessionState.IN_PROGRESS);
         store.appendMessage(sessionId, "interviewer", OPENER, 0, 0, Supervisor.ACTION_QUESTION);
         List<String> focusPoints = state.jdProfile().skills().stream()
                 .limit(MAX_FOCUS_POINTS).toList();

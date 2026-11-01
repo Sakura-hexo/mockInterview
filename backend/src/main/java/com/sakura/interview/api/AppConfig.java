@@ -1,5 +1,6 @@
 package com.sakura.interview.api;
 
+import com.sakura.interview.agent.AgentRuntime;
 import com.sakura.interview.agent.Supervisor;
 import com.sakura.interview.infra.AgentLlmCaller;
 import com.sakura.interview.infra.AgentScopeRuntime;
@@ -18,15 +19,18 @@ import com.sakura.interview.session.ReportGenerator;
 import com.sakura.interview.session.ReportService;
 import com.sakura.interview.session.ReportWorker;
 import com.sakura.interview.session.SessionStore;
-import com.sakura.interview.tool.QuestionBankAgentTool;
+import com.sakura.interview.tool.QuestionBankTool;
 import com.sakura.interview.tool.QuestionBankTool;
 import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -87,9 +91,13 @@ public class AppConfig {
     }
 
     @Bean
-    public AgentScopeRuntime agentRuntime(MilvusQuestionStore questionStore) {
-        return new AgentScopeRuntime(List.of(new QuestionBankAgentTool(
-                new QuestionBankTool(questionStore))));
+    public AgentScopeRuntime agentRuntime() {
+        return new AgentScopeRuntime();
+    }
+
+    @Bean
+    public QuestionBankTool questionBankTool(MilvusQuestionStore questionStore) {
+        return new QuestionBankTool(questionStore);
     }
 
     @Bean
@@ -102,6 +110,12 @@ public class AppConfig {
         return new ReportService(sessionStore, reportStore);
     }
 
+    /** Worker 两写同事务用：数据源已就绪，Boot 自动装配 DataSourceTransactionManager。 */
+    @Bean
+    public TransactionTemplate transactionTemplate(PlatformTransactionManager txManager) {
+        return new TransactionTemplate(txManager);
+    }
+
     @Bean
     public ReportGenerator reportGenerator(StructuredOutputInvoker invoker,
                                             SessionStore sessionStore) {
@@ -110,15 +124,27 @@ public class AppConfig {
 
     @Bean(initMethod = "start", destroyMethod = "close")
     public ReportWorker reportWorker(MySqlReportStore reportStore, ReportGenerator generator,
-                                     SessionStore sessionStore) {
-        return new ReportWorker(reportStore, generator, sessionStore);
+                                     SessionStore sessionStore, TransactionTemplate txTemplate) {
+        return new ReportWorker(reportStore, generator, sessionStore, txTemplate);
+    }
+
+    /** 压缩后台单线程：天然串行避免同会话摘要互相覆盖，守护线程不阻塞退出。 */
+    @Bean(destroyMethod = "shutdown")
+    public ExecutorService compressionExecutor() {
+        return Executors.newSingleThreadExecutor(r -> {
+            Thread thread = new Thread(r, "ctx-compress");
+            thread.setDaemon(true);
+            return thread;
+        });
     }
 
     @Bean
-    public Supervisor supervisor(AgentScopeRuntime runtime, StructuredOutputInvoker invoker,
+    public Supervisor supervisor(AgentRuntime runtime, StructuredOutputInvoker invoker,
                                  SessionStore sessionStore, ContextCompressor compressor,
-                                 ReportService reportService) {
-        return new Supervisor(runtime, invoker, sessionStore, compressor, reportService);
+                                 ReportService reportService, QuestionBankTool questionBank,
+                                 ExecutorService compressionExecutor) {
+        return new Supervisor(runtime, invoker, sessionStore, compressor, reportService,
+                questionBank, compressionExecutor);
     }
 
     @Bean

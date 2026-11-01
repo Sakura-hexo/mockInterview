@@ -11,37 +11,21 @@ import io.agentscope.core.event.TextBlockDeltaEvent;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.model.ChatUsage;
 import io.agentscope.core.state.InMemoryAgentStateStore;
-import io.agentscope.core.tool.AgentTool;
-import io.agentscope.core.tool.Toolkit;
 import reactor.core.publisher.Flux;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * AgentRuntime 的 AgentScope 实现：换引擎只改本类。
  * 无状态——每次调用构建全新 agent（stateStore 仅作 AgentScope 必填占位、
  * 不跨轮复用），历史由 Supervisor 组装进 userInput 注入，杜绝自动累积导致的
- * token 线性膨胀。面试官 maxIters 3 挂题库工具，chat maxIters 1；
- * 不传内置文件工具即权限收敛（字节码核验零内置工具引用）。
+ * token 线性膨胀。角色统一单轮生成：题库候选由 Supervisor 预检索注入系统提示词，
+ * 不挂任何工具（字节码核验零内置工具引用）。
  * 流式口径：全部 TEXT_BLOCK_DELTA 依序转发，Final.fullText 取其拼接——
  * 推送内容与落库文本恒一致；思考块与工具事件只计数不转发。
  */
 public final class AgentScopeRuntime implements AgentRuntime {
-
-    private static final int INTERVIEWER_MAX_ITERS = 3;
-    private static final int CHAT_MAX_ITERS = 1;
-
-    private final Toolkit interviewerToolkit;
-
-    public AgentScopeRuntime(List<AgentTool> interviewerTools) {
-        Toolkit toolkit = new Toolkit();
-        for (AgentTool tool : interviewerTools) {
-            toolkit.registerAgentTool(tool);
-        }
-        this.interviewerToolkit = toolkit;
-    }
 
     @Override
     public Flux<StreamChunk> streamGenerate(String role, String sessionId,
@@ -99,17 +83,13 @@ public final class AgentScopeRuntime implements AgentRuntime {
     }
 
     private ReActAgent buildAgent(String role, String systemPrompt) {
-        ReActAgent.Builder builder = ReActAgent.builder()
+        return ReActAgent.builder()
                 .name(role)
                 .sysPrompt(systemPrompt)
                 .model(ChatModels.chat())
                 .stateStore(new InMemoryAgentStateStore())
-                .enableMetaTool(false);
-        if (AgentRuntime.ROLE_INTERVIEWER.equals(role)) {
-            builder.maxIters(INTERVIEWER_MAX_ITERS).toolkit(interviewerToolkit);
-        } else {
-            builder.maxIters(CHAT_MAX_ITERS);
-        }
-        return builder.build();
+                .maxIters(1) // 单轮生成：无工具可调，出题靠预检索注入
+                .enableMetaTool(false)
+                .build();
     }
 }

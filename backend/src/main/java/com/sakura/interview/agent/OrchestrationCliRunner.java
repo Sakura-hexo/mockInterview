@@ -15,7 +15,6 @@ import com.sakura.interview.session.ReportGenerator;
 import com.sakura.interview.session.ReportService;
 import com.sakura.interview.session.ReportWorker;
 import com.sakura.interview.session.SessionState;
-import com.sakura.interview.tool.QuestionBankAgentTool;
 import com.sakura.interview.tool.QuestionBankTool;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -24,7 +23,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 
 /**
  * 编排 CLI：新会话或 --resume 恢复进行多轮对话，验证路由分流、追问换题、
@@ -52,14 +50,13 @@ public final class OrchestrationCliRunner {
              PersistentSessionStore store = new PersistentSessionStore(ds, redis);
              MilvusQuestionStore questionStore =
                      new MilvusQuestionStore(EmbeddingModels.embedding())) {
-            QuestionBankAgentTool bankTool =
-                    new QuestionBankAgentTool(new QuestionBankTool(questionStore));
-            AgentScopeRuntime runtime = new AgentScopeRuntime(List.of(bankTool));
+            AgentScopeRuntime runtime = new AgentScopeRuntime();
             StructuredOutputInvoker invoker = new StructuredOutputInvoker(new AgentLlmCaller());
             MySqlReportStore reportStore = new MySqlReportStore(ds);
             Supervisor supervisor = new Supervisor(runtime, invoker, store,
                     new ContextCompressor(new AgentLlmCaller()),
-                    new ReportService(store, reportStore));
+                    new ReportService(store, reportStore),
+                    new QuestionBankTool(questionStore), Runnable::run);
             try (ReportWorker worker = new ReportWorker(reportStore,
                     new ReportGenerator(invoker, store)).start()) {
                 runLoop(supervisor, args, resumeId);

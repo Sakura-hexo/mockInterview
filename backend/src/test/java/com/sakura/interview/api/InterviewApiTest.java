@@ -50,7 +50,7 @@ class InterviewApiTest {
     private static final FakeAuthStore authSessions = new FakeAuthStore();
     private static final FakeUserStore users = new FakeUserStore();
     private static final FakeAgentRuntime runtime = new FakeAgentRuntime(
-            c -> "请介绍线程池的核心参数。");
+            c -> "请介绍线程池的核心参数。\n选题");
 
     @TestConfiguration
     static class TestBeans {
@@ -71,13 +71,12 @@ class InterviewApiTest {
         }
 
         @Bean
-        AuthInterceptor authInterceptor() {
+        AuthInterceptor authInterceptor(AuthService authService) {
             return new AuthInterceptor(authSessions);
         }
 
         @Bean
         Supervisor supervisor() {
-            runtime.toolCallsPerCall(1);
             return new Supervisor(runtime, new StructuredOutputInvoker(branchingCaller()),
                     sessions, new ContextCompressor((sys, user) -> "合并摘要"),
                     new ReportService(sessions, reports));

@@ -44,6 +44,17 @@ public final class FakeSessionStore implements SessionStore {
     }
 
     @Override
+    public boolean casStatus(String sessionId, String from, String to) {
+        SessionState state = sessions.get(sessionId);
+        String current = state == null ? statuses.get(sessionId) : state.status();
+        if (!from.equals(current)) {
+            return false;
+        }
+        updateStatus(sessionId, to);
+        return true;
+    }
+
+    @Override
     public int appendMessage(String sessionId, String role, String text,
                              long inputTokens, long outputTokens, String action) {
         List<StoredMessage> list = messages.computeIfAbsent(sessionId, key -> new ArrayList<>());
