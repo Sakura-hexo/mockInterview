@@ -26,7 +26,8 @@ public final class RagCliRunner {
 
     public static void main(String[] args) {
         if (args.length == 0) {
-            System.err.println("用法：import [--rebuild] | search 查询 [--topK N] [--dense-only] [--no-rewrite]");
+            System.err.println("用法：import [--rebuild] | search 查询 [--topK N] [--dense-only] [--no-rewrite]"
+                    + " | eval [--topK N] [--rewrite]");
             System.exit(2);
         }
         try (MilvusQuestionStore store = new MilvusQuestionStore(EmbeddingModels.embedding())) {
@@ -35,6 +36,7 @@ public final class RagCliRunner {
             switch (args[0]) {
                 case "import" -> runImport(store, hasFlag(args, "--rebuild"));
                 case "search" -> runSearch(store, args);
+                case "eval" -> runEval(store, args);
                 default -> {
                     System.err.println("未知命令：" + args[0]);
                     System.exit(2);
@@ -72,7 +74,9 @@ public final class RagCliRunner {
 
     private static List<Path> bankFiles() {
         try (Stream<Path> stream = Files.list(BANK_DIR)) {
-            List<Path> files = stream.filter(p -> p.toString().endsWith(".md")).sorted().toList();
+            List<Path> files = stream.filter(p -> p.toString().endsWith(".md"))
+                    .filter(p -> !p.getFileName().toString().startsWith("eval-"))
+                    .sorted().toList();
             if (files.isEmpty()) {
                 throw new IllegalStateException("question-bank 目录下没有 Markdown 题库文件");
             }
@@ -126,6 +130,94 @@ public final class RagCliRunner {
             System.out.printf("%d. [%s] score=%.4f %s | 标签:%s | 来源:%s%n",
                     rank++, hit.id(), hit.score(), hit.question(), hit.tags(), hit.source());
         }
+    }
+
+    /** 评测：期望题号先对题库校验，生产口径跑基线，--rewrite 追加上限对照口径。 */
+    private static void runEval(MilvusQuestionStore store, String[] args) {
+        Set<String> bankIds = new HashSet<>();
+        for (Path file : bankFiles()) {
+            for (BankQuestion question : QuestionBankParser.parse(file)) {
+                bankIds.add(question.id());
+            }
+        }
+        List<EvalCase> cases = EvalSetParser.parse(Path.of("question-bank", "eval-set.md"));
+        for (EvalCase evalCase : cases) {
+            for (String gold : evalCase.goldIds()) {
+                if (!bankIds.contains(gold)) {
+                    throw new IllegalStateException(
+                            "评测期望题号不在题库：" + evalCase.id() + " 期望 " + gold);
+                }
+            }
+        }
+        store.ensureCollection();
+        int topK = intFlag(args, "--topK", 5);
+        System.out.printf("评测 %d 条 | topK %d | 期望题号校验通过%n", cases.size(), topK);
+        System.out.println("== 生产口径 混合检索 ==");
+        List<RetrievalEval.TierReport> baseline =
+                RetrievalEval.run(q -> store.hybridSearch(q, topK), cases);
+        printReports(baseline, store);
+        if (hasFlag(args, "--scores")) {
+            printScores(baseline);
+        }
+        if (hasFlag(args, "--rewrite")) {
+            System.out.println("== 上限对照 改写加双查询融合 ==");
+            List<RetrievalEval.TierReport> rewritten = RetrievalEval.run(q -> {
+                String rewrittenQuery = QueryRewriter.rewrite(q);
+                if (rewrittenQuery.equals(q)) {
+                    return store.hybridSearch(q, topK);
+                }
+                return SearchTiers.fuse(store.hybridSearch(q, topK),
+                        store.hybridSearch(rewrittenQuery, topK), topK);
+            }, cases);
+            printReports(rewritten, null);
+            if (hasFlag(args, "--scores")) {
+                printScores(rewritten);
+            }
+        }
+    }
+
+    /** 定标数据导出：全量 case 的 top1、top2 分差与命中排名。 */
+    private static void printScores(List<RetrievalEval.TierReport> reports) {
+        System.out.println("== 定标数据 top1 top2 分差与命中排名 ==");
+        for (RetrievalEval.TierReport report : reports) {
+            for (RetrievalEval.CaseResult result : report.results()) {
+                float top1 = result.top().isEmpty() ? 0f : result.top().get(0).score();
+                float top2 = result.top().size() < 2 ? 0f : result.top().get(1).score();
+                System.out.printf("%s %s rank=%d top1=%.4f top2=%.4f diff=%.4f %s%n",
+                        result.evalCase().id(), report.tier(), result.firstGoldRank(),
+                        top1, top2, top1 - top2, result.evalCase().query());
+            }
+        }
+    }
+
+    private static void printReports(List<RetrievalEval.TierReport> reports, MilvusQuestionStore store) {
+        for (RetrievalEval.TierReport report : reports) {
+            System.out.printf("-- %s | %d 条 | hit@1 %d/%d | hit@3 %d/%d | MRR %.3f --%n",
+                    report.tier(), report.total(), report.hit1(), report.total(),
+                    report.hit3(), report.total(), report.mrr());
+            for (RetrievalEval.CaseResult failure : report.failures()) {
+                System.out.printf("失败 %s 查询：%s 期望：%s%n", failure.evalCase().id(),
+                        failure.evalCase().query(), failure.evalCase().goldIds());
+                System.out.println("  实际：" + topLine(failure.top()));
+                if (store != null) {
+                    System.out.println("  稠密：" + topLine(store.denseSearch(failure.evalCase().query(), 5)));
+                    System.out.println("  稀疏：" + topLine(store.sparseSearch(failure.evalCase().query(), 5)));
+                }
+            }
+        }
+    }
+
+    private static String topLine(List<SearchHit> top) {
+        StringBuilder sb = new StringBuilder();
+        int rank = 1;
+        for (SearchHit hit : top) {
+            if (sb.length() > 0) {
+                sb.append(" ");
+            }
+            sb.append(rank++).append(".").append(hit.id())
+                    .append(String.format("(%.4f)", hit.score()));
+        }
+        return sb.toString();
     }
 
     private static boolean hasFlag(String[] args, String flag) {
