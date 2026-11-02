@@ -1,8 +1,8 @@
 // SSE 流客户端（前端架构方案 4.2、接口文档 4.3）
-// fetch + ReadableStream 手写循环，不用 EventSource（带不了 Authorization 头）
+// fetch + ReadableStream 手写循环：可控中止与逐块解析，同源 Cookie 自动携带
 // 事件顺序 message → action → metrics → done；异常时后端发 error 事件
 
-import { ApiError, clearToken, getToken } from './http';
+import { ApiError, clearAuth } from './http';
 import { parseSse, type SseEvent } from '../lib/sseParser';
 import type { InterviewAction } from '../types';
 
@@ -26,19 +26,17 @@ export async function streamChat(
   cb: StreamCallbacks,
   signal?: AbortSignal,
 ): Promise<void> {
-  const token = getToken();
+  // 同源自动携带 HttpOnly 会话 Cookie（认证方案 2026-11-02 Cookie 模式）
   const res = await fetch(`/api/interviews/${sessionId}/chat`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content, images: [] }), // images 为 P1 预留（接口文档 4.3）
     signal,
+    credentials: 'same-origin',
   });
 
   if (res.status === 401) {
-    clearToken();
+    clearAuth();
     if (window.location.pathname !== '/login') window.location.assign('/login');
     throw new ApiError(401, '未认证');
   }

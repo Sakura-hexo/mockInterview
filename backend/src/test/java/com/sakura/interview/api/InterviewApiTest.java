@@ -10,6 +10,7 @@ import com.sakura.interview.session.FakeReportStore;
 import com.sakura.interview.session.FakeSessionStore;
 import com.sakura.interview.session.ReportService;
 import com.sakura.interview.session.ReportTask;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Web 层切片集成测试：真路由、真拦截器、真信封，领域依赖全部落在内存假件上。
- * 覆盖注册登录令牌链路、401 拦截、按用户隔离、状态机冲突、SSE 事件流与报告 202。
+ * 覆盖注册登录 HttpOnly Cookie 链路、401 拦截、按用户隔离、状态机冲突、SSE 事件流与报告 202。
  */
 @WebMvcTest(controllers = {AuthController.class, InterviewController.class})
 class InterviewApiTest {
@@ -116,7 +117,7 @@ class InterviewApiTest {
         users.byUsername.clear();
     }
 
-    private String register(String username) throws Exception {
+    private Cookie register(String username) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"username\":\"" + username + "\",\"password\":\"password123\"}"))
@@ -124,13 +125,15 @@ class InterviewApiTest {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.username").value(username))
                 .andReturn();
-        return JsonPath.read(result.getResponse().getContentAsString(StandardCharsets.UTF_8),
-                "$.data.token");
+        Cookie cookie = result.getResponse().getCookie(AuthController.SESSION_COOKIE);
+        assertThat(cookie).isNotNull();
+        assertThat(cookie.isHttpOnly()).isTrue();
+        return cookie;
     }
 
-    private String createSession(String token) throws Exception {
+    private String createSession(Cookie token) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/interviews")
-                        .header("Authorization", "Bearer " + token)
+                        .cookie(token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(CREATE_BODY))
                 .andExpect(status().isOk())
@@ -142,9 +145,9 @@ class InterviewApiTest {
 
     @Test
     void 注册即登录且令牌可访问受保护接口() throws Exception {
-        String token = register("tester");
+        Cookie token = register("tester");
 
-        mockMvc.perform(get("/api/interviews").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/interviews").cookie(token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.total").value(0));
@@ -160,28 +163,28 @@ class InterviewApiTest {
 
     @Test
     void 登出后令牌失效() throws Exception {
-        String token = register("tester");
-        mockMvc.perform(post("/api/auth/logout").header("Authorization", "Bearer " + token))
+        Cookie token = register("tester");
+        mockMvc.perform(post("/api/auth/logout").cookie(token))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(get("/api/interviews").header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/interviews").cookie(token))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
     void 开始面试返回固定开场白并落为首题() throws Exception {
-        String token = register("tester");
+        Cookie token = register("tester");
         String sessionId = createSession(token);
 
         mockMvc.perform(post("/api/interviews/" + sessionId + "/start")
-                        .header("Authorization", "Bearer " + token))
+                        .cookie(token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.firstQuestion").value(
                         "面试正式开始。请先做一个简短的自我介绍，重点讲讲与目标岗位相关的技能与项目经历。"))
                 .andExpect(jsonPath("$.data.focusPoints[0]").value("Spring"));
 
         mockMvc.perform(get("/api/interviews/" + sessionId)
-                        .header("Authorization", "Bearer " + token))
+                        .cookie(token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.session.status").value("IN_PROGRESS"))
                 .andExpect(jsonPath("$.data.session.questionCount").value(5))
@@ -191,68 +194,68 @@ class InterviewApiTest {
 
     @Test
     void 重复开始与未开始结束返回409() throws Exception {
-        String token = register("tester");
+        Cookie token = register("tester");
         String sessionId = createSession(token);
 
         mockMvc.perform(post("/api/interviews/" + sessionId + "/start")
-                        .header("Authorization", "Bearer " + token))
+                        .cookie(token))
                 .andExpect(status().isOk());
         mockMvc.perform(post("/api/interviews/" + sessionId + "/start")
-                        .header("Authorization", "Bearer " + token))
+                        .cookie(token))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value(409));
 
         // 已开始的会话可结束，再建新会话直接结束则 409
         mockMvc.perform(post("/api/interviews/" + sessionId + "/end")
-                        .header("Authorization", "Bearer " + token))
+                        .cookie(token))
                 .andExpect(status().isOk());
         String fresh = createSession(token);
         mockMvc.perform(post("/api/interviews/" + fresh + "/end")
-                        .header("Authorization", "Bearer " + token))
+                        .cookie(token))
                 .andExpect(status().isConflict());
     }
 
     @Test
     void 他人会话一律404不区分不存在() throws Exception {
-        String owner = register("owner");
-        String stranger = register("stranger");
+        Cookie owner = register("owner");
+        Cookie stranger = register("stranger");
         String sessionId = createSession(owner);
 
         mockMvc.perform(get("/api/interviews/" + sessionId)
-                        .header("Authorization", "Bearer " + stranger))
+                        .cookie(stranger))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(404));
         mockMvc.perform(get("/api/interviews/s-none")
-                        .header("Authorization", "Bearer " + stranger))
+                        .cookie(stranger))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void 会话列表只含本人会话() throws Exception {
-        String owner = register("owner");
-        String stranger = register("stranger");
+        Cookie owner = register("owner");
+        Cookie stranger = register("stranger");
         createSession(owner);
         createSession(owner);
 
         mockMvc.perform(get("/api/interviews")
-                        .header("Authorization", "Bearer " + stranger))
+                        .cookie(stranger))
                 .andExpect(jsonPath("$.data.total").value(0));
         mockMvc.perform(get("/api/interviews")
-                        .header("Authorization", "Bearer " + owner))
+                        .cookie(owner))
                 .andExpect(jsonPath("$.data.total").value(2))
                 .andExpect(jsonPath("$.data.list.length()").value(2));
     }
 
     @Test
     void 对话SSE按事件顺序推送() throws Exception {
-        String token = register("tester");
+        Cookie token = register("tester");
         String sessionId = createSession(token);
         mockMvc.perform(post("/api/interviews/" + sessionId + "/start")
-                        .header("Authorization", "Bearer " + token))
+                        .cookie(token))
                 .andExpect(status().isOk());
 
         MvcResult started = mockMvc.perform(post("/api/interviews/" + sessionId + "/chat")
-                        .header("Authorization", "Bearer " + token)
+                        .cookie(token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"content\":\"我先自我介绍\",\"images\":[]}"))
                 .andExpect(request().asyncStarted())
@@ -271,11 +274,11 @@ class InterviewApiTest {
 
     @Test
     void 未开始的会话对话返回409() throws Exception {
-        String token = register("tester");
+        Cookie token = register("tester");
         String sessionId = createSession(token);
 
         mockMvc.perform(post("/api/interviews/" + sessionId + "/chat")
-                        .header("Authorization", "Bearer " + token)
+                        .cookie(token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"content\":\"你好\",\"images\":[]}"))
                 .andExpect(status().isConflict());
@@ -283,10 +286,10 @@ class InterviewApiTest {
 
     @Test
     void 结束面试建报告任务且轮询返回202() throws Exception {
-        String token = register("tester");
+        Cookie token = register("tester");
         String sessionId = createSession(token);
         mockMvc.perform(post("/api/interviews/" + sessionId + "/start")
-                        .header("Authorization", "Bearer " + token))
+                        .cookie(token))
                 .andExpect(status().isOk());
         // 补两轮问答使配对数达到报告下限
         sessions.appendMessage(sessionId, "user", "回答一", 0, 0);
@@ -294,12 +297,12 @@ class InterviewApiTest {
         sessions.appendMessage(sessionId, "user", "回答二", 0, 0);
 
         mockMvc.perform(post("/api/interviews/" + sessionId + "/end")
-                        .header("Authorization", "Bearer " + token))
+                        .cookie(token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.reportStatus").value("GENERATING"));
 
         mockMvc.perform(get("/api/interviews/" + sessionId + "/report")
-                        .header("Authorization", "Bearer " + token))
+                        .cookie(token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(202))
                 .andExpect(jsonPath("$.data.reportStatus").value("GENERATING"));
@@ -311,7 +314,7 @@ class InterviewApiTest {
                         + "\"items\":[],\"suggestions\":[],\"tokenTotal\":100,\"durationMs\":1000}",
                 null));
         mockMvc.perform(get("/api/interviews/" + sessionId + "/report")
-                        .header("Authorization", "Bearer " + token))
+                        .cookie(token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.scores.overall").value(6))
@@ -320,24 +323,24 @@ class InterviewApiTest {
 
     @Test
     void 无报告任务时获取报告返回404() throws Exception {
-        String token = register("tester");
+        Cookie token = register("tester");
         String sessionId = createSession(token);
 
         mockMvc.perform(get("/api/interviews/" + sessionId + "/report")
-                        .header("Authorization", "Bearer " + token))
+                        .cookie(token))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value(404));
     }
 
     @Test
     void multipart建会话与JSON口径一致() throws Exception {
-        String token = register("tester");
+        Cookie token = register("tester");
         byte[] resume = "三年 Java 后端".getBytes(StandardCharsets.UTF_8);
 
         mockMvc.perform(multipart("/api/interviews")
                         .file(new MockMultipartFile(
                                 "resumeFile", "resume.txt", "text/plain", resume))
-                        .header("Authorization", "Bearer " + token)
+                        .cookie(token)
                         .param("jdText", "招 Java 后端")
                         .param("config",
                                 "{\"direction\":\"JAVA_BACKEND\",\"difficulty\":\"EASY\",\"questionCount\":3}"))

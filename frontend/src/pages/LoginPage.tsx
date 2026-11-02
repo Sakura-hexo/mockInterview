@@ -1,7 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ApiError, setToken } from '../api/http';
-import { login, register, setUsernameStored } from '../api/auth';
+import { ApiError, setLoggedIn, setUsernameStored } from '../api/http';
+import { login, register } from '../api/auth';
 import './LoginPage.css';
 
 // 登录/注册页 /login（认证改造方案 2026-11-01，视觉沿用 V1 定稿设计稿 01）
@@ -50,8 +50,9 @@ export default function LoginPage() {
     try {
       const result =
         mode === 'login' ? await login(name, password) : await register(name, password);
-      setToken(result.token);
+      setLoggedIn();
       setUsernameStored(result.username);
+      localStorage.removeItem('APP_TOKEN'); // 清掉 Bearer 时代的孤儿键
       navigate('/');
     } catch (err) {
       if (err instanceof ApiError) {

@@ -45,8 +45,8 @@ flowchart LR
 | 框架 | React 19 + react-router-dom 7 | 与 travelScope 同 |
 | Markdown | react-markdown + remark-gfm | 复用 travelScope 的 sanitize 逻辑 |
 | 样式 | 纯 CSS（`App.css` 单文件） | 不引 Tailwind / antd，与 travelScope 一致 |
-| HTTP | 原生 fetch + 手写 SSE 解析 | 复用 travelScope `parseSse`（接口文档明确要求 fetch 而非 EventSource） |
-| 鉴权 | localStorage 存会话令牌（键沿用 `APP_TOKEN`）与用户名，apiFetch 自动加 `Authorization: Bearer` | 注册/登录/登出走 auth.ts（2026-11-01 修订） |
+| HTTP | 原生 fetch + 手写 SSE 解析 | 复用 travelScope `parseSse`（fetch 做可控中止与逐块解析） |
+| 鉴权 | 会话凭据在 HttpOnly Cookie，localStorage 仅存登录标志与用户名，apiFetch 同源自动携带 Cookie | 注册/登录/登出走 auth.ts（2026-11-02 Cookie 模式修订） |
 | 图表 | 不引库，评分用 CSS 表格 + 进度条 | 极简 |
 
 工程位置：项目根新增 `frontend/` 子目录，与后端 `src/` 平级。开发期 Vite 起 5173 端口，proxy 转发 `/api` 到 `http://localhost:8080`；生产期 `vite build` 产物拷到 `src/main/resources/static/`，由 Spring Boot 直接服务，docker-compose 单容器即可演示。
@@ -64,7 +64,7 @@ flowchart LR
 *                     重定向 /
 ```
 
-路由守卫 `RequireAuth`：未存 token 一律跳 `/login`。
+路由守卫 `RequireAuth`：无登录标志一律跳 `/login`；真实凭据校验由后端 Cookie 会话兜底。
 
 ### 3.2 页面骨架（沿用 travelScope 左右分栏）
 
@@ -190,15 +190,16 @@ travelScope 的 `login-card` 居中卡片：
 - 表单为用户名 + 密码双输入框；密码框 `type="password"` 全程掩码，旁置文字型"显示/隐藏"切换（V1 风格禁图标）
 - autocomplete 语义标注：用户名 `username`、登录 `current-password`、注册 `new-password`
 - 客户端校验：用户名 2-20 位、注册时密码至少 8 位
-- 提交调 `POST /api/auth/login` 或 `POST /api/auth/register`（注册即登录），成功存会话令牌与用户名跳 `/`；401"用户名或密码错误"、409"用户名已被占用"、429"失败次数过多"红色提示
+- 提交调 `POST /api/auth/login` 或 `POST /api/auth/register`（注册即登录），成功置登录标志与用户名跳 `/`——会话凭据由服务端经 HttpOnly Cookie 下发，前端不持有令牌（2026-11-02 修订）；401"用户名或密码错误"、409"用户名已被占用"、429"失败次数过多"红色提示
 - 底部小字：注册即登录，无需邮箱验证；自部署开源项目 · 数据只保存在自己的机器上
 
 ## 5 状态与数据流
 
 ```mermaid
 flowchart LR
-    LS[localStorage token] --> AF[apiFetch 拦截器]
-    AF -->|401| L[跳转 login]
+    LS[localStorage 登录标志] --> AF[apiFetch 拦截器]
+    CK[HttpOnly 会话 Cookie] -.同源自动携带.-> AF
+    AF -->|401| L[跳转 login 清登录态]
     AF -->|200| API[Spring Boot API]
     API --> SSE[SSE 流]
     SSE --> CP[InterviewPage state]
@@ -209,7 +210,7 @@ flowchart LR
 
 | 状态 | 存放位置 | 生命周期 |
 |---|---|---|
-| `token` | localStorage | 全局，退出清空 |
+| `loggedIn` | localStorage | 全局非敏感标志，退出清空；凭据本体在 HttpOnly Cookie（2026-11-02 修订） |
 | `username` | localStorage | 全局，退出清空，供侧栏展示（2026-11-01 修订新增） |
 | `conversations` | Sidebar 组件 state | 会话级，路由切换刷新 |
 | `messages` | InterviewPage useState | 进入页面拉取 + SSE 增量 |

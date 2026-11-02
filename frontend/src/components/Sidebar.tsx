@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { clearToken } from '../api/http';
-import { clearUsernameStored, getUsernameStored, logout } from '../api/auth';
+import { clearAuth, getUsernameStored } from '../api/http';
+import { logout } from '../api/auth';
 import { listInterviews } from '../api/interview';
 import type { InterviewSummary, SessionStatus } from '../types';
 
@@ -106,10 +106,9 @@ export default function Sidebar() {
   );
 
   function handleLogout() {
-    // 先发注销请求再清令牌：apiFetch 组装请求头时才读得到本地 token，失败不阻塞本地登出
+    // 先发注销请求再清登录态：服务端删会话并清 Cookie，失败不阻塞本地登出
     logout().catch(() => {});
-    clearToken();
-    clearUsernameStored();
+    clearAuth();
     navigate('/login');
   }
 

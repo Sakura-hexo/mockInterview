@@ -8,10 +8,12 @@
 
 > 2026-11-01 修订：认证由 APP_TOKEN 静态令牌改为账号密码会话令牌（开源产品定位）——第 1 节鉴权约定更新，新增 4.0 认证接口，第 5 节补充密码安全约束。方案全文见 `.agentdocs/plans/2026-11-01/用户认证-账号密码改造方案.md`。
 
+> 2026-11-02 修订：凭据传输升级为 HttpOnly Cookie——4.0 重写为 Cookie 契约，Bearer 通道与响应体令牌移除，第 1 节与 4.3 前端注意同步更新。方案见 `.agentdocs/plans/2026-11-02/用户认证-Cookie模式-优化方案.md`。
+
 ## 1 通用约定
 
 - Base URL：`http://localhost:8080`
-- 鉴权：`/api` 接口需请求头 `Authorization: Bearer {会话令牌}`，令牌由 4.0 认证接口发放（2026-11-01 修订：APP_TOKEN 静态令牌退役）；register 与 login 为令牌发放入口不校验，其余接口缺失或无效返回 401
+- 鉴权：`/api` 接口凭 HttpOnly Cookie `INTERVIEW_SESSION` 识别会话（2026-11-02 修订：Bearer 通道移除）；register 与 login 为会话发放入口不校验，其余接口无有效会话返回 401
 - 数据格式：请求与响应均为 `application/json`；仅 chat 接口响应为 `text/event-stream`
 - 统一响应体：`{"code": 0, "message": "ok", "data": ...}`，code 非 0 表示业务错误
 - 错误码：401 未认证、404 会话不存在、409 状态冲突或用户名已占用、413 内容超限、429 登录失败次数过多、500 内部错误
@@ -37,15 +39,15 @@ ChatMessage        role content tokens time
 
 ## 4 接口明细
 
-### 4.0 认证接口（2026-11-01 修订新增）
+### 4.0 认证接口（2026-11-01 新增；2026-11-02 修订为 HttpOnly Cookie 模式）
 
-三个接口均不做会话前置校验（register 与 login 是令牌发放入口，logout 自带令牌）。
+三个接口均不做会话前置校验（register 与 login 是会话发放入口，logout 自带 Cookie）。
 
 **POST /api/auth/register** 注册即登录
 
 入参：`{"username": "2-20 位字符", "password": "至少 8 位"}`
 
-出参：`data: { "token": "会话令牌", "username": "demo" }`
+出参：`data: { "username": "demo" }`——令牌仅走 Cookie，响应体不含
 
 错误：用户名已占用 HTTP 409（code 40901）；参数不合法 HTTP 400（code 40001）
 
@@ -55,9 +57,9 @@ ChatMessage        role content tokens time
 
 **POST /api/auth/logout** 登出
 
-需携带 Bearer 会话令牌。删除当前会话，令牌即刻失效。出参 `data: null`。
+删除当前会话并以同属性清 Cookie，令牌即刻失效。出参 `data: null`。
 
-**会话令牌约定**：32 字节随机 hex 不透明串；Redis 键 `auth:session:{token}`，值为 userId 与创建时间；TTL 24 小时，每次通过校验的请求滑动续期。前端存 localStorage（键沿用 `APP_TOKEN`，另存 `APP_USERNAME` 供侧栏展示）。
+**会话 Cookie 约定（2026-11-02 修订）**：登录与注册成功后下发 `Set-Cookie: INTERVIEW_SESSION={令牌}`，属性 `HttpOnly; SameSite=Strict; Path=/api; Max-Age=86400`；`Secure` 由配置 `auth.cookie.secure` 控制，默认 false，HTTPS 反代部署置 true 或设环境变量 `AUTH_COOKIE_SECURE`。令牌为 32 字节随机 hex，Redis 键 `auth:session:{token}` 存 userId，TTL 24 小时滑动续期。Bearer 通道已移除，全部 `/api` 接口仅认 Cookie；脚本测试用 curl cookie jar：`curl -c jar.txt -b jar.txt`。前端 localStorage 只存非敏感的登录标志与用户名。
 
 ### 4.1 新建面试会话（实现于步骤 7）
 
@@ -101,7 +103,7 @@ event: error     data: {"message": "错误描述"}
 
 error 事件（2026-10-31 补充，对齐前端架构方案 4.2）：本轮生成失败时发出 error 并终结本流，不再发 done；前端气泡尾部红条提示并允许重发同一回答。
 
-前端注意：使用 fetch 流式读取响应，不要使用 EventSource——EventSource 无法携带 Authorization 请求头，鉴权会失败。本接口与普通接口一样走 Bearer 鉴权拦截器。
+前端注意：使用 fetch 流式读取响应，不用 EventSource——需要可控中止与残余缓冲补解析；同源自动携带会话 Cookie，鉴权由统一拦截器校验（2026-11-02 修订：不再依赖请求头鉴权）。
 
 断线与恢复（2026-10-31 补充，对齐前端架构方案 4.3）：用户点停止或连接意外中断时，后端不取消本轮生成，写完即止，已生成部分照常写入消息存储；前端通过会话详情接口每 3 秒轮询恢复该轮结果。不做 SSE 续传（Last-Event-ID 式恢复）。
 

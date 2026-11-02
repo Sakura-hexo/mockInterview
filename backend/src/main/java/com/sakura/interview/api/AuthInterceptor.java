@@ -1,6 +1,7 @@
 package com.sakura.interview.api;
 
 import com.google.gson.Gson;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.MediaType;
@@ -9,8 +10,9 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import java.nio.charset.StandardCharsets;
 
 /**
- * 认证拦截器：拦 /api/**（放行 /api/auth/**），查 Redis 会话并注入 userId 请求属性，
- * 命中即滑动续期；无效令牌直接写 401 信封并中断——前端 http.ts 收 401 清令牌跳登录。
+ * 认证拦截器：拦 /api/**（放行 /api/auth/**），从 HttpOnly Cookie 取会话令牌查 Redis
+ * 并注入 userId 请求属性，命中即滑动续期；无有效会话直接写 401 信封并中断——
+ * 前端 http.ts 收 401 清登录态跳登录。Bearer 通道已于 2026-11-02 Cookie 模式升级中移除。
  */
 public final class AuthInterceptor implements HandlerInterceptor {
 
@@ -26,11 +28,8 @@ public final class AuthInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response,
                              Object handler) throws Exception {
-        String authorization = request.getHeader("Authorization");
-        Long userId = null;
-        if (authorization != null && authorization.startsWith("Bearer ")) {
-            userId = authStore.resolveUserId(authorization.substring("Bearer ".length()).trim());
-        }
+        String token = sessionToken(request);
+        Long userId = token == null ? null : authStore.resolveUserId(token);
         if (userId == null) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
@@ -41,5 +40,18 @@ public final class AuthInterceptor implements HandlerInterceptor {
         }
         request.setAttribute(USER_ID_ATTRIBUTE, userId);
         return true;
+    }
+
+    private static String sessionToken(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) {
+            return null;
+        }
+        for (Cookie cookie : cookies) {
+            if (AuthController.SESSION_COOKIE.equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+        return null;
     }
 }

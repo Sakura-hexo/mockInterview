@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
-import { getToken } from './api/http';
+import { isLoggedIn } from './api/http';
 import Sidebar from './components/Sidebar';
 import LoginPage from './pages/LoginPage';
 import HistoryPage from './pages/HistoryPage';
@@ -8,9 +8,9 @@ import InterviewPage from './pages/InterviewPage';
 import ReportPage from './pages/ReportPage';
 import './App.css';
 
-// 路由守卫：未存 token 一律跳 /login（页面方案 3.1）
+// 路由守卫：无登录标志一律跳 /login；真实凭据校验由后端 Cookie 会话兜底（页面方案 3.1）
 function RequireAuth() {
-  if (!getToken()) return <Navigate to="/login" replace />;
+  if (!isLoggedIn()) return <Navigate to="/login" replace />;
   return <Outlet />;
 }
 

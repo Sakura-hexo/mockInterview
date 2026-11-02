@@ -150,8 +150,8 @@ flowchart LR
 
 ### 4.2 接口鉴权
 
-- 账号密码会话模式（2026-11-01 修订，开源产品定位）：`/api/auth/register` 与 `/api/auth/login` 发放 32 字节随机不透明 token，存 Redis `auth:session:{token}`，TTL 24 小时并对每次有效请求滑动续期；`/api/auth/logout` 删除会话即刻失效
-- 所有 `/api` 接口走 `Authorization Bearer` 会话令牌校验，未带或无效返回 401；拦截器校验通过后注入 userId，面试数据一律按 userId 过滤
+- 账号密码会话模式（2026-11-01 修订，开源产品定位；2026-11-02 升级 Cookie 传输）：`/api/auth/register` 与 `/api/auth/login` 发放 32 字节随机不透明 token，存 Redis `auth:session:{token}`，TTL 24 小时并对每次有效请求滑动续期；`/api/auth/logout` 删除会话并清 Cookie 即刻失效
+- 凭据传输用 HttpOnly Cookie（`INTERVIEW_SESSION`，属性 `HttpOnly; SameSite=Strict; Path=/api`，`Secure` 由 `auth.cookie.secure` 配置控制，HTTPS 反代部署开启）：JS 读不到令牌，XSS 偷不走会话；无有效会话返回 401；拦截器校验通过后注入 userId，面试数据一律按 userId 过滤
 - 密码安全：BCrypt 散列落库、日志与出参不回显、登录接口同用户名连续失败 5 次锁 1 分钟；明确不做"前端先加密再传输"（伪安全），传输防线为部署侧 TLS——本地 localhost 回环无需，公网部署由 nginx 或 caddy 反代承担
 - 目的：防匿名调用刷模型费用；简历等敏感数据按用户边界隔离
 
