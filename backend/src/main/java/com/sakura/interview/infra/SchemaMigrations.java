@@ -23,7 +23,7 @@ public final class SchemaMigrations {
         applied += addColumn(jdbc, "t_session", "difficulty", "VARCHAR(16) NOT NULL DEFAULT 'MEDIUM'");
         applied += addColumn(jdbc, "t_session", "question_count", "INT NOT NULL DEFAULT 10");
         applied += addColumn(jdbc, "t_message", "action", "VARCHAR(16) NULL");
-        createIndex(jdbc, "t_session", "idx_session_user", "user_id");
+        ensureIndexColumns(jdbc, "t_session", "idx_session_user", "user_id, created_at");
         return applied;
     }
 
@@ -40,14 +40,21 @@ public final class SchemaMigrations {
         return 1;
     }
 
-    private static void createIndex(JdbcTemplate jdbc, String table, String index, String column) {
+    /** 索引列集迁移：列集不一致时重建（无 CREATE INDEX IF NOT EXISTS，也无改列语法），幂等。 */
+    private static void ensureIndexColumns(JdbcTemplate jdbc, String table, String index, String columns) {
         List<String> existing = jdbc.queryForList(
-                "SELECT index_name FROM information_schema.statistics"
-                        + " WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?",
+                "SELECT column_name FROM information_schema.statistics"
+                        + " WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?"
+                        + " ORDER BY seq_in_index",
                 String.class, table, index);
-        if (existing.isEmpty()) {
-            jdbc.execute("CREATE INDEX " + index + " ON " + table + " (" + column + ")");
-            System.err.printf("[迁移] %s 增加 %s 索引%n", table, index);
+        String expected = String.join(", ", columns.split("\\s*,\\s*"));
+        if (String.join(", ", existing).equals(expected)) {
+            return;
         }
+        if (!existing.isEmpty()) {
+            jdbc.execute("ALTER TABLE " + table + " DROP INDEX " + index);
+        }
+        jdbc.execute("CREATE INDEX " + index + " ON " + table + " (" + expected + ")");
+        System.err.printf("[迁移] %s 重建 %s 索引为列集 %s%n", table, index, expected);
     }
 }

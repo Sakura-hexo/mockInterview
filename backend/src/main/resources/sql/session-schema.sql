@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS t_session (
   status               VARCHAR(20) NOT NULL DEFAULT 'CREATED',
   created_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   ended_at             TIMESTAMP NULL,
-  KEY idx_session_user (user_id)
+  KEY idx_session_user (user_id, created_at)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
 
 CREATE TABLE IF NOT EXISTS t_message (
