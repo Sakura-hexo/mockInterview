@@ -102,6 +102,19 @@ public final class EnvKeys {
                         + "&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai");
     }
 
+    /** 连接池大小：50 并发压测定位出 3 连接排队瓶颈后默认上调（压测记录 2026-11-02）。 */
+    public static int mysqlPoolSize() {
+        String value = load().get("MYSQL_POOL");
+        if (value == null || value.isBlank()) {
+            return 10;
+        }
+        try {
+            return Math.max(1, Integer.parseInt(value.trim()));
+        } catch (NumberFormatException e) {
+            return 10;
+        }
+    }
+
     public static String mysqlUsername() {
         return orDefault("MYSQL_USERNAME", "root");
     }

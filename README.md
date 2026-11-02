@@ -1,5 +1,7 @@
 # AI 模拟面试平台（mockInterview）
 
+[![CI](https://github.com/Sakura-hexo/mockInterview/actions/workflows/ci.yml/badge.svg)](https://github.com/Sakura-hexo/mockInterview/actions/workflows/ci.yml)
+
 多智能体模拟面试应用：输入简历与 Java 后端岗位描述，AI 面试官多轮提问与追问，面试结束输出结构化评分与复盘报告。
 
 > 部署、使用与开发模式速查：**[使用方法](使用方法.md)**

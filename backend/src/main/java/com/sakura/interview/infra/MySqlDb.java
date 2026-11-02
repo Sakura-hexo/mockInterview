@@ -17,14 +17,14 @@ public final class MySqlDb {
     private MySqlDb() {
     }
 
-    /** 会话持久化连接池：CLI 单进程小池即可。 */
+    /** 会话持久化连接池：默认 10（MYSQL_POOL 可调），压测定档，避免并发建会话排队。 */
     public static HikariDataSource dataSource() {
         HikariDataSource ds = new HikariDataSource();
         ds.setPoolName("interview-session");
         ds.setJdbcUrl(EnvKeys.mysqlUrl());
         ds.setUsername(EnvKeys.mysqlUsername());
         ds.setPassword(EnvKeys.mysqlPassword());
-        ds.setMaximumPoolSize(3);
+        ds.setMaximumPoolSize(EnvKeys.mysqlPoolSize());
         return ds;
     }
 
