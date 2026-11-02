@@ -1,7 +1,7 @@
 package com.sakura.interview.agent;
 
-import com.google.gson.JsonObject;
 import com.sakura.interview.infra.StructuredOutputInvoker;
+import com.sakura.interview.session.AnalysisCache;
 import com.sakura.interview.session.ContextAssembler;
 import com.sakura.interview.session.ContextCompressor;
 import com.sakura.interview.session.ReportService;
@@ -9,7 +9,6 @@ import com.sakura.interview.session.SessionConfig;
 import com.sakura.interview.session.SessionState;
 import com.sakura.interview.session.SessionStore;
 import com.sakura.interview.session.SessionSummary;
-import com.sakura.interview.tool.JdParseTool;
 import com.sakura.interview.tool.JdProfile;
 import com.sakura.interview.tool.QuestionBankTool;
 import reactor.core.publisher.Flux;
@@ -43,6 +42,7 @@ public final class Supervisor {
 
     private final AgentRuntime runtime;
     private final StructuredOutputInvoker invoker;
+    private final SessionAnalyst analyst;
     private final Router router;
     private final SessionStore store;
     private final ContextCompressor compressor;
@@ -53,16 +53,18 @@ public final class Supervisor {
     public Supervisor(AgentRuntime runtime, StructuredOutputInvoker invoker,
                       SessionStore store, ContextCompressor compressor,
                       ReportService reportService) {
-        this(runtime, invoker, store, compressor, reportService, null, Runnable::run);
+        this(runtime, invoker, new SessionAnalyst(invoker, AnalysisCache.NONE), store,
+                compressor, reportService, null, Runnable::run);
     }
 
-    /** Web 装配用：预检索题库工具与后台压缩执行器。 */
+    /** Web 装配用：注入带缓存的分析器、预检索题库工具与后台压缩执行器。 */
     public Supervisor(AgentRuntime runtime, StructuredOutputInvoker invoker,
-                      SessionStore store, ContextCompressor compressor,
+                      SessionAnalyst analyst, SessionStore store, ContextCompressor compressor,
                       ReportService reportService, QuestionBankTool questionBank,
                       Executor maintenanceExecutor) {
         this.runtime = runtime;
         this.invoker = invoker;
+        this.analyst = analyst;
         this.store = store;
         this.compressor = compressor;
         this.reportService = reportService;
@@ -83,17 +85,14 @@ public final class Supervisor {
         return createSession(null, resumeText, jdText, null);
     }
 
-    /** 建会话（Web 用）：简历经结构化调用器产出摘要，JD 经解析工具提要点，配置与归属落库。 */
+    /** 建会话（Web 用）：摘要与岗位画像经分析器一次结构化调用产出，配置与归属落库。 */
     public CreateResult createSession(Long userId, String resumeText, String jdText,
                                       SessionConfig config) {
-        JsonObject resumeObj = invoker.invoke(Prompts.RESUME_ANALYST_SYSTEM, resumeText, JsonObject.class);
-        String digest = resumeObj.has("digest")
-                ? resumeObj.get("digest").getAsString() : "简历解析未产出摘要";
-        JdProfile jd = new JdParseTool(invoker).parse(jdText);
+        SessionAnalyst.Analysis analysis = analyst.analyze(resumeText, jdText);
         String sessionId = "s-" + UUID.randomUUID().toString().substring(0, 8);
-        store.saveSession(new SessionState(sessionId, userId, digest, jd, config,
-                SessionState.CREATED, null, List.of(), 0));
-        return new CreateResult(sessionId, digest, jd);
+        store.saveSession(new SessionState(sessionId, userId, analysis.resumeDigest(),
+                analysis.jdProfile(), config, SessionState.CREATED, null, List.of(), 0));
+        return new CreateResult(sessionId, analysis.resumeDigest(), analysis.jdProfile());
     }
 
     /** 单轮对话（无监听）：CLI 与单测口径。 */

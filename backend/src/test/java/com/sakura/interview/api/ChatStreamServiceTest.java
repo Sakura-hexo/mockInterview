@@ -42,11 +42,12 @@ class ChatStreamServiceTest {
     private final ChatStreamService service =
             new ChatStreamService(supervisor, sessions, Runnable::run);
 
-    /** 按系统提示词分流：简历分析出摘要、意图分类按关键词、其余按 JD 返回。 */
+    /** 按系统提示词分流：创建分析一次产出摘要与画像、意图分类按关键词、其余按 JD 返回。 */
     private static LlmCaller branchingCaller() {
         return (sys, user) -> {
-            if (sys.contains("简历分析器")) {
-                return "{\"digest\":\"三年 Java 后端，主导订单系统\"}";
+            if (sys.contains("创建分析器")) {
+                return "{\"digest\":\"三年 Java 后端，主导订单系统\",\"direction\":\"Java后端\","
+                        + "\"skills\":[\"Spring\",\"MySQL\"],\"bonus\":[]}";
             }
             if (sys.contains("意图分类器")) {
                 return user.contains("生成报告") || user.contains("结束面试")

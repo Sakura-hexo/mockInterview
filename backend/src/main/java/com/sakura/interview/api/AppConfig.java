@@ -1,12 +1,14 @@
 package com.sakura.interview.api;
 
 import com.sakura.interview.agent.AgentRuntime;
+import com.sakura.interview.agent.SessionAnalyst;
 import com.sakura.interview.agent.Supervisor;
 import com.sakura.interview.infra.AgentLlmCaller;
 import com.sakura.interview.infra.AgentScopeRuntime;
 import com.sakura.interview.infra.ChatModels;
 import com.sakura.interview.infra.EmbeddingModels;
 import com.sakura.interview.infra.EnvKeys;
+import com.sakura.interview.infra.MySqlAnalysisCache;
 import com.sakura.interview.infra.MySqlDb;
 import com.sakura.interview.infra.MySqlReportStore;
 import com.sakura.interview.infra.MySqlUserStore;
@@ -15,6 +17,7 @@ import com.sakura.interview.infra.RedisAuthStore;
 import com.sakura.interview.infra.RedisSessionCache;
 import com.sakura.interview.infra.StructuredOutputInvoker;
 import com.sakura.interview.rag.MilvusQuestionStore;
+import com.sakura.interview.session.AnalysisCache;
 import com.sakura.interview.session.ContextCompressor;
 import com.sakura.interview.session.ReportGenerator;
 import com.sakura.interview.session.ReportService;
@@ -178,11 +181,24 @@ public class AppConfig {
 
     @Bean
     public Supervisor supervisor(AgentRuntime runtime, StructuredOutputInvoker fastInvoker,
-                                 SessionStore sessionStore, ContextCompressor compressor,
+                                 SessionAnalyst sessionAnalyst, SessionStore sessionStore,
+                                 ContextCompressor compressor,
                                  ReportService reportService, QuestionBankTool questionBank,
                                  ExecutorService compressionExecutor) {
-        return new Supervisor(runtime, fastInvoker, sessionStore, compressor, reportService,
-                questionBank, compressionExecutor);
+        return new Supervisor(runtime, fastInvoker, sessionAnalyst, sessionStore, compressor,
+                reportService, questionBank, compressionExecutor);
+    }
+
+    /** 建会话分析缓存：MySQL 事实源，重启后同简历同 JD 仍命中。 */
+    @Bean
+    public AnalysisCache analysisCache(DataSource dataSource) {
+        return new MySqlAnalysisCache(dataSource);
+    }
+
+    @Bean
+    public SessionAnalyst sessionAnalyst(StructuredOutputInvoker fastInvoker,
+                                         AnalysisCache analysisCache) {
+        return new SessionAnalyst(fastInvoker, analysisCache);
     }
 
     @Bean

@@ -3,6 +3,7 @@ package com.sakura.interview.agent;
 import com.sakura.interview.infra.LlmCaller;
 import com.sakura.interview.infra.StructuredOutputInvoker;
 import com.sakura.interview.rag.SearchHit;
+import com.sakura.interview.session.AnalysisCache;
 import com.sakura.interview.session.ContextCompressor;
 import com.sakura.interview.session.FakeReportStore;
 import com.sakura.interview.session.FakeSessionStore;
@@ -24,11 +25,12 @@ class SupervisorTest {
     private static final String JD_JSON =
             "{\"direction\":\"Java后端\",\"skills\":[\"Spring\",\"MySQL\"],\"bonus\":[]}";
 
-    /** 按系统提示词分流的假调用器：简历分析出摘要、意图分类出意图、其余按 JD 返回。 */
+    /** 按系统提示词分流：创建分析一次产出摘要与画像、意图分类出意图、其余按 JD 返回。 */
     private static LlmCaller branchingCaller() {
         return (sys, user) -> {
-            if (sys.contains("简历分析器")) {
-                return "{\"digest\":\"三年 Java 后端，主导订单系统，熟悉并发与 JVM 调优\"}";
+            if (sys.contains("创建分析器")) {
+                return "{\"digest\":\"三年 Java 后端，主导订单系统，熟悉并发与 JVM 调优\","
+                        + "\"direction\":\"Java后端\",\"skills\":[\"Spring\",\"MySQL\"],\"bonus\":[]}";
             }
             if (sys.contains("意图分类器")) {
                 return user.contains("天气") ? "{\"intent\":\"CHAT\"}" : "{\"intent\":\"INTERVIEW\"}";
@@ -220,8 +222,10 @@ class SupervisorTest {
         FakeSessionStore sessions = new FakeSessionStore();
         QuestionBankTool bank = new QuestionBankTool((query, topK) -> List.of(
                 new SearchHit("QB-001", "索引失效的场景有哪些", "MySQL", "seed", 0.9f)));
-        Supervisor supervisor = new Supervisor(runtime, new StructuredOutputInvoker(branchingCaller()),
-                sessions, new ContextCompressor((sys, user) -> "合并摘要"),
+        StructuredOutputInvoker invoker = new StructuredOutputInvoker(branchingCaller());
+        Supervisor supervisor = new Supervisor(runtime, invoker,
+                new SessionAnalyst(invoker, AnalysisCache.NONE), sessions,
+                new ContextCompressor((sys, user) -> "合并摘要"),
                 new ReportService(sessions, new FakeReportStore()), bank, Runnable::run);
         String sessionId = supervisor.createSession("我的简历", "招 Java 后端").sessionId();
 
@@ -252,8 +256,10 @@ class SupervisorTest {
         FakeSessionStore sessions = new FakeSessionStore();
         AtomicInteger compressCalls = new AtomicInteger();
         List<Runnable> background = new ArrayList<>();
-        Supervisor supervisor = new Supervisor(runtime, new StructuredOutputInvoker(branchingCaller()),
-                sessions, new ContextCompressor((sys, user) -> {
+        StructuredOutputInvoker invoker = new StructuredOutputInvoker(branchingCaller());
+        Supervisor supervisor = new Supervisor(runtime, invoker,
+                new SessionAnalyst(invoker, AnalysisCache.NONE), sessions,
+                new ContextCompressor((sys, user) -> {
                     compressCalls.incrementAndGet();
                     return "合并摘要";
                 }), new ReportService(sessions, new FakeReportStore()), null, background::add);

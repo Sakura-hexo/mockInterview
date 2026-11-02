@@ -4,6 +4,7 @@ import com.sakura.interview.infra.AgentLlmCaller;
 import com.sakura.interview.infra.AgentScopeRuntime;
 import com.sakura.interview.infra.EmbeddingModels;
 import com.sakura.interview.infra.EnvKeys;
+import com.sakura.interview.infra.MySqlAnalysisCache;
 import com.sakura.interview.infra.MySqlDb;
 import com.sakura.interview.infra.MySqlReportStore;
 import com.sakura.interview.infra.PersistentSessionStore;
@@ -53,7 +54,8 @@ public final class OrchestrationCliRunner {
             AgentScopeRuntime runtime = new AgentScopeRuntime();
             StructuredOutputInvoker invoker = new StructuredOutputInvoker(new AgentLlmCaller());
             MySqlReportStore reportStore = new MySqlReportStore(ds);
-            Supervisor supervisor = new Supervisor(runtime, invoker, store,
+            Supervisor supervisor = new Supervisor(runtime, invoker,
+                    new SessionAnalyst(invoker, new MySqlAnalysisCache(ds)), store,
                     new ContextCompressor(new AgentLlmCaller()),
                     new ReportService(store, reportStore),
                     new QuestionBankTool(questionStore), Runnable::run);

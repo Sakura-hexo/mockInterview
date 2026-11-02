@@ -37,6 +37,8 @@ public final class MySqlDb {
                     new ClassPathResource("sql/report-schema.sql"));
             ScriptUtils.executeSqlScript(connection,
                     new ClassPathResource("sql/auth-schema.sql"));
+            ScriptUtils.executeSqlScript(connection,
+                    new ClassPathResource("sql/analysis-schema.sql"));
         } catch (SQLException e) {
             throw new IllegalStateException("初始化会话表失败：", e);
         }

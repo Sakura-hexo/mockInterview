@@ -27,8 +27,9 @@ class LongSessionTest {
 
     private static LlmCaller branchingCaller() {
         return (sys, user) -> {
-            if (sys.contains("简历分析器")) {
-                return "{\"digest\":\"三年 Java 后端，主导订单系统\"}";
+            if (sys.contains("创建分析器")) {
+                return "{\"digest\":\"三年 Java 后端，主导订单系统\","
+                        + "\"direction\":\"Java后端\",\"skills\":[\"Spring\",\"MySQL\"],\"bonus\":[]}";
             }
             if (sys.contains("意图分类器")) {
                 return "{\"intent\":\"INTERVIEW\"}";
