@@ -6,10 +6,11 @@ import './NewInterviewPage.css';
 
 const MAX_PDF_SIZE = 5 * 1024 * 1024; // 简历 PDF 上限 5MB（接口文档 4.1）
 
+// 难度即人设：三档分别对应面试官语气（简单温柔引导 / 中等严肃认真 / 困难找茬压力面）
 const DIFFICULTIES = [
-  { value: 'EASY', label: '简单' },
-  { value: 'MEDIUM', label: '中等' },
-  { value: 'HARD', label: '困难' },
+  { value: 'EASY', label: '简单 · 温柔引导' },
+  { value: 'MEDIUM', label: '中等 · 严肃认真' },
+  { value: 'HARD', label: '困难 · 找茬压力面' },
 ];
 
 const COUNTS = [5, 10, 15];

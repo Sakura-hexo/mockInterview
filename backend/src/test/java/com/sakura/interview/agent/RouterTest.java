@@ -19,6 +19,17 @@ class RouterTest {
     }
 
     @Test
+    void 拒绝短消息直通面试不走模型分类() {
+        LlmCaller bomb = (sys, user) -> {
+            throw new IllegalStateException("拒绝短路不应调用模型");
+        };
+        Router router = new Router(new StructuredOutputInvoker(bomb));
+        assertThat(router.route("不要")).isEqualTo(Intent.INTERVIEW);
+        assertThat(router.route("这题不会")).isEqualTo(Intent.INTERVIEW);
+        assertThat(router.route("复盘之前先不要结束")).isEqualTo(Intent.REPORT);
+    }
+
+    @Test
     void 结构化分类闲聊与面试() {
         Router router = new Router(new StructuredOutputInvoker((sys, user) ->
                 user.contains("天气") ? "{\"intent\":\"CHAT\"}" : "{\"intent\":\"INTERVIEW\"}"));

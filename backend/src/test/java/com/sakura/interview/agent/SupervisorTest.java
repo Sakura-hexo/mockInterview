@@ -192,7 +192,21 @@ class SupervisorTest {
                 .contains("计划 10 道题，已问 1 道")
                 .contains("出新题的回复必须")
                 .contains("最后一道题")
-                .doesNotContain("已问满");
+                .doesNotContain("本场计划题数已问满");
+    }
+
+    @Test
+    void 拒绝短消息注入本轮指令而长作答不注入() {
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "好的，下一题。\n选题");
+        Wiring wiring = newSupervisor(runtime);
+        String sessionId = wiring.supervisor().createSession("我的简历", "招 Java 后端").sessionId();
+        wiring.sessions().appendMessage(sessionId, "interviewer", "开场白", 0, 0, "QUESTION");
+
+        wiring.supervisor().chat(sessionId, "不要");
+        wiring.supervisor().chat(sessionId, "这道题我想从幂等键的设置时机开始讲，先写Redis再执行业务");
+
+        assertThat(runtime.calls().get(0).systemPrompt()).contains("【本轮指令】");
+        assertThat(runtime.calls().get(1).systemPrompt()).doesNotContain("【本轮指令】");
     }
 
     @Test

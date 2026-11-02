@@ -39,6 +39,11 @@ public final class Router {
                 }
             }
         }
+        // 整条短消息的拒绝/不会属面试节奏事件：直通面试不走模型分类——
+        // 实测「不要」被分类器判为闲聊，陪聊只会把话题劝回原题，面试官永远收不到拒绝
+        if (RefusalDetector.isRefusal(userText)) {
+            return Intent.INTERVIEW;
+        }
         try {
             JsonObject obj = invoker.invoke(SYSTEM_PROMPT, userText, JsonObject.class);
             String intent = obj.has("intent")

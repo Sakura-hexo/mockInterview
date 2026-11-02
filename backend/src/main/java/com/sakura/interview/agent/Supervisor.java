@@ -112,11 +112,15 @@ public final class Supervisor {
             case INTERVIEW -> {
                 // 问满计划题数后收尾：不再预检索候选题，提示词切换为总结引导
                 int asked = store.countQuestions(sessionId);
-                String candidates = asked < state.config().questionCount()
-                        ? candidatesFor(state, userText) : "";
+                boolean remaining = asked < state.config().questionCount();
+                // 拒绝信号升为本轮级指令：三轮纯提示词迭代均被模型劝答本能压过
+                String system = Prompts.interviewerSystem(state, asked,
+                        remaining ? candidatesFor(state, userText) : "");
+                if (remaining && RefusalDetector.isRefusal(userText)) {
+                    system = system + Prompts.REFUSAL_DIRECTIVE;
+                }
                 yield agentTurn(state, Intent.INTERVIEW,
-                        AgentRuntime.ROLE_INTERVIEWER,
-                        Prompts.interviewerSystem(state, asked, candidates),
+                        AgentRuntime.ROLE_INTERVIEWER, system,
                         userText, listener);
             }
         };
