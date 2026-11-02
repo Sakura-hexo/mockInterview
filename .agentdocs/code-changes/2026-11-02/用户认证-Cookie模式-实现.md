@@ -34,15 +34,16 @@
   3. 退出：回 `/login`，登录标志与用户名清空
   4. 重新登录（正确填表）进入 `/`
   5. 伪造登录标志但无有效 Cookie → 访问 `/` 被 401 打回 `/login` 并清标志（等价 Cookie 过期场景）
-- 真机复验：待后端重启后由用户走一遍登录（见待办）
+- 真机复验（后端会话重启后实测）：注册返回 `Set-Cookie: INTERVIEW_SESSION=...; Path=/api; Max-Age=86400; HttpOnly; SameSite=Strict`，响应体只有 username 无令牌；带 Cookie 访问列表 200、无 Cookie 401、旧 Bearer 头 401（通道确认已死）。冒烟账号 `cookiesmoke` 留在 t_user，可忽略
 
 ## 四 踩坑记录
 
 - 登出后 LoginPage 重新挂载输入框为空，E2E 脚本直接 requestSubmit 撞上客户端校验——测试脚本时序问题非产品缺陷
 - mvn 不在 PATH，实际位于 `D:\apache-maven-3.9.13\bin\mvn`
+- 后端须从仓库根目录启动：EnvKeys 定位 `backend/.env` 为相对路径，在 backend/ 目录内启动会报"未找到 MYSQL_PASSWORD"（本会话实测踩坑）
 - 接口文档编辑时被并行会话的署名替换提交抢先触碰，需重读后再改（内容无冲突）
 
 ## 五 待办与移交
 
-- 前端 `npm run build` 产物已进 `backend/src/main/resources/static`，**后端需重启**后 HttpOnly Cookie 生效；重启后用户需重新登录一次（旧 localStorage 令牌已无意义）
+- 后端已由后端会话重启并真机复验通过；用户旧登录态（localStorage 存的令牌）已无意义，下次打开页面需重新登录一次，属预期
 - README 部署章节（开源化清单项）落地时补 `AUTH_COOKIE_SECURE` 与 HTTPS 反代说明
