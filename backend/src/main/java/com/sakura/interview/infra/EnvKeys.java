@@ -40,6 +40,15 @@ public final class EnvKeys {
         return orDefault("MODEL_PROVIDER", "dashscope").toLowerCase();
     }
 
+    /**
+     * 是否放行模型的隐藏思考流。qwen 系思考模型的 reasoning_content 不进入回复正文，
+     * 但按解码速度逐 token 生成，面试场景表现为数十秒黑屏死等（困难档找茬最深、思考量最大），
+     * 因此默认关闭，需要深度思考时置 LLM_THINKING=true。
+     */
+    public static boolean llmThinkingEnabled() {
+        return "true".equalsIgnoreCase(orDefault("LLM_THINKING", "false"));
+    }
+
     public static String openAiApiKey() {
         String key = load().get("OPENAI_API_KEY");
         if (key == null || key.isBlank()) {

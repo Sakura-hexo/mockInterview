@@ -1,5 +1,6 @@
 package com.sakura.interview.infra;
 
+import io.agentscope.core.model.GenerateOptions;
 import io.agentscope.core.model.Model;
 import io.agentscope.extensions.model.dashscope.DashScopeChatModel;
 import io.agentscope.extensions.model.ollama.OllamaChatModel;
@@ -67,6 +68,7 @@ public final class ChatModels {
         return DashScopeChatModel.builder()
                 .apiKey(EnvKeys.dashScopeApiKey())
                 .modelName(modelName(tier, EnvKeys.dashScopeModel(), EnvKeys.dashScopeModelFast()))
+                .enableThinking(EnvKeys.llmThinkingEnabled())
                 .build();
     }
 
@@ -75,7 +77,20 @@ public final class ChatModels {
                 .apiKey(EnvKeys.openAiApiKey())
                 .baseUrl(EnvKeys.openAiBaseUrl())
                 .modelName(modelName(tier, EnvKeys.openAiModel(), EnvKeys.openAiModelFast()))
+                .generateOptions(thinkingOptions())
                 .build();
+    }
+
+    /**
+     * OpenAI 兼容路线的思考开关：qwen 系中转端点用请求体参数 enable_thinking 控制
+     * 隐藏思考流（reasoning_effort 实测无效）。开关语义与 EnvKeys.llmThinkingEnabled 一致。
+     */
+    private static GenerateOptions thinkingOptions() {
+        GenerateOptions.Builder builder = GenerateOptions.builder();
+        if (!EnvKeys.llmThinkingEnabled()) {
+            builder.additionalBodyParam("enable_thinking", false);
+        }
+        return builder.build();
     }
 
     private static Model ollama(String tier) {
