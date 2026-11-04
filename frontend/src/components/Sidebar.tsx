@@ -120,6 +120,10 @@ export default function Sidebar() {
         ＋ 新建面试
       </button>
 
+      <button className="stats-nav-btn" onClick={() => navigate('/stats')}>
+        📊 用量统计
+      </button>
+
       <div className="conversation-list">
         <div className="sidebar-section">进行中</div>
         {activeList.map((c) => (

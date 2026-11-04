@@ -229,3 +229,20 @@
   color: #7d8ba1;
   font-size: 14px;
 }
+
+/* 侧栏用量统计入口：与新建按钮同区，弱一级（V1 定稿：次级导航不抢主行动） */
+.stats-nav-btn {
+  margin: 8px 14px 0;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 13px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+
+.stats-nav-btn:hover { color: #e2e8f0; background: #1e2c40; }

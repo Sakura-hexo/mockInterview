@@ -12,6 +12,9 @@ public interface UserStore {
 
     Optional<UserRecord> findByUsername(String username);
 
+    /** 按自增 id 查用户：会话鉴权注入的是 userId，管理端校验用户名时反查。 */
+    Optional<UserRecord> findById(long id);
+
     record UserRecord(long id, String username, String passwordHash) {
     }
 }
