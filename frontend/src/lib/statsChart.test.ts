@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { averageTokens, barPercents, fillDailyTrend, formatTokens, localDateKey } from './statsChart';
+import {
+  averageTokens,
+  barPercents,
+  fillDailyTrend,
+  formatTokens,
+  localDateKey,
+  shortDate,
+  trendTickIndexes,
+} from './statsChart';
 
 describe('fillDailyTrend 趋势补零', () => {
   it('铺满连续 N 天并把有数据的天对齐', () => {
@@ -49,5 +57,24 @@ describe('averageTokens 场均', () => {
 
   it('会话数为零时给 0 而非 NaN', () => {
     expect(averageTokens(3000, 0)).toBe(0);
+  });
+});
+
+describe('trendTickIndexes 柱底刻度', () => {
+  it('每 5 根一标且末尾必标', () => {
+    expect(trendTickIndexes(30)).toEqual([0, 5, 10, 15, 20, 25, 29]);
+  });
+
+  it('短序列与空序列不重复不越界', () => {
+    expect(trendTickIndexes(1)).toEqual([0]);
+    expect(trendTickIndexes(3)).toEqual([0, 2]);
+    expect(trendTickIndexes(0)).toEqual([]);
+  });
+});
+
+describe('shortDate 短日期', () => {
+  it('yyyy-MM-dd 取 MM-DD', () => {
+    expect(shortDate('2026-11-04')).toBe('11-04');
+    expect(shortDate('11-4')).toBe('11-4');
   });
 });

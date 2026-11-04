@@ -61,6 +61,22 @@
 
 .trend-bar:hover { background: #3b82f6; }
 
+/* 柱底稀疏日期刻度：与柱区同 gap 同列宽，非刻度列留空占位保持对齐 */
+.trend-labels {
+  display: flex;
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.trend-label {
+  flex: 1;
+  min-width: 4px;
+  text-align: center;
+  font-size: 11px;
+  color: #7d8ba1;
+  white-space: nowrap;
+}
+
 .stats-table {
   width: 100%;
   border-collapse: collapse;

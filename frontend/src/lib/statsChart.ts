@@ -32,6 +32,24 @@ export function barPercents(values: number[]): number[] {
   return values.map((value) => Math.max(Math.round((value / max) * 100), value > 0 ? 4 : 2));
 }
 
+/** 柱底稀疏刻度下标：每 step 根标一个，末尾（今天）必标，30 根全标会挤成一团。 */
+export function trendTickIndexes(count: number, step = 5): number[] {
+  if (count <= 0) return [];
+  const ticks: number[] = [];
+  for (let i = 0; i < count; i += step) {
+    ticks.push(i);
+  }
+  if (ticks[ticks.length - 1] !== count - 1) {
+    ticks.push(count - 1);
+  }
+  return ticks;
+}
+
+/** yyyy-MM-dd 取 MM-DD 短日期，做柱底刻度文本。 */
+export function shortDate(date: string): string {
+  return date.length > 5 ? date.slice(5) : date;
+}
+
 /** token 缩写：万位以上一位小数，其余原样。 */
 export function formatTokens(value: number): string {
   if (value >= 10000) {

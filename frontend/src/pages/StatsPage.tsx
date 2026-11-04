@@ -7,7 +7,14 @@ import {
   type TokenStatsResponse,
 } from '../api/stats';
 import { ApiError } from '../api/http';
-import { averageTokens, barPercents, fillDailyTrend, formatTokens } from '../lib/statsChart';
+import {
+  averageTokens,
+  barPercents,
+  fillDailyTrend,
+  formatTokens,
+  shortDate,
+  trendTickIndexes,
+} from '../lib/statsChart';
 import './StatsPage.css';
 
 const DIRECTION_LABEL: Record<string, string> = { JAVA_BACKEND: 'Java 后端' };
@@ -110,6 +117,7 @@ function MyStats({
   percents: number[];
   sessions: TokenStatsResponse['sessions'];
 }) {
+  const tickIndexes = new Set(trendTickIndexes(trend.length));
   return (
     <>
       <div className="stats-cards">
@@ -130,6 +138,13 @@ function MyStats({
               style={{ height: `${percents[i]}%` }}
               title={`${point.date} · ${point.tokens} token`}
             />
+          ))}
+        </div>
+        <div className="trend-labels">
+          {trend.map((point, i) => (
+            <span key={point.date} className="trend-label">
+              {tickIndexes.has(i) ? shortDate(point.date) : ''}
+            </span>
           ))}
         </div>
       </div>
