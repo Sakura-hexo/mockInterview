@@ -48,7 +48,11 @@ public final class ReportGenerator {
                 aggregated.suggestions(), tokenTotal, store.durationMs(sessionId));
     }
 
-    /** 配对规则：interviewer 为题目，其后连续 user 消息拼为回答；chat 跳过；首题前的 user 不计。 */
+    /**
+     * 配对规则：interviewer 为题目，其后连续 user 消息拼为回答；chat 跳过；首题前的 user 不计。
+     * 空回答的配对丢弃——问满前的提前告别语、候选人沉默直接结束等场景下，
+     * 无作答的"题目"不构成有效考察，评分 0 分是噪音（2026-11-04 真机抓到告别语计成 0.0/10 题）。
+     */
     public static List<QaPair> pairUp(List<StoredMessage> messages) {
         List<QaPair> pairs = new ArrayList<>();
         String question = null;
@@ -56,7 +60,7 @@ public final class ReportGenerator {
         for (StoredMessage message : messages) {
             switch (message.role()) {
                 case "interviewer" -> {
-                    if (question != null) {
+                    if (question != null && !answer.isEmpty()) {
                         pairs.add(new QaPair(question, answer.toString().strip()));
                     }
                     question = message.text();
@@ -75,7 +79,7 @@ public final class ReportGenerator {
                 }
             }
         }
-        if (question != null) {
+        if (question != null && !answer.isEmpty()) {
             pairs.add(new QaPair(question, answer.toString().strip()));
         }
         return pairs;

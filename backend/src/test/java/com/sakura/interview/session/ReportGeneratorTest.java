@@ -72,10 +72,27 @@ class ReportGeneratorTest {
                 msg(7, "user", "回答A2"),
                 msg(8, "interviewer", "第三题")));
 
-        assertThat(pairs).hasSize(3);
+        // 尾部无回答的"第三题"是未作答的悬空题：丢弃不评分（2026-11-04 真机告别语曾被计成 0.0/10 题）
+        assertThat(pairs).hasSize(2);
         assertThat(pairs.get(0).answer()).isEqualTo("回答A1\n补充A1");
         assertThat(pairs.get(1).question()).isEqualTo("第二题");
-        assertThat(pairs.get(2).answer()).isEmpty();
+    }
+
+    @Test
+    void 空回答配对一律丢弃_提前告别与沉默不成题() {
+        List<QaPair> pairs = ReportGenerator.pairUp(List.of(
+                msg(1, "interviewer", "第一题"),
+                msg(2, "user", "回答A1"),
+                // 面试官连发两条：第二题无人作答即被第三题覆盖
+                msg(3, "interviewer", "第二题"),
+                msg(4, "interviewer", "第三题"),
+                msg(5, "user", "回答A3"),
+                // 提前收尾的告别语没有后续回答
+                msg(6, "interviewer", "本场题目到这里就全部结束了，感谢你的时间。")));
+
+        assertThat(pairs).hasSize(2);
+        assertThat(pairs.get(0).question()).isEqualTo("第一题");
+        assertThat(pairs.get(1).question()).isEqualTo("第三题");
     }
 
     @Test

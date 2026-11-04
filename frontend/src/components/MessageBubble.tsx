@@ -5,13 +5,23 @@ import type { AnnotatedMessage } from '../lib/interviewPhase';
 // 面试官气泡：徽章 + Markdown 正文 + 流式光标 + metrics 小字 + 错误红条
 // 候选人气泡：蓝底右侧（页面方案 4.2，视觉按 V1 定稿设计稿 04）
 
+// 后端时间为带偏移 ISO（+08:00）；解析后按浏览器本地时区显示 HH:mm
+function clockOf(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? ''
+    : d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+}
+
 export default function MessageBubble({ message }: { message: AnnotatedMessage }) {
+  const clock = clockOf(message.time);
   if (message.role === 'CANDIDATE') {
     return (
       <div className="message-row user">
         <div className="bubble user">
           {message.content}
-          {message.time && <div className="bubble-stats">{message.time}</div>}
+          {clock && <div className="bubble-stats">{clock}</div>}
         </div>
       </div>
     );
@@ -23,7 +33,7 @@ export default function MessageBubble({ message }: { message: AnnotatedMessage }
         {message.badge && (
           <div className="bubble-meta">
             <span className={`bubble-tag ${message.badge.cls}`}>{message.badge.text}</span>
-            {message.time && <span className="bubble-time">{message.time}</span>}
+            {clock && <span className="bubble-time">{clock}</span>}
           </div>
         )}
         <div className="bubble-content">

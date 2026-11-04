@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { getReport } from '../api/interview';
-import { deriveStage, nextPollDelay } from '../lib/reportProgress';
+import { deriveStage, nextPollDelay, pollFailureAction } from '../lib/reportProgress';
 import type { InterviewReport } from '../types';
 
 // 报告页轮询 hook（前端架构方案第 6 节）：
 // 202 生成中 → 3 秒轮询、5 次后退避 10 秒封顶；分步进度由轮询次数推导
+// 暂态失败（网络断、网关 5xx、容器重启窗口）不终止轮询——处置策略与容忍上限见 lib/reportProgress
 
 export function useReportPolling(sessionId: string) {
   const [report, setReport] = useState<InterviewReport | null>(null);
@@ -25,10 +26,19 @@ export function useReportPolling(sessionId: string) {
 
   useEffect(() => {
     let generatingPolls = 0;
+    let transientFailures = 0;
+
+    const fail = (message: string) => {
+      if (aliveRef.current) {
+        setLoadError(message);
+        setLoaded(true);
+      }
+    };
 
     const tick = async () => {
       try {
         const r = await getReport(sessionId);
+        transientFailures = 0;
         if (r.state === 'DONE') {
           if (aliveRef.current) {
             setReport(r.report);
@@ -43,13 +53,12 @@ export function useReportPolling(sessionId: string) {
           setStage(deriveStage(generatingPolls));
           setLoaded(true);
         }
-      } catch {
-        // 404 等真实错误停止轮询；401 由 http.ts 统一跳登录
-        if (aliveRef.current) {
-          setLoadError('报告加载失败，请刷新重试');
-          setLoaded(true);
+      } catch (e) {
+        if (pollFailureAction(e, transientFailures + 1) === 'stop') {
+          fail('报告加载失败，请刷新重试');
+          return;
         }
-        return;
+        transientFailures += 1;
       }
       // 按节奏调度下一轮（3 秒起步，5 次后退避 10 秒封顶）
       if (aliveRef.current) {

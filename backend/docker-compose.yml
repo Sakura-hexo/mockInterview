@@ -146,6 +146,8 @@ services:
       MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD:-interview123}
       REDIS_URI: redis://redis:6379
       MILVUS_URI: http://milvus:19530
+      # JVM 时区与 MySQL 容器对齐（LocalDateTime 写入墙钟归位），否则 t_message 比东八区真实时间偏 8 小时
+      TZ: Asia/Shanghai
     depends_on:
       mysql:
         condition: service_healthy

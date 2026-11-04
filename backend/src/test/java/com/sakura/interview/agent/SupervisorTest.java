@@ -8,6 +8,7 @@ import com.sakura.interview.session.ContextCompressor;
 import com.sakura.interview.session.FakeReportStore;
 import com.sakura.interview.session.FakeSessionStore;
 import com.sakura.interview.session.ReportService;
+import com.sakura.interview.session.SessionConfig;
 import com.sakura.interview.session.ReportTask;
 import com.sakura.interview.session.StoredMessage;
 import com.sakura.interview.tool.QuestionBankTool;
@@ -289,5 +290,102 @@ class SupervisorTest {
         background.forEach(Runnable::run);
         assertThat(compressCalls.get()).isGreaterThanOrEqualTo(1);
         assertThat(sessions.summaries.get(sessionId)).isNotNull();
+    }
+
+    // ---- 未问满防提前收尾闸门（2026-11-04 真机抓到 15 题只问 14 即告别）----
+
+    /** 带题库的 web 装配：闸门桥接兜底依赖候选题。 */
+    private static Supervisor webSupervisor(FakeAgentRuntime runtime, FakeSessionStore sessions,
+                                            QuestionBankTool bank) {
+        StructuredOutputInvoker invoker = new StructuredOutputInvoker(branchingCaller());
+        return new Supervisor(runtime, invoker,
+                new SessionAnalyst(invoker, AnalysisCache.NONE), sessions,
+                new ContextCompressor((sys, user) -> "合并摘要"),
+                new ReportService(sessions, new FakeReportStore()), bank, Runnable::run);
+    }
+
+    @Test
+    void 未问满告别话术触发闸门重试_重试成功以新题落库() {
+        // 首答全场告别 → 带 FAREWELL_DIRECTIVE 重试 → 正常出题；告别原文不落库
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> c.systemPrompt().contains("本场题目尚未问满")
+                ? "好，我们继续。下一题：谈谈索引失效场景。\n选题"
+                : "本场题目到这里就全部结束了，感谢你的时间。");
+        Wiring wiring = newSupervisor(runtime);
+        String sessionId = wiring.supervisor().createSession("我的简历", "招 Java 后端").sessionId();
+
+        Supervisor.SupervisorReply reply = wiring.supervisor().chat(sessionId, "回答一");
+
+        assertThat(runtime.calls()).hasSize(2);
+        assertThat(runtime.calls().get(1).systemPrompt()).contains("本场题目尚未问满");
+        assertThat(reply.reply()).contains("索引失效").endsWith("选题");
+        assertThat(reply.action()).isEqualTo(Supervisor.ACTION_QUESTION);
+        List<StoredMessage> messages = wiring.sessions().readAll(sessionId);
+        assertThat(messages.get(1).text()).doesNotContain("全部结束");
+    }
+
+    @Test
+    void 重试仍告别_用候选题首条零调用桥接补题() {
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "本场题目到这里就全部结束了，感谢你的时间。");
+        FakeSessionStore sessions = new FakeSessionStore();
+        QuestionBankTool bank = new QuestionBankTool((query, topK) -> List.of(
+                new SearchHit("QB-001", "索引失效的场景有哪些", "MySQL", "seed", 0.9f)));
+        Supervisor supervisor = webSupervisor(runtime, sessions, bank);
+        String sessionId = supervisor.createSession("我的简历", "招 Java 后端").sessionId();
+
+        Supervisor.SupervisorReply reply = supervisor.chat(sessionId, "回答一");
+
+        // 原文与重试都告别：两次模型调用后走确定性桥接，候选题标签剥除、带选题标记
+        assertThat(runtime.calls()).hasSize(2);
+        assertThat(reply.reply())
+                .contains("索引失效的场景有哪些")
+                .doesNotContain("标签")
+                .endsWith("选题");
+        assertThat(reply.action()).isEqualTo(Supervisor.ACTION_QUESTION);
+        assertThat(sessions.readAll(sessionId).get(1).action()).isEqualTo("QUESTION");
+    }
+
+    @Test
+    void 重试仍告别且无候选题_放行原文由报告兜底() {
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "本场题目到这里就全部结束了，感谢你的时间。");
+        Wiring wiring = newSupervisor(runtime);
+        String sessionId = wiring.supervisor().createSession("我的简历", "招 Java 后端").sessionId();
+
+        Supervisor.SupervisorReply reply = wiring.supervisor().chat(sessionId, "回答一");
+
+        assertThat(runtime.calls()).hasSize(2);
+        assertThat(reply.reply()).contains("全部结束");
+        assertThat(reply.action()).isEqualTo(Supervisor.ACTION_FOLLOW_UP);
+    }
+
+    @Test
+    void 无标记的正常追问轮不触发闸门() {
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "追问：能结合项目再具体一点吗？");
+        Wiring wiring = newSupervisor(runtime);
+        String sessionId = wiring.supervisor().createSession("我的简历", "招 Java 后端").sessionId();
+
+        Supervisor.SupervisorReply reply = wiring.supervisor().chat(sessionId, "回答一");
+
+        assertThat(runtime.calls()).hasSize(1);
+        assertThat(reply.action()).isEqualTo(Supervisor.ACTION_FOLLOW_UP);
+    }
+
+    @Test
+    void 问满后的合法告别不重试() {
+        AtomicInteger turn = new AtomicInteger(1);
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> turn.get() == 1
+                ? "第一题：谈谈 JVM 内存结构。\n选题"
+                : "本场题目到这里就全部结束了，感谢你的时间。");
+        FakeSessionStore sessions = new FakeSessionStore();
+        Supervisor supervisor = webSupervisor(runtime, sessions, null);
+        String sessionId = supervisor.createSession(null, "我的简历", "招 Java 后端",
+                new SessionConfig("JAVA_BACKEND", "MEDIUM", 1)).sessionId();
+
+        supervisor.chat(sessionId, "回答一");
+        turn.set(2);
+        Supervisor.SupervisorReply reply = supervisor.chat(sessionId, "回答二");
+
+        assertThat(runtime.calls()).hasSize(2);
+        assertThat(reply.reply()).contains("全部结束");
+        assertThat(reply.action()).isEqualTo(Supervisor.ACTION_FOLLOW_UP);
     }
 }

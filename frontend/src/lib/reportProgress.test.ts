@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { deriveStage, formatDuration, nextPollDelay, REPORT_STAGES } from './reportProgress';
+import { deriveStage, formatDuration, nextPollDelay, pollFailureAction, MAX_TRANSIENT_FAILURES, REPORT_STAGES } from './reportProgress';
+import { ApiError } from '../api/http';
 
 describe('nextPollDelay 轮询节奏', () => {
   it('前 5 次为 3 秒，之后退避到 10 秒封顶', () => {
@@ -36,5 +37,25 @@ describe('formatDuration 时长格式化', () => {
 
   it('负数与非法输入按 0 处理', () => {
     expect(formatDuration(-100)).toBe('0 分 0 秒');
+  });
+});
+
+describe('pollFailureAction 轮询失败处置', () => {
+  it('真错误立即终止：404 任务不存在、400、401', () => {
+    expect(pollFailureAction(new ApiError(404, '不存在'), 0)).toBe('stop');
+    expect(pollFailureAction(new ApiError(400, '参数错误'), 0)).toBe('stop');
+    expect(pollFailureAction(new ApiError(401, '未认证'), 0)).toBe('stop');
+  });
+
+  it('网络异常等暂态失败在容忍上限内退避重试', () => {
+    expect(pollFailureAction(new TypeError('fetch failed'), 0)).toBe('retry');
+    expect(pollFailureAction(new TypeError('fetch failed'), 1)).toBe('retry');
+    expect(pollFailureAction(new ApiError(502, '网关错误'), 5)).toBe('retry');
+    expect(pollFailureAction(new ApiError(503, '服务暂不可用'), MAX_TRANSIENT_FAILURES - 1)).toBe('retry');
+  });
+
+  it('连续暂态失败超过容忍上限才终止', () => {
+    expect(pollFailureAction(new TypeError('fetch failed'), MAX_TRANSIENT_FAILURES)).toBe('stop');
+    expect(pollFailureAction(new ApiError(502, '网关错误'), MAX_TRANSIENT_FAILURES + 1)).toBe('stop');
   });
 });

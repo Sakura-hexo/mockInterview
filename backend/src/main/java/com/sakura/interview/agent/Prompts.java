@@ -35,6 +35,15 @@ final class Prompts {
 
             【本轮指令】候选人刚才的输入是明确的拒绝或表示不会。本轮禁止提及原题、禁止追问、禁止安慰或劝答：最多一句简短回应带过，立即出下一题，回复以单独一行 选题 结尾。""";
 
+    /**
+     * 提前收尾闸门的重试指令：Supervisor 在未问满但模型输出告别话术时追加重试一轮。
+     * 与拒绝指令同机制：系统提示词每轮重建，指令轮结束即失效，不落历史。
+     */
+    static final String FAREWELL_DIRECTIVE = """
+
+
+            【本轮指令】本场题目尚未问满，禁止收尾、总结全场、告别或祝福。本轮最多一句带过后立即出下一题，回复以单独一行 选题 结尾。""";
+
     /** 面试官系统提示词：进度、行为规则、防重复清单、简历与岗位要点、预取候选题。 */
     static String interviewerSystem(SessionState state, int askedCount, String candidates) {
         JdProfile jd = state.jdProfile();
@@ -42,7 +51,13 @@ final class Prompts {
         int planned = state.config().questionCount();
         StringBuilder sb = new StringBuilder();
         sb.append("你是一场 Java 后端模拟面试的面试官，候选人正在求职 Java 后端岗位。\n");
-        sb.append("本场进度：计划 ").append(planned).append(" 道题，已问 ").append(askedCount).append(" 道。\n\n");
+        if (askedCount >= planned) {
+            sb.append("本场进度：计划 ").append(planned).append(" 道题，已问 ").append(askedCount).append(" 道。\n\n");
+        } else {
+            sb.append("本场进度：计划 ").append(planned).append(" 道题，已问 ").append(askedCount)
+                    .append(" 道，还剩 ").append(planned - askedCount)
+                    .append(" 道未问——问满之前禁止任何收尾、总结全场、告别或祝福的表述。\n\n");
+        }
         sb.append(personaLine(state.config().difficulty()));
         sb.append("行为规则：\n");
         sb.append("1. 最高优先级：候选人拒绝（如「不要」「不想聊这个」「换个话题」）、明确说不会或不知道、")

@@ -113,15 +113,13 @@ public final class Supervisor {
                 // 问满计划题数后收尾：不再预检索候选题，提示词切换为总结引导
                 int asked = store.countQuestions(sessionId);
                 boolean remaining = asked < state.config().questionCount();
+                String candidates = remaining ? candidatesFor(state, userText) : "";
                 // 拒绝信号升为本轮级指令：三轮纯提示词迭代均被模型劝答本能压过
-                String system = Prompts.interviewerSystem(state, asked,
-                        remaining ? candidatesFor(state, userText) : "");
+                String system = Prompts.interviewerSystem(state, asked, candidates);
                 if (remaining && RefusalDetector.isRefusal(userText)) {
                     system = system + Prompts.REFUSAL_DIRECTIVE;
                 }
-                yield agentTurn(state, Intent.INTERVIEW,
-                        AgentRuntime.ROLE_INTERVIEWER, system,
-                        userText, listener);
+                yield interviewerTurn(state, system, userText, listener, remaining, candidates);
             }
         };
     }
@@ -135,10 +133,80 @@ public final class Supervisor {
                                       String systemPrompt, String userText, TurnListener listener) {
         String sessionId = state.sessionId();
         store.appendMessage(sessionId, "user", userText, 0, 0);
-        String contextInput = ContextAssembler.assemble(
+        StreamChunk.Final finalChunk = streamTurn(role, sessionId, systemPrompt,
+                contextInput(sessionId), listener);
+        return finalizeTurn(state, intent, role, finalChunk);
+    }
+
+    /** 面试官轮：与通用轮的差别只在未问满时套提前收尾闸门，落库口径完全一致。 */
+    private SupervisorReply interviewerTurn(SessionState state, String systemPrompt, String userText,
+                                            TurnListener listener, boolean remaining,
+                                            String candidates) {
+        String sessionId = state.sessionId();
+        store.appendMessage(sessionId, "user", userText, 0, 0);
+        String context = contextInput(sessionId);
+        StreamChunk.Final finalChunk = streamTurn(
+                AgentRuntime.ROLE_INTERVIEWER, sessionId, systemPrompt, context, listener);
+        StreamChunk.Final effective = remaining
+                ? enforceNotConcluded(state, systemPrompt, context, finalChunk, listener, candidates)
+                : finalChunk;
+        return finalizeTurn(state, Intent.INTERVIEW, AgentRuntime.ROLE_INTERVIEWER, effective);
+    }
+
+    /**
+     * 未问满防提前收尾闸门：回复无选题标记且命中告别话术视为漂移——
+     * 带 FAREWELL_DIRECTIVE 重试一次，仍失败则用候选题首条做确定性桥接（零额外模型调用）。
+     * 有标记的追问/出题轮与问满后的合法告别不进本闸门。
+     */
+    private StreamChunk.Final enforceNotConcluded(SessionState state, String systemPrompt,
+                                                  String contextInput, StreamChunk.Final first,
+                                                  TurnListener listener, String candidates) {
+        String text = first.fullText();
+        if (hasPickMark(text) || !FarewellDetector.isConclusion(text)) {
+            return first;
+        }
+        StreamChunk.Final retry = streamTurn(AgentRuntime.ROLE_INTERVIEWER, state.sessionId(),
+                systemPrompt + Prompts.FAREWELL_DIRECTIVE, contextInput, listener);
+        if (hasPickMark(retry.fullText()) || !FarewellDetector.isConclusion(retry.fullText())) {
+            return retry;
+        }
+        String bridged = bridgedQuestion(candidates);
+        if (bridged == null) {
+            System.err.println("[提前收尾闸门] 重试仍告别且无候选题，放行原文");
+            return first;
+        }
+        System.err.println("[提前收尾闸门] 重试仍告别，已用候选题桥接补题");
+        return new StreamChunk.Final(bridged, first.inputTokens() + retry.inputTokens(),
+                first.outputTokens() + retry.outputTokens(), first.toolCalls());
+    }
+
+    /** 候选题首条改写为面试官口吻的下一题（带选题标记），供闸门兜底。 */
+    private static String bridgedQuestion(String candidates) {
+        if (candidates == null || candidates.isBlank()) {
+            return null;
+        }
+        String firstLine = candidates.lines().findFirst().orElse("");
+        int idEnd = firstLine.indexOf(' ');
+        String question = idEnd > 0 ? firstLine.substring(idEnd + 1) : firstLine;
+        int paren = question.indexOf("（标签：");
+        if (paren > 0) {
+            question = question.substring(0, paren);
+        }
+        if (question.isBlank()) {
+            return null;
+        }
+        return "本场还有题目未问完，我们继续。\n\n下一题：" + question.strip() + "\n选题";
+    }
+
+    private String contextInput(String sessionId) {
+        return ContextAssembler.assemble(
                 store.readWindow(sessionId, ContextAssembler.WINDOW_MESSAGES),
                 store.loadSummary(sessionId).map(SessionSummary::text).orElse(null));
-        StreamChunk.Final finalChunk = streamTurn(role, sessionId, systemPrompt, contextInput, listener);
+    }
+
+    private SupervisorReply finalizeTurn(SessionState state, Intent intent, String role,
+                                         StreamChunk.Final finalChunk) {
+        String sessionId = state.sessionId();
         // 题型推导（选题标记启发式）：末尾标记行判新题，按 round 分首题与换题，
         // 无标记判追问（闲聊固定追问）；标记行从落库文本与已问题单中剥除
         String action = AgentRuntime.ROLE_CHAT.equals(role)

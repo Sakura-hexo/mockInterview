@@ -16,6 +16,7 @@ import javax.sql.DataSource;
 import java.lang.reflect.Type;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
@@ -31,8 +32,6 @@ public final class MySqlSessionStore implements SessionStore {
     private static final Type STRING_LIST = new TypeToken<List<String>>() {
     }.getType();
 
-    private static final DateTimeFormatter ISO = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-
     private static final String MESSAGE_COLUMNS =
             "seq, role, content, input_tokens, output_tokens, action, created_at";
 
@@ -40,14 +39,13 @@ public final class MySqlSessionStore implements SessionStore {
         Timestamp time = rs.getTimestamp("created_at");
         return new StoredMessage(rs.getInt("seq"), rs.getString("role"), rs.getString("content"),
                 rs.getLong("input_tokens"), rs.getLong("output_tokens"), rs.getString("action"),
-                time == null ? null : ISO.format(time.toLocalDateTime()));
+                formatTime(time));
     };
 
     private static final RowMapper<SessionOverview> OVERVIEW_MAPPER = (rs, i) -> new SessionOverview(
             rs.getString("session_id"), rs.getString("status"), rs.getString("jd_direction"),
             rs.getString("difficulty"), rs.getInt("question_count"),
-            Optional.ofNullable(rs.getTimestamp("created_at")).map(Timestamp::toLocalDateTime)
-                    .map(ISO::format).orElse(null));
+            formatTime(rs.getTimestamp("created_at")));
 
     private final JdbcTemplate jdbc;
     private final Gson gson = new Gson();
@@ -225,8 +223,16 @@ public final class MySqlSessionStore implements SessionStore {
         return spans.isEmpty() ? 0 : spans.get(0);
     }
 
+    /**
+     * 对外统一时间口径：带本地时区偏移的 ISO 串（如 2026-11-03T18:49:46+08:00）。
+     * 此前用无偏移的 ISO 本地格式，前端只能按本地时区猜——容器 JVM 是 UTC 而 MySQL
+     * 是东八区时同一字段两种真相（2026-11-04 实测 t_message 偏 8 小时），
+     * 显式偏移让任何客户端解析都无歧义（app 容器 TZ 与 MySQL 时区对齐见 docker-compose）。
+     */
     private static String formatTime(Timestamp time) {
-        return time == null ? null : ISO.format(time.toLocalDateTime());
+        return time == null ? null
+                : DateTimeFormatter.ISO_OFFSET_DATE_TIME
+                        .format(time.toLocalDateTime().atZone(ZoneId.systemDefault()));
     }
 
     private List<String> parseList(String json) {
