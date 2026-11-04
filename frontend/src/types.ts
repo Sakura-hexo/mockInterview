@@ -54,6 +54,8 @@ export interface ReportItem {
   userAnswerSummary: string;
   comment: string;
   score: number;
+  // 参考回答员按点评缺口定制的可背诵范文，未生成时缺省
+  referenceAnswer?: string;
 }
 
 export interface InterviewReport {

@@ -152,6 +152,12 @@ export default function ReportPage() {
                     <h5>面试官评语</h5>
                     <div className="comment">{item.comment}</div>
                   </section>
+                  {item.referenceAnswer && (
+                    <section>
+                      <h5>参考回答（针对你的缺口定制）</h5>
+                      <div className="comment">{item.referenceAnswer}</div>
+                    </section>
+                  )}
                 </div>
               </details>
             ))}

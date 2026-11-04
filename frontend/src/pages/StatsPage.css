@@ -42,40 +42,7 @@
   color: #64748b;
 }
 
-/* 趋势条形图：纯 div 高度百分比，30 根弹性铺开 */
-.trend-chart {
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 140px;
-  padding-top: 4px;
-}
-
-.trend-bar {
-  flex: 1;
-  min-width: 4px;
-  background: #93c5fd;
-  border-radius: 3px 3px 0 0;
-  transition: background 0.2s;
-}
-
-.trend-bar:hover { background: #3b82f6; }
-
-/* 柱底稀疏日期刻度：与柱区同 gap 同列宽，非刻度列留空占位保持对齐 */
-.trend-labels {
-  display: flex;
-  gap: 3px;
-  margin-top: 6px;
-}
-
-.trend-label {
-  flex: 1;
-  min-width: 4px;
-  text-align: center;
-  font-size: 11px;
-  color: #7d8ba1;
-  white-space: nowrap;
-}
+/* 每日用量图已换 DeepSeek 同款 ECharts SVG（components/UsageChart），无本页 CSS */
 
 .stats-table {
   width: 100%;
