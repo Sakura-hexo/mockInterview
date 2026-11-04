@@ -18,12 +18,14 @@ export interface SpeechSynthesisUtteranceLike {
 
 export interface SpeechSynthesisLike {
   readonly speaking: boolean;
-  speak(utterance: SpeechSynthesisUtteranceLike): void;
+  /** 参数取 DOM 类型，真实 window.speechSynthesis 才能结构匹配本接口。 */
+  speak(utterance: SpeechSynthesisUtterance): void;
   cancel(): void;
   getVoices(): SpeechSynthesisVoiceLike[];
 }
 
-export type SpeechSynthesisUtteranceConstructor = new (text: string) => SpeechSynthesisUtteranceLike;
+/** 返回真实 DOM 语句类型，让 window 的原生构造器可直接传入；测试假件经双转型注入。 */
+export type SpeechSynthesisUtteranceConstructor = new (text: string) => SpeechSynthesisUtterance;
 
 export interface SpeechOutputSource {
   speechSynthesis?: SpeechSynthesisLike;
@@ -34,8 +36,8 @@ export function speechOutputSupported(source: SpeechOutputSource): boolean {
   return source.speechSynthesis !== undefined && source.SpeechSynthesisUtterance !== undefined;
 }
 
-/** 中文嗓音优先 zh-CN，其次任意 zh；都没有则返回 null，交给 utterance.lang 兜底。 */
-export function pickChineseVoice(voices: SpeechSynthesisVoiceLike[]): SpeechSynthesisVoiceLike | null {
+/** 中文嗓音优先 zh-CN，其次任意 zh；都没有则返回 null，交给 utterance.lang 兜底。泛型保调用方拿到原元素类型。 */
+export function pickChineseVoice<T extends SpeechSynthesisVoiceLike>(voices: T[]): T | null {
   const chinese = voices.filter((voice) => voice.lang.toLowerCase().startsWith('zh'));
   const mandarin = chinese.find(
     (voice) => voice.lang.toLowerCase().replace('_', '-').startsWith('zh-cn'),
