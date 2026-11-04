@@ -55,4 +55,14 @@ public final class MySqlUserStore implements UserStore {
                 username);
         return found.isEmpty() ? Optional.empty() : Optional.of(found.get(0));
     }
+
+    @Override
+    public Optional<UserRecord> findById(long id) {
+        List<UserRecord> found = jdbc.query(
+                "SELECT id, username, password_hash FROM t_user WHERE id = ?",
+                (rs, i) -> new UserRecord(rs.getLong("id"), rs.getString("username"),
+                        rs.getString("password_hash")),
+                id);
+        return found.isEmpty() ? Optional.empty() : Optional.of(found.get(0));
+    }
 }

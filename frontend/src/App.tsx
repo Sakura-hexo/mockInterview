@@ -37,6 +37,7 @@ export default function App() {
             <Route path="/new" element={<NewInterviewPage />} />
             <Route path="/interview/:id" element={<InterviewPage />} />
             <Route path="/report/:id" element={<ReportPage />} />
+            <Route path="/stats" element={<StatsPage />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

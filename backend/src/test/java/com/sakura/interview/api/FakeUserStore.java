@@ -27,4 +27,9 @@ public final class FakeUserStore implements UserStore {
     public Optional<UserRecord> findByUsername(String username) {
         return Optional.ofNullable(byUsername.get(username));
     }
+
+    @Override
+    public Optional<UserRecord> findById(long id) {
+        return byUsername.values().stream().filter(u -> u.id() == id).findFirst();
+    }
 }

@@ -24,9 +24,18 @@ public final class QuestionBankParser {
     }
 
     public static List<BankQuestion> parse(Path file) {
+        return parseLines(readLines(file));
+    }
+
+    /** 管理端上传口径：解析内存文本（UTF-8 Markdown），格式与文件版完全一致。 */
+    public static List<BankQuestion> parseText(String content) {
+        return parseLines(content == null ? List.of() : content.lines().toList());
+    }
+
+    static List<BankQuestion> parseLines(List<String> lines) {
         List<BankQuestion> questions = new ArrayList<>();
         Cursor cursor = new Cursor();
-        for (String raw : readLines(file)) {
+        for (String raw : lines) {
             String line = raw.strip();
             if (line.startsWith(ID_PREFIX)) {
                 cursor.flush(questions);
@@ -43,7 +52,7 @@ public final class QuestionBankParser {
         }
         cursor.flush(questions);
         if (questions.isEmpty()) {
-            throw new IllegalStateException("题库文件没有解析到任何题目：" + file);
+            throw new IllegalStateException("题库内容没有解析到任何题目");
         }
         return questions;
     }

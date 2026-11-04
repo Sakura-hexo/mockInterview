@@ -3,6 +3,7 @@ package com.sakura.interview.api;
 import com.sakura.interview.agent.AgentRuntime;
 import com.sakura.interview.agent.SessionAnalyst;
 import com.sakura.interview.agent.Supervisor;
+import com.sakura.interview.rag.MilvusBankImporter;
 import com.sakura.interview.infra.AgentLlmCaller;
 import com.sakura.interview.infra.AgentScopeRuntime;
 import com.sakura.interview.infra.ChatModels;
@@ -11,6 +12,7 @@ import com.sakura.interview.infra.EnvKeys;
 import com.sakura.interview.infra.MySqlAnalysisCache;
 import com.sakura.interview.infra.MySqlDb;
 import com.sakura.interview.infra.MySqlReportStore;
+import com.sakura.interview.infra.MySqlStatsStore;
 import com.sakura.interview.infra.MySqlUserStore;
 import com.sakura.interview.infra.PersistentSessionStore;
 import com.sakura.interview.infra.RedisAuthStore;
@@ -78,6 +80,22 @@ public class AppConfig {
     @Bean
     public MySqlUserStore userStore(DataSource dataSource) {
         return new MySqlUserStore(dataSource);
+    }
+
+    @Bean
+    public MySqlStatsStore statsStore(DataSource dataSource) {
+        return new MySqlStatsStore(dataSource);
+    }
+
+    /** 管理员门禁：env ADMIN_USERNAME 指定谁可见管理页签，不配置则管理接口 404 零暴露。 */
+    @Bean
+    public AdminGate adminGate() {
+        return StatsController.gateFromEnv();
+    }
+
+    @Bean
+    public MilvusBankImporter bankImporter(MilvusQuestionStore questionStore) {
+        return new MilvusBankImporter(questionStore);
     }
 
     @Bean

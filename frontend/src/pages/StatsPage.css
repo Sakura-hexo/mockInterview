@@ -1,0 +1,147 @@
+/* 用量统计页：卡片、纯 CSS 条形趋势、表格与上传（V1 简约风，同 report 页节奏） */
+
+.stats-wrap {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.stat-card,
+.stats-card {
+  background: #fff;
+  border: 1px solid #e5e9f0;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.stats-card h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-name {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* 趋势条形图：纯 div 高度百分比，30 根弹性铺开 */
+.trend-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 140px;
+  padding-top: 4px;
+}
+
+.trend-bar {
+  flex: 1;
+  min-width: 4px;
+  background: #93c5fd;
+  border-radius: 3px 3px 0 0;
+  transition: background 0.2s;
+}
+
+.trend-bar:hover { background: #3b82f6; }
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  color: #334155;
+}
+
+.stats-table th {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid #e5e9f0;
+  color: #64748b;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.stats-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid #f1f5f9;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stats-empty { color: #94a3b8; font-size: 13px; margin: 0; }
+
+.stats-footnote {
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.6;
+  padding: 0 4px 8px;
+}
+
+.stats-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.tab-btn {
+  padding: 6px 14px;
+  border: 1px solid #d5dbe6;
+  border-radius: 10px;
+  background: #fff;
+  color: #475569;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.tab-btn.active {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+
+.upload-hint {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
+
+.upload-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.upload-row input[type='file'] {
+  font-size: 13px;
+  color: #475569;
+}
+
+.upload-result {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #15803d;
+}
+
+.upload-error {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #b91c1c;
+}
