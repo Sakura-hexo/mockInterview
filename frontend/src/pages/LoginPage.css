@@ -76,6 +76,12 @@
   color: #fff;
 }
 
+/* 管理端页签：用户名锁定内置账号，只读态灰底提示不可编辑 */
+.login-card input:read-only {
+  background: #f4f6fa;
+  cursor: not-allowed;
+}
+
 /* 密码行：输入框 + 文字型显示切换（V1 风格禁图标） */
 .field-row {
   display: flex;

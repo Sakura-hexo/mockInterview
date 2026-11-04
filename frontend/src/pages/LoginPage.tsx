@@ -5,7 +5,8 @@ import { login, register } from '../api/auth';
 import './LoginPage.css';
 
 // 登录/注册页 /login（认证改造方案 2026-11-01，视觉沿用 V1 定稿设计稿 01）
-type Mode = 'login' | 'register';
+// 2026-11-04 增加管理端页签：内置管理员 admin 登录后直达统计页管理页签
+type Mode = 'login' | 'register' | 'admin';
 
 const ERROR_TEXT: Record<number, string> = {
   401: '用户名或密码错误',
@@ -26,12 +27,14 @@ export default function LoginPage() {
   function switchMode(next: Mode) {
     setMode(next);
     setError('');
+    // 管理端用户名锁定内置 admin，离开管理端时清空避免残留
+    setUsername(next === 'admin' ? 'admin' : '');
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (loading) return;
-    const name = username.trim();
+    const name = mode === 'admin' ? 'admin' : username.trim();
     if (name.length < 2 || name.length > 20) {
       setError('请输入 2 到 20 位用户名');
       return;
@@ -49,11 +52,11 @@ export default function LoginPage() {
     setError('');
     try {
       const result =
-        mode === 'login' ? await login(name, password) : await register(name, password);
+        mode === 'register' ? await register(name, password) : await login(name, password);
       setLoggedIn();
       setUsernameStored(result.username);
       localStorage.removeItem('APP_TOKEN'); // 清掉 Bearer 时代的孤儿键
-      navigate('/');
+      navigate(mode === 'admin' ? '/stats' : '/');
     } catch (err) {
       if (err instanceof ApiError) {
         setError(ERROR_TEXT[err.status] ?? err.message);
@@ -86,15 +89,23 @@ export default function LoginPage() {
           >
             注册
           </button>
+          <button
+            type="button"
+            className={mode === 'admin' ? 'active' : ''}
+            onClick={() => switchMode('admin')}
+          >
+            管理端
+          </button>
         </div>
 
         <label>
           用户名
           <input
             type="text"
-            placeholder="2 到 20 位字符"
+            placeholder={mode === 'admin' ? '内置管理员' : '2 到 20 位字符'}
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            readOnly={mode === 'admin'}
             autoComplete="username"
             autoFocus
           />
@@ -108,7 +119,7 @@ export default function LoginPage() {
               placeholder={mode === 'register' ? '至少 8 位' : '请输入密码'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
             />
             <button
               type="button"
@@ -127,18 +138,28 @@ export default function LoginPage() {
           disabled={loading || !username.trim() || !password}
         >
           {loading
-            ? mode === 'login'
-              ? '登录中…'
-              : '注册中…'
-            : mode === 'login'
-              ? '进入系统'
-              : '注册并进入'}
+            ? '登录中…'
+            : mode === 'register'
+              ? '注册并进入'
+              : mode === 'admin'
+                ? '进入管理端'
+                : '进入系统'}
         </button>
 
         <div className="login-tip">
-          注册即登录，无需邮箱验证
-          <br />
-          自部署开源项目 · 面试数据只保存在你自己的机器上
+          {mode === 'admin' ? (
+            <>
+              内置管理员账号 admin · 默认密码 admin
+              <br />
+              管理端可查看全站用量与上传题库
+            </>
+          ) : (
+            <>
+              注册即登录，无需邮箱验证
+              <br />
+              自部署开源项目 · 面试数据只保存在你自己的机器上
+            </>
+          )}
         </div>
       </form>
     </div>

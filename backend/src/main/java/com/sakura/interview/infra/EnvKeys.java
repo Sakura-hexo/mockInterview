@@ -48,6 +48,11 @@ public final class EnvKeys {
         return orDefault("ADMIN_USERNAME", "").trim();
     }
 
+    /** 内置管理员密码（env ADMIN_PASSWORD）：默认 admin，公开部署前改强密码重启即重置生效。 */
+    public static String adminPassword() {
+        return orDefault("ADMIN_PASSWORD", "admin");
+    }
+
     /** 是否放行模型的隐藏思考流。qwen 系思考模型的 reasoning_content 不进入回复正文，
      * 但按解码速度逐 token 生成，面试场景表现为数十秒黑屏死等（困难档找茬最深、思考量最大），
      * 因此默认关闭，需要深度思考时置 LLM_THINKING=true。

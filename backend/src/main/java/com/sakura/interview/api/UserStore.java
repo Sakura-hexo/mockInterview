@@ -15,6 +15,9 @@ public interface UserStore {
     /** 按自增 id 查用户：会话鉴权注入的是 userId，管理端校验用户名时反查。 */
     Optional<UserRecord> findById(long id);
 
+    /** 重置密码散列：内置管理员账号播种用，密码不符时回写。 */
+    void updatePasswordHash(long id, String passwordHash);
+
     record UserRecord(long id, String username, String passwordHash) {
     }
 }

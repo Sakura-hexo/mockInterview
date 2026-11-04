@@ -221,7 +221,18 @@ public class AppConfig {
 
     @Bean
     public AuthService authService(MySqlUserStore users, RedisAuthStore sessions) {
-        return new AuthService(users, sessions);
+        AuthService service = new AuthService(users, sessions);
+        seedBuiltInAdmin(service);
+        return service;
+    }
+
+    /** 内置管理员播种：仅当 ADMIN_USERNAME 指向内置名 admin 时生效，幂等（缺则建、密码不符则重置）。
+     *  指向其他用户名时不播种不改密码——普通账号的管理权只由门禁判定，不动其凭据。 */
+    private static void seedBuiltInAdmin(AuthService service) {
+        if (!"admin".equals(EnvKeys.adminUsername())) {
+            return;
+        }
+        service.ensureAccount("admin", EnvKeys.adminPassword());
     }
 
     @Bean(destroyMethod = "shutdown")

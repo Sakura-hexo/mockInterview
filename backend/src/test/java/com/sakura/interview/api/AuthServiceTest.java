@@ -1,6 +1,7 @@
 package com.sakura.interview.api;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -92,5 +93,22 @@ class AuthServiceTest {
         sessions.resolveUserId(result.token());
         sessions.resolveUserId(result.token());
         assertThat(sessions.renewCount).isEqualTo(2);
+    }
+
+    @Test
+    void 内置管理员播种缺则建幂等且密码不符重置() {
+        // 五位密码不走注册校验，播种后直接可登录
+        service.ensureAccount("admin", "admin");
+        assertThat(service.login("admin", "admin").username()).isEqualTo("admin");
+
+        // 幂等：密码一致时不重写散列
+        String hashAfterSeed = users.byUsername.get("admin").passwordHash();
+        service.ensureAccount("admin", "admin");
+        assertThat(users.byUsername.get("admin").passwordHash()).isEqualTo(hashAfterSeed);
+
+        // 旧库 admin 行密码未知时重置后新口令生效
+        users.updatePasswordHash(1, new BCryptPasswordEncoder().encode("different9"));
+        service.ensureAccount("admin", "admin");
+        assertThat(service.login("admin", "admin").username()).isEqualTo("admin");
     }
 }
