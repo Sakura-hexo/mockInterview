@@ -5,6 +5,7 @@ import { useReportPolling } from '../hooks/useReportPolling';
 import { formatDuration, REPORT_STAGES } from '../lib/reportProgress';
 import type { InterviewSummary, ReportScore } from '../types';
 import './ReportPage.css';
+import './ReportPrint.css';
 
 const DIRECTION_LABEL: Record<string, string> = { JAVA_BACKEND: 'Java 后端' };
 const DIFFICULTY_LABEL: Record<string, string> = { EASY: '简单', MEDIUM: '中等', HARD: '困难' };
@@ -22,6 +23,7 @@ export default function ReportPage() {
   const navigate = useNavigate();
   const { report, generating, stage, loadError, loaded } = useReportPolling(id);
   const [session, setSession] = useState<(InterviewSummary & { questionCount?: number }) | null>(null);
+  const [printing, setPrinting] = useState(false);
 
   // 报告头卡的方向/难度/时间来自会话详情
   useEffect(() => {
@@ -29,6 +31,15 @@ export default function ReportPage() {
       .then((d) => setSession(d.session))
       .catch(() => {});
   }, [id]);
+
+  useEffect(() => {
+    if (!printing) return;
+    const frame = window.requestAnimationFrame(() => {
+      window.print();
+      setPrinting(false);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [printing]);
 
   if (!loaded) {
     return <div className="home-placeholder">报告加载中…</div>;
@@ -75,6 +86,9 @@ export default function ReportPage() {
       <header className="chat-header">
         <div className="title">复盘报告{meta ? ` · ${meta}` : ''}</div>
         <div className="actions">
+          <button className="btn btn-ghost" type="button" onClick={() => setPrinting(true)} disabled={printing}>
+            导出 PDF
+          </button>
           <button className="btn btn-ghost" onClick={() => navigate(`/interview/${id}`)}>
             查看消息记录
           </button>
@@ -119,7 +133,7 @@ export default function ReportPage() {
           <div className="rp-card">
             <h3>逐题回顾（{report.items.length} 题）</h3>
             {report.items.map((item, i) => (
-              <details className="acc" key={i} open={i === 0}>
+              <details className="acc" key={i} open={printing || i === 0}>
                 <summary>
                   <span className="q-num">{i + 1}</span>
                   <span className="q-title">{item.question}</span>
