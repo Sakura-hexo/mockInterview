@@ -38,4 +38,17 @@ class FarewellDetectorTest {
         // 闸门只在无选题标记时触发，带标记的正常换题轮不受影响
         assertThat(FarewellDetector.isConclusion("这道题到此结束。")).isTrue();
     }
+
+    @Test
+    void 全短语标记命中真机漏网句式() {
+        // s-dfeeabd0 漏网原句：旧词表「面试结束」差「问题」两字、「到此结束」差一字，均未命中
+        assertThat(FarewellDetector.isConclusion("本场面试问题到这里结束。")).isTrue();
+        assertThat(FarewellDetector.isConclusion("问题到此结束了。")).isTrue();
+        assertThat(FarewellDetector.isConclusion("题目到这里结束，今天就到这。")).isTrue();
+        assertThat(FarewellDetector.isConclusion("题目到此结束。")).isTrue();
+        assertThat(FarewellDetector.isConclusion("没有更多问题了。")).isTrue();
+        assertThat(FarewellDetector.isConclusion("没有更多题目要问了。")).isTrue();
+        assertThat(FarewellDetector.isConclusion("问题问完了，辛苦。")).isTrue();
+        assertThat(FarewellDetector.isConclusion("面试先到这里。")).isTrue();
+    }
 }

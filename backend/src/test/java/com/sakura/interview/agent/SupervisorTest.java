@@ -324,6 +324,25 @@ class SupervisorTest {
     }
 
     @Test
+    void 未问满问题到这里结束_新词表命中触发闸门重试() {
+        // s-dfeeabd0 漏网原句：旧词表无一命中直接送达，全短语补丁后应拦下重试
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> c.systemPrompt().contains("本场题目尚未问满")
+                ? "好，我们继续。下一题：谈谈索引失效场景。\n选题"
+                : "本场面试问题到这里结束。");
+        Wiring wiring = newSupervisor(runtime);
+        String sessionId = wiring.supervisor().createSession("我的简历", "招 Java 后端").sessionId();
+
+        Supervisor.SupervisorReply reply = wiring.supervisor().chat(sessionId, "回答一");
+
+        assertThat(runtime.calls()).hasSize(2);
+        assertThat(runtime.calls().get(1).systemPrompt()).contains("本场题目尚未问满");
+        assertThat(reply.reply()).contains("索引失效").endsWith("选题");
+        assertThat(reply.action()).isEqualTo(Supervisor.ACTION_QUESTION);
+        List<StoredMessage> messages = wiring.sessions().readAll(sessionId);
+        assertThat(messages.get(1).text()).doesNotContain("到这里结束");
+    }
+
+    @Test
     void 重试仍告别_用候选题首条零调用桥接补题() {
         FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "本场题目到这里就全部结束了，感谢你的时间。");
         FakeSessionStore sessions = new FakeSessionStore();
@@ -367,6 +386,25 @@ class SupervisorTest {
 
         assertThat(runtime.calls()).hasSize(1);
         assertThat(reply.action()).isEqualTo(Supervisor.ACTION_FOLLOW_UP);
+    }
+
+    @Test
+    void 单题收尾话术带选题标记不进闸门() {
+        // 误伤防线：「这道题到此结束」词面命中，但正常换题轮带选题标记由闸门联合条件放行
+        AtomicInteger turn = new AtomicInteger(1);
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> turn.get() == 1
+                ? "第一题：谈谈 JVM 内存结构。\n选题"
+                : "这道题到此结束。下一题：谈谈索引失效场景。\n选题");
+        Wiring wiring = newSupervisor(runtime);
+        String sessionId = wiring.supervisor().createSession("我的简历", "招 Java 后端").sessionId();
+
+        wiring.supervisor().chat(sessionId, "回答一");
+        turn.set(2);
+        Supervisor.SupervisorReply reply = wiring.supervisor().chat(sessionId, "回答二");
+
+        assertThat(runtime.calls()).hasSize(2);
+        assertThat(reply.action()).isEqualTo(Supervisor.ACTION_NEXT);
+        assertThat(reply.reply()).contains("这道题到此结束").endsWith("选题");
     }
 
     @Test
