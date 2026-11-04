@@ -1,0 +1,211 @@
+@page {
+  size: A4;
+  margin: 14mm 12mm;
+}
+
+@media print {
+  html,
+  body,
+  #root {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+
+  .app {
+    display: block;
+    height: auto;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .main {
+    display: block;
+  }
+
+  .main-body {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+
+  .chat-header {
+    display: block;
+    padding: 0 0 8mm;
+    background: #fff;
+    border-bottom: 1pt solid #111827;
+  }
+
+  .chat-header .title {
+    display: block;
+    color: #000;
+    font-size: 13pt;
+    font-weight: 700;
+  }
+
+  .chat-header .actions {
+    display: none;
+  }
+
+  .report-wrap {
+    max-width: none;
+    padding: 0;
+    color: #000;
+    font-size: 10.5pt;
+    line-height: 1.6;
+  }
+
+  .rp-head,
+  .rp-card,
+  .rp-foot {
+    background: #fff;
+    border-color: #111827;
+    box-shadow: none;
+  }
+
+  .rp-head {
+    display: block;
+    padding: 0 0 6mm;
+    margin-bottom: 6mm;
+    border-bottom: 1pt solid #111827;
+    break-inside: avoid;
+  }
+
+  .rp-head h1,
+  .rp-card h3,
+  .rp-foot,
+  .rp-meta,
+  .score-label,
+  .sname,
+  .sval,
+  .acc-body h5 {
+    color: #000;
+  }
+
+  .rp-head h1 {
+    margin: 0 0 3mm;
+    font-size: 18pt;
+    line-height: 1.3;
+  }
+
+  .rp-meta {
+    display: block;
+    margin-top: 2mm;
+  }
+
+  .rp-meta span {
+    display: block;
+    margin-bottom: 1mm;
+  }
+
+  .rp-conclusion,
+  .comment {
+    background: #fff;
+    color: #000;
+    border-left: 3pt solid #111827;
+    break-inside: avoid;
+  }
+
+  .score-display {
+    display: block;
+    margin-top: 4mm;
+    text-align: left;
+  }
+
+  .score-number {
+    color: #000;
+    font-size: 24pt;
+  }
+
+  .rp-card {
+    padding: 0;
+    margin-bottom: 7mm;
+    break-inside: auto;
+  }
+
+  .rp-card h3 {
+    margin: 0 0 4mm;
+    padding-bottom: 2mm;
+    border-bottom: 1pt solid #111827;
+    font-size: 13pt;
+    break-after: avoid;
+  }
+
+  .srow {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    gap: 6mm;
+    padding: 2mm 0;
+    border-bottom: 0.5pt solid #6b7280;
+  }
+
+  .strack,
+  .sfill {
+    display: none;
+  }
+
+  .sval {
+    width: auto;
+    font-size: 11pt;
+  }
+
+  .acc {
+    margin-bottom: 5mm;
+    border: none;
+    border-top: 0.5pt solid #6b7280;
+    break-inside: auto;
+  }
+
+  .acc summary {
+    display: flex;
+    gap: 4mm;
+    padding: 2mm 0;
+    background: #fff;
+    border-left: 3pt solid #111827;
+    break-inside: avoid;
+    break-after: avoid;
+  }
+
+  .acc .q-num {
+    display: none;
+  }
+
+  .acc .q-title {
+    flex: 1;
+    color: #000;
+    font-weight: 700;
+    white-space: normal;
+  }
+
+  .acc .q-score,
+  .acc-body p,
+  .advice-ol li {
+    color: #000;
+  }
+
+  .acc-body {
+    padding: 2mm 0 0 7mm;
+  }
+
+  .acc-body section {
+    break-inside: avoid;
+  }
+
+  .advice-ol {
+    padding-left: 7mm;
+  }
+
+  .advice-ol li {
+    break-inside: avoid;
+  }
+
+  .rp-foot {
+    justify-content: flex-start;
+    padding: 3mm 0 0;
+    border-top: 1pt solid #111827;
+    color: #000;
+  }
+}

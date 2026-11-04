@@ -158,6 +158,7 @@
 
 .input-area {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 16px 24px;
   background: #fff;
@@ -179,6 +180,30 @@
 
 .input-area textarea:focus { border-color: #3b82f6; }
 .input-area textarea:disabled { background: #f5f6fa; cursor: not-allowed; }
+
+.speech-btn {
+  align-self: flex-end;
+  padding: 10px 16px;
+  border: 1px solid #d5dbe6;
+  border-radius: 10px;
+  background: #fff;
+  color: #334155;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.speech-btn:hover:not(:disabled) { border-color: #3b82f6; color: #1d4ed8; }
+.speech-btn.speech-listening { background: #fee2e2; border-color: #fecaca; color: #991b1b; }
+.speech-btn:disabled { background: #f5f6fa; color: #94a3b8; cursor: not-allowed; }
+
+.speech-error {
+  flex-basis: 100%;
+  padding: 6px 2px 0;
+  color: #b91c1c;
+  font-size: 12px;
+}
 
 .send-btn,
 .stop-btn {

@@ -3,8 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { endInterview } from '../api/interview';
 import { ApiError } from '../api/http';
 import { useInterviewStream } from '../hooks/useInterviewStream';
+import { useSpeechInput } from '../hooks/useSpeechInput';
 import MessageBubble from '../components/MessageBubble';
 import ActivityStream from '../components/ActivityStream';
+import { appendTranscript } from '../lib/speechInput';
 import './InterviewPage.css';
 
 const DIRECTION_LABEL: Record<string, string> = { JAVA_BACKEND: 'Java 后端' };
@@ -33,6 +35,9 @@ export default function InterviewPage() {
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
+  const { supported, listening, error: speechError, start, stop: stopSpeech } = useSpeechInput({
+    onTranscript: (transcript) => setDraft((draft) => appendTranscript(draft, transcript)),
+  });
 
   // 新消息与流式增量时自动滚到底部
   useEffect(() => {
@@ -142,6 +147,14 @@ export default function InterviewPage() {
             onKeyDown={handleKeyDown}
             disabled={streaming}
           />
+          <button
+            className={`speech-btn ${listening ? 'speech-listening' : ''}`}
+            onClick={listening ? stopSpeech : start}
+            disabled={streaming || !supported}
+            title={supported ? '语音输入，识别后可再编辑' : '当前浏览器不支持语音输入'}
+          >
+            {listening ? '停止' : '语音'}
+          </button>
           {streaming ? (
             <button className="stop-btn" onClick={stop}>
               停止
@@ -159,6 +172,10 @@ export default function InterviewPage() {
             >
               发送
             </button>
+          )}
+          {speechError && <div className="speech-error">{speechError}</div>}
+          {!supported && (
+            <div className="speech-error">当前浏览器不支持语音输入，请改用 Chrome 或 Edge，或手动输入</div>
           )}
         </div>
       )}
