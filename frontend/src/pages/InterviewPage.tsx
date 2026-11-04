@@ -1,16 +1,21 @@
-import { KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { endInterview } from '../api/interview';
 import { ApiError } from '../api/http';
 import { useInterviewStream } from '../hooks/useInterviewStream';
 import { useSpeechInput } from '../hooks/useSpeechInput';
+import { useSpeechOutput } from '../hooks/useSpeechOutput';
 import MessageBubble from '../components/MessageBubble';
 import ActivityStream from '../components/ActivityStream';
 import { appendTranscript } from '../lib/speechInput';
+import type { AnnotatedMessage } from '../lib/interviewPhase';
 import './InterviewPage.css';
 
 const DIRECTION_LABEL: Record<string, string> = { JAVA_BACKEND: 'Java 后端' };
 const DIFFICULTY_LABEL: Record<string, string> = { EASY: '简单', MEDIUM: '中等', HARD: '困难' };
+
+// 自动读题开关持久化：默认开（TTS 的主场景就是面试官开口问），关掉记住选择
+const AUTO_READ_KEY = 'interview-auto-read';
 
 // 面试聊天页 /interview/:id（页面方案 4.2，视觉按 V1 定稿设计稿 04/06）
 export default function InterviewPage() {
@@ -38,6 +43,49 @@ export default function InterviewPage() {
   const { supported, listening, error: speechError, start, stop: stopSpeech } = useSpeechInput({
     onTranscript: (transcript) => setDraft((draft) => appendTranscript(draft, transcript)),
   });
+
+  // 面试官读题：气泡按钮 + 顶栏自动读题开关（ENDED 只读回看不自动读）
+  const [speakingId, setSpeakingId] = useState<string | null>(null);
+  const [autoRead, setAutoRead] = useState(() => localStorage.getItem(AUTO_READ_KEY) !== '0');
+  const [ttsError, setTtsError] = useState('');
+  const tts = useSpeechOutput({
+    onDone: () => setSpeakingId(null),
+  });
+
+  const toggleSpeak = useCallback(
+    (message: AnnotatedMessage) => {
+      setTtsError('');
+      const messageId = message.id ?? message.content;
+      if (speakingId === messageId) {
+        tts.stop();
+        setSpeakingId(null);
+        return;
+      }
+      setSpeakingId(messageId);
+      tts.speak(message.content);
+    },
+    [speakingId, tts],
+  );
+
+  const lastInterviewerRef = useRef<string | null>(null);
+  const readOnlyLoaded = !!(session && (session.status === 'ENDED' || session.status === 'REPORTED'));
+
+  // 新面试官消息完成流式后自动朗读；挂载时只登记基线不补读历史
+  useEffect(() => {
+    if (!autoRead || !tts.supported || readOnlyLoaded) return;
+    const last = [...annotated].reverse().find((m) => m.role === 'INTERVIEWER');
+    if (!last || last.streaming) return;
+    const key = last.id ?? last.content;
+    if (lastInterviewerRef.current === null) {
+      lastInterviewerRef.current = key;
+      return;
+    }
+    if (lastInterviewerRef.current === key) return;
+    lastInterviewerRef.current = key;
+    setTtsError('');
+    setSpeakingId(key);
+    tts.speak(last.content);
+  }, [annotated, autoRead, tts.supported, readOnlyLoaded, tts.speak]);
 
   // 新消息与流式增量时自动滚到底部
   useEffect(() => {
@@ -101,6 +149,21 @@ export default function InterviewPage() {
           {statusBadge}
         </div>
         <div className="actions">
+          {tts.supported && (
+            <button
+              type="button"
+              className={`btn btn-ghost auto-read-btn ${autoRead ? 'on' : ''}`}
+              onClick={() =>
+                setAutoRead((current) => {
+                  localStorage.setItem(AUTO_READ_KEY, current ? '0' : '1');
+                  return !current;
+                })
+              }
+              title={autoRead ? '新题完成生成后自动朗读，点击关闭' : '开启后新题自动朗读'}
+            >
+              自动读题{autoRead ? '开' : '关'}
+            </button>
+          )}
           {!readOnly && (
             <button className="btn btn-danger" onClick={handleEnd} disabled={ending}>
               {ending ? '结束中…' : '结束面试'}
@@ -108,6 +171,8 @@ export default function InterviewPage() {
           )}
         </div>
       </header>
+
+      {ttsError && <div className="streaming-hint tts-error">{ttsError}</div>}
 
       {!readOnly && (streaming || recovering) && (
         <div className="streaming-hint">
@@ -129,7 +194,13 @@ export default function InterviewPage() {
           {loadError && <div className="interview-error">{loadError}</div>}
           {endError && <div className="interview-error">{endError}</div>}
           {annotated.map((m) => (
-            <MessageBubble key={m.id ?? m.content} message={m} />
+            <MessageBubble
+              key={m.id ?? m.content}
+              message={m}
+              onToggleSpeak={m.role === 'INTERVIEWER' ? () => toggleSpeak(m) : undefined}
+              speaking={!!m.id && m.id === speakingId}
+              ttsSupported={tts.supported}
+            />
           ))}
           <ActivityStream items={activities} />
         </div>

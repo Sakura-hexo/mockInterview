@@ -14,7 +14,17 @@ function clockOf(iso?: string): string {
     : d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
 }
 
-export default function MessageBubble({ message }: { message: AnnotatedMessage }) {
+export default function MessageBubble({
+  message,
+  onToggleSpeak,
+  speaking,
+  ttsSupported,
+}: {
+  message: AnnotatedMessage;
+  onToggleSpeak?: () => void;
+  speaking?: boolean;
+  ttsSupported?: boolean;
+}) {
   const clock = clockOf(message.time);
   if (message.role === 'CANDIDATE') {
     return (
@@ -34,6 +44,17 @@ export default function MessageBubble({ message }: { message: AnnotatedMessage }
           <div className="bubble-meta">
             <span className={`bubble-tag ${message.badge.cls}`}>{message.badge.text}</span>
             {clock && <span className="bubble-time">{clock}</span>}
+            {onToggleSpeak && !message.streaming && (
+              <button
+                type="button"
+                className={`tts-btn ${speaking ? 'tts-speaking' : ''}`}
+                onClick={onToggleSpeak}
+                disabled={!ttsSupported}
+                title={ttsSupported ? (speaking ? '停止朗读' : '朗读本题') : '当前浏览器不支持语音播放'}
+              >
+                {speaking ? '停止' : '读题'}
+              </button>
+            )}
           </div>
         )}
         <div className="bubble-content">
