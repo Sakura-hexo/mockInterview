@@ -15,7 +15,9 @@ import reactor.core.publisher.Flux;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 
 /**
@@ -40,6 +42,10 @@ public final class Supervisor {
     /** 预检索查询里候选人回答的截取长度。 */
     private static final int ANSWER_EXCERPT_CHARS = 120;
 
+    /** 首轮等后台分析落库的轮询上限：60 次 100 毫秒，超时降级继续出题。 */
+    private static final int ANALYSIS_WAIT_POLLS = 60;
+    private static final long ANALYSIS_POLL_INTERVAL_MS = 100;
+
     private final AgentRuntime runtime;
     private final StructuredOutputInvoker invoker;
     private final SessionAnalyst analyst;
@@ -49,6 +55,8 @@ public final class Supervisor {
     private final ReportService reportService;
     private final QuestionBankTool questionBank;
     private final Executor maintenanceExecutor;
+    /** 分析在飞集合：提交时认领（含排队未执行），防后台与首轮兜底重复跑同一会话的分析。 */
+    private final Set<String> analyzing = ConcurrentHashMap.newKeySet();
 
     public Supervisor(AgentRuntime runtime, StructuredOutputInvoker invoker,
                       SessionStore store, ContextCompressor compressor,
@@ -85,14 +93,76 @@ public final class Supervisor {
         return createSession(null, resumeText, jdText, null);
     }
 
-    /** 建会话（Web 用）：摘要与岗位画像经分析器一次结构化调用产出，配置与归属落库。 */
+    /** 建会话（Web 用）：先落占位会话秒回，分析提交后台线程跑完回填——冷创建不再等模型。 */
     public CreateResult createSession(Long userId, String resumeText, String jdText,
                                       SessionConfig config) {
-        SessionAnalyst.Analysis analysis = analyst.analyze(resumeText, jdText);
         String sessionId = "s-" + UUID.randomUUID().toString().substring(0, 8);
-        store.saveSession(new SessionState(sessionId, userId, analysis.resumeDigest(),
-                analysis.jdProfile(), config, SessionState.CREATED, null, List.of(), 0));
-        return new CreateResult(sessionId, analysis.resumeDigest(), analysis.jdProfile());
+        SessionState state = new SessionState(sessionId, userId, "",
+                new JdProfile("Java 后端", List.of(), List.of()), config,
+                SessionState.CREATED, null, List.of(), 0);
+        state.markAnalysisPending(resumeText, jdText);
+        store.saveSession(state);
+        // 认领发生在提交时而非线程体内：排队期间首轮兜底能看见在飞，不会重复跑分析
+        if (analyzing.add(sessionId)) {
+            maintenanceExecutor.execute(() -> {
+                try {
+                    analyzeAndStore(sessionId, resumeText, jdText);
+                } finally {
+                    analyzing.remove(sessionId);
+                }
+            });
+        }
+        // 同步执行器（CLI 与单测）下此刻分析已完成，回读拿真实摘要；异步下仍是占位
+        return store.loadSession(sessionId)
+                .map(fresh -> new CreateResult(sessionId, fresh.resumeDigest(), fresh.jdProfile()))
+                .orElseGet(() -> new CreateResult(sessionId, "", state.jdProfile()));
+    }
+
+    /** 分析并回填（假定已在飞集合里）：失败打日志留待下轮兜底，不清 pending。 */
+    private void analyzeAndStore(String sessionId, String resumeText, String jdText) {
+        try {
+            SessionAnalyst.Analysis analysis = analyst.analyze(resumeText, jdText);
+            store.completeAnalysis(sessionId, analysis.resumeDigest(), analysis.jdProfile());
+        } catch (RuntimeException e) {
+            System.err.printf("[会话分析] 失败留待下轮兜底重试：%s%n", e.getMessage());
+        }
+    }
+
+    /**
+     * 首轮兜底：分析未完成时，在飞就短暂等它落库（用户打字窗口通常早已完成），
+     * 不在飞（进程重启或后台失败）就本线程补跑；仍不完整则带占位画像降级出题，
+     * 占位方向足以支撑预检索与出题，下一轮会再自动重试。
+     */
+    private SessionState ensureAnalyzed(SessionState state) {
+        if (!state.analysisPending()) {
+            return state;
+        }
+        String sessionId = state.sessionId();
+        if (analyzing.add(sessionId)) {
+            try {
+                analyzeAndStore(sessionId, state.resumeText(), state.jdText());
+            } finally {
+                analyzing.remove(sessionId);
+            }
+        } else {
+            waitForBackgroundAnalysis(sessionId);
+        }
+        return requireState(sessionId);
+    }
+
+    /** 等后台分析落库：在飞标记消失（完成或失败）或超 6 秒为止。 */
+    private void waitForBackgroundAnalysis(String sessionId) {
+        for (int i = 0; i < ANALYSIS_WAIT_POLLS && analyzing.contains(sessionId); i++) {
+            sleepQuietly(ANALYSIS_POLL_INTERVAL_MS);
+        }
+    }
+
+    private static void sleepQuietly(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     /** 单轮对话（无监听）：CLI 与单测口径。 */
@@ -110,6 +180,8 @@ public final class Supervisor {
             case CHAT -> agentTurn(state, Intent.CHAT,
                     AgentRuntime.ROLE_CHAT, Prompts.CHAT_SYSTEM, userText, listener);
             case INTERVIEW -> {
+                // 分析兜底：占位建会话的后台分析若未完成，此处等待或补跑
+                state = ensureAnalyzed(state);
                 // 问满计划题数后收尾：不再预检索候选题，提示词切换为总结引导
                 int asked = store.countQuestions(sessionId);
                 boolean remaining = asked < state.config().questionCount();

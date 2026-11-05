@@ -1,6 +1,7 @@
 -- 会话持久化三表：MySQL 为事实源，Redis 只做热存缓存（可随时从本表重建）
 -- 状态机：CREATED → IN_PROGRESS → ENDED → REPORTED（接口文档第 2 节）
 -- user_id 为账号归属，CLI 创建的会话为 NULL（接口层一律按 userId 过滤，不对外可见）
+-- 异步分析三列：建会话先落占位（analysis_pending=1 暂存原文），后台分析完成后回填并清空
 
 CREATE TABLE IF NOT EXISTS t_session (
   session_id           VARCHAR(36) PRIMARY KEY,
@@ -14,6 +15,9 @@ CREATE TABLE IF NOT EXISTS t_session (
   difficulty           VARCHAR(16) NOT NULL DEFAULT 'MEDIUM',
   question_count       INT NOT NULL DEFAULT 10,
   status               VARCHAR(20) NOT NULL DEFAULT 'CREATED',
+  resume_text          TEXT NULL,
+  jd_text              TEXT NULL,
+  analysis_pending     TINYINT NOT NULL DEFAULT 0,
   created_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   ended_at             TIMESTAMP NULL,
   KEY idx_session_user (user_id, created_at)

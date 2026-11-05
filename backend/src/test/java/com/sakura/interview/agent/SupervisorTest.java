@@ -279,6 +279,9 @@ class SupervisorTest {
                     return "合并摘要";
                 }), new ReportService(sessions, new FakeReportStore()), null, background::add);
         String sessionId = supervisor.createSession("我的简历", "招 Java 后端").sessionId();
+        // 先放行建会话的后台分析：本测试焦点是压缩不进关键路径，占位分析须先完成
+        background.forEach(Runnable::run);
+        background.clear();
 
         for (int i = 1; i <= 15; i++) {
             supervisor.chat(sessionId, "回答" + i);

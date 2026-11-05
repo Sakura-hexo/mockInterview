@@ -11,6 +11,8 @@ import com.sakura.interview.tool.JdProfile;
  * askedQuestions 存面试官每轮输出摘要注入下一轮系统提示词防止重复出题；
  * 单条与总量都设上限，更早的题目由滚动前情摘要覆盖。
  * status 状态机：CREATED → IN_PROGRESS → ENDED → REPORTED，由接口层推进，不在本类流转。
+ * 建会话先落占位（markAnalysisPending 暂存简历与 JD 原文），后台分析完成后经
+ * applyAnalysis 回填真值——摘要与画像因此可变，回填只发生在分析完成这一个时点。
  */
 public final class SessionState {
 
@@ -24,13 +26,18 @@ public final class SessionState {
 
     private final String sessionId;
     private final Long userId;
-    private final String resumeDigest;
-    private final JdProfile jdProfile;
     private final SessionConfig config;
     private final String status;
     private final String createdAt;
     private final List<String> askedQuestions = new ArrayList<>();
     private int round;
+
+    private String resumeDigest;
+    private JdProfile jdProfile;
+    /** 分析是否仍为占位：true 时摘要与画像不可信，原文两字段供补跑分析。 */
+    private volatile boolean analysisPending;
+    private String resumeText;
+    private String jdText;
 
     public SessionState(String sessionId, String resumeDigest, JdProfile jdProfile) {
         this(sessionId, resumeDigest, jdProfile, List.of(), 0);
@@ -78,6 +85,22 @@ public final class SessionState {
         round++;
     }
 
+    /** 占位建会话：暂存分析输入原文并标记待回填（后台与首轮兜底分析共用这两份原文）。 */
+    public void markAnalysisPending(String resumeText, String jdText) {
+        this.resumeText = resumeText;
+        this.jdText = jdText;
+        this.analysisPending = true;
+    }
+
+    /** 分析完成回填真值并清占位：原文同时清空，存储层 completeAnalysis 的内存镜像。 */
+    public void applyAnalysis(String resumeDigest, JdProfile jdProfile) {
+        this.resumeDigest = resumeDigest;
+        this.jdProfile = jdProfile;
+        this.analysisPending = false;
+        this.resumeText = null;
+        this.jdText = null;
+    }
+
     /** 概览视图：历史列表与会话详情头部共用（接口文档第 3 节，方向取 JD 解析文本）。 */
     public SessionOverview overview() {
         return new SessionOverview(sessionId, status, jdProfile.direction(),
@@ -118,5 +141,19 @@ public final class SessionState {
 
     public List<String> askedQuestions() {
         return List.copyOf(askedQuestions);
+    }
+
+    /** 分析是否仍为占位：true 时摘要与画像不可信，需等待回填或补跑。 */
+    public boolean analysisPending() {
+        return analysisPending;
+    }
+
+    /** 分析输入原文（仅 pending 期间非空），供后台与首轮兜底分析读取。 */
+    public String resumeText() {
+        return resumeText;
+    }
+
+    public String jdText() {
+        return jdText;
     }
 }

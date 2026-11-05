@@ -22,6 +22,10 @@ public final class SchemaMigrations {
         applied += addColumn(jdbc, "t_session", "user_id", "BIGINT NULL");
         applied += addColumn(jdbc, "t_session", "difficulty", "VARCHAR(16) NOT NULL DEFAULT 'MEDIUM'");
         applied += addColumn(jdbc, "t_session", "question_count", "INT NOT NULL DEFAULT 10");
+        // 异步分析三列：占位建会话暂存原文与待回填标记，完成后清空（建会话分析异步化方案）
+        applied += addColumn(jdbc, "t_session", "resume_text", "TEXT NULL");
+        applied += addColumn(jdbc, "t_session", "jd_text", "TEXT NULL");
+        applied += addColumn(jdbc, "t_session", "analysis_pending", "TINYINT NOT NULL DEFAULT 0");
         applied += addColumn(jdbc, "t_message", "action", "VARCHAR(16) NULL");
         ensureIndexColumns(jdbc, "t_session", "idx_session_user", "user_id, created_at");
         return applied;

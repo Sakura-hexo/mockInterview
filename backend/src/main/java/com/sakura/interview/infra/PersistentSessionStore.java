@@ -6,6 +6,7 @@ import com.sakura.interview.session.SessionState;
 import com.sakura.interview.session.SessionStore;
 import com.sakura.interview.session.SessionSummary;
 import com.sakura.interview.session.StoredMessage;
+import com.sakura.interview.tool.JdProfile;
 
 import javax.sql.DataSource;
 import java.time.LocalDateTime;
@@ -37,6 +38,12 @@ public final class PersistentSessionStore implements SessionStore, AutoCloseable
     @Override
     public Optional<SessionState> loadSession(String sessionId) {
         return mysql.loadSession(sessionId);
+    }
+
+    /** 会话元数据不进 Redis 缓存，分析回填纯委托即可。 */
+    @Override
+    public void completeAnalysis(String sessionId, String resumeDigest, JdProfile jdProfile) {
+        mysql.completeAnalysis(sessionId, resumeDigest, jdProfile);
     }
 
     @Override

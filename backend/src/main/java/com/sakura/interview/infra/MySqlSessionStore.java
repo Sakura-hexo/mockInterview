@@ -58,40 +58,61 @@ public final class MySqlSessionStore implements SessionStore {
     public void saveSession(SessionState state) {
         JdProfile jd = state.jdProfile();
         SessionConfig config = state.config();
+        // 分析四列不进覆盖清单：聊天轮次落库时内存里可能是占位状态，
+        // 覆盖会把已完成的分析写回占位——分析列只经 INSERT 占位与 completeAnalysis 回填
         jdbc.update("""
                         INSERT INTO t_session (session_id, user_id, resume_digest, jd_direction, jd_skills,
-                            jd_bonus, asked_questions_json, round_no, difficulty, question_count, status)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            jd_bonus, asked_questions_json, round_no, difficulty, question_count, status,
+                            resume_text, jd_text, analysis_pending)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ON DUPLICATE KEY UPDATE
-                          resume_digest = VALUES(resume_digest), jd_direction = VALUES(jd_direction),
-                          jd_skills = VALUES(jd_skills), jd_bonus = VALUES(jd_bonus),
                           asked_questions_json = VALUES(asked_questions_json),
                           round_no = VALUES(round_no), difficulty = VALUES(difficulty),
                           question_count = VALUES(question_count)""",
                 state.sessionId(), state.userId(), state.resumeDigest(), jd.direction(),
                 gson.toJson(jd.skills()), gson.toJson(jd.bonus()),
                 gson.toJson(state.askedQuestions()), state.round(),
-                config.difficulty(), config.questionCount(), state.status());
+                config.difficulty(), config.questionCount(), state.status(),
+                state.analysisPending() ? state.resumeText() : null,
+                state.analysisPending() ? state.jdText() : null,
+                state.analysisPending() ? 1 : 0);
     }
 
     @Override
     public Optional<SessionState> loadSession(String sessionId) {
         List<SessionState> found = jdbc.query(
                 "SELECT user_id, resume_digest, jd_direction, jd_skills, jd_bonus,"
-                        + " asked_questions_json, round_no, difficulty, question_count, status, created_at"
+                        + " asked_questions_json, round_no, difficulty, question_count, status, created_at,"
+                        + " resume_text, jd_text, analysis_pending"
                         + " FROM t_session WHERE session_id = ?",
-                (rs, i) -> new SessionState(sessionId,
-                        rs.getObject("user_id") == null ? null : rs.getLong("user_id"),
-                        rs.getString("resume_digest"),
-                        new JdProfile(rs.getString("jd_direction"),
-                                parseList(rs.getString("jd_skills")),
-                                parseList(rs.getString("jd_bonus"))),
-                        new SessionConfig("JAVA_BACKEND", rs.getString("difficulty"),
-                                rs.getInt("question_count")),
-                        rs.getString("status"), formatTime(rs.getTimestamp("created_at")),
-                        parseList(rs.getString("asked_questions_json")), rs.getInt("round_no")),
+                (rs, i) -> {
+                    SessionState state = new SessionState(sessionId,
+                            rs.getObject("user_id") == null ? null : rs.getLong("user_id"),
+                            rs.getString("resume_digest"),
+                            new JdProfile(rs.getString("jd_direction"),
+                                    parseList(rs.getString("jd_skills")),
+                                    parseList(rs.getString("jd_bonus"))),
+                            new SessionConfig("JAVA_BACKEND", rs.getString("difficulty"),
+                                    rs.getInt("question_count")),
+                            rs.getString("status"), formatTime(rs.getTimestamp("created_at")),
+                            parseList(rs.getString("asked_questions_json")), rs.getInt("round_no"));
+                    if (rs.getInt("analysis_pending") == 1) {
+                        state.markAnalysisPending(rs.getString("resume_text"), rs.getString("jd_text"));
+                    }
+                    return state;
+                },
                 sessionId);
         return found.isEmpty() ? Optional.empty() : Optional.of(found.get(0));
+    }
+
+    @Override
+    public void completeAnalysis(String sessionId, String resumeDigest, JdProfile jdProfile) {
+        jdbc.update("""
+                        UPDATE t_session SET resume_digest = ?, jd_direction = ?, jd_skills = ?, jd_bonus = ?,
+                          analysis_pending = 0, resume_text = NULL, jd_text = NULL
+                        WHERE session_id = ?""",
+                resumeDigest, jdProfile.direction(), gson.toJson(jdProfile.skills()),
+                gson.toJson(jdProfile.bonus()), sessionId);
     }
 
     @Override
