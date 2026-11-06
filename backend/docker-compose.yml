@@ -98,6 +98,20 @@ services:
       timeout: 20s
       retries: 5
 
+  # ---- Milvus 网页管理台 Attu：浏览器里翻题库集合、跑检索（本地开发辅助，不开 profile）----
+
+  attu:
+    image: zilliz/attu:v2.6
+    container_name: milvus-attu
+    restart: unless-stopped
+    ports:
+      - "8000:3000"
+    environment:
+      MILVUS_URL: milvus:19530
+    depends_on:
+      milvus:
+        condition: service_healthy
+
   # ---- 监控栈（profile monitoring）：抓宿主机后端指标 + 预置面板 ----
 
   prometheus:
