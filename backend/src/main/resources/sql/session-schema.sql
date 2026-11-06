@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS t_session (
   resume_text          TEXT NULL,
   jd_text              TEXT NULL,
   analysis_pending     TINYINT NOT NULL DEFAULT 0,
+  invalid_streak       INT NOT NULL DEFAULT 0,
   created_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   ended_at             TIMESTAMP NULL,
   KEY idx_session_user (user_id, created_at)

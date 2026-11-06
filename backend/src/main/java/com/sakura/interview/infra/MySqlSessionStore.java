@@ -63,19 +63,20 @@ public final class MySqlSessionStore implements SessionStore {
         jdbc.update("""
                         INSERT INTO t_session (session_id, user_id, resume_digest, jd_direction, jd_skills,
                             jd_bonus, asked_questions_json, round_no, difficulty, question_count, status,
-                            resume_text, jd_text, analysis_pending)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            resume_text, jd_text, analysis_pending, invalid_streak)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ON DUPLICATE KEY UPDATE
                           asked_questions_json = VALUES(asked_questions_json),
                           round_no = VALUES(round_no), difficulty = VALUES(difficulty),
-                          question_count = VALUES(question_count)""",
+                          question_count = VALUES(question_count), invalid_streak = VALUES(invalid_streak)""",
                 state.sessionId(), state.userId(), state.resumeDigest(), jd.direction(),
                 gson.toJson(jd.skills()), gson.toJson(jd.bonus()),
                 gson.toJson(state.askedQuestions()), state.round(),
                 config.difficulty(), config.questionCount(), state.status(),
                 state.analysisPending() ? state.resumeText() : null,
                 state.analysisPending() ? state.jdText() : null,
-                state.analysisPending() ? 1 : 0);
+                state.analysisPending() ? 1 : 0,
+                state.invalidStreak());
     }
 
     @Override
@@ -83,7 +84,7 @@ public final class MySqlSessionStore implements SessionStore {
         List<SessionState> found = jdbc.query(
                 "SELECT user_id, resume_digest, jd_direction, jd_skills, jd_bonus,"
                         + " asked_questions_json, round_no, difficulty, question_count, status, created_at,"
-                        + " resume_text, jd_text, analysis_pending"
+                        + " resume_text, jd_text, analysis_pending, invalid_streak"
                         + " FROM t_session WHERE session_id = ?",
                 (rs, i) -> {
                     SessionState state = new SessionState(sessionId,
@@ -99,6 +100,7 @@ public final class MySqlSessionStore implements SessionStore {
                     if (rs.getInt("analysis_pending") == 1) {
                         state.markAnalysisPending(rs.getString("resume_text"), rs.getString("jd_text"));
                     }
+                    state.restoreInvalidStreak(rs.getInt("invalid_streak"));
                     return state;
                 },
                 sessionId);

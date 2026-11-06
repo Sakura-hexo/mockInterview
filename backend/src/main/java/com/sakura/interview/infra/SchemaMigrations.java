@@ -26,6 +26,8 @@ public final class SchemaMigrations {
         applied += addColumn(jdbc, "t_session", "resume_text", "TEXT NULL");
         applied += addColumn(jdbc, "t_session", "jd_text", "TEXT NULL");
         applied += addColumn(jdbc, "t_session", "analysis_pending", "TINYINT NOT NULL DEFAULT 0");
+        // 无效作答连击：三振出局方案的持久化计数（无效加一、切题清零）
+        applied += addColumn(jdbc, "t_session", "invalid_streak", "INT NOT NULL DEFAULT 0");
         applied += addColumn(jdbc, "t_message", "action", "VARCHAR(16) NULL");
         ensureIndexColumns(jdbc, "t_session", "idx_session_user", "user_id, created_at");
         return applied;

@@ -9,11 +9,17 @@ import type { ChatMessage, InterviewSummary } from '../types';
 
 const STREAMING_ID = '__streaming__';
 const RECOVERY_POLL_MS = 3000; // 恢复轮询间隔（架构方案 4.3）
-// 出题标记行仅做题型判定：后端落库前剥除，前端流式期间同步剥除避免闪现
+// 出题与无效标记行仅做轮次信号：后端落库前剥除，前端流式期间同步剥除避免闪现。
+// 真机实测模型会把「选题 无效」写在回复中部再补一行裸选题，故按行过滤而非只剥结尾。
 const PICK_LINE_RE = /\n?选题[^\n]*$/;
+const INVALID_LINE_RE = /\n?无效$/;
 
 function stripPickLine(text: string): string {
-  return text.replace(PICK_LINE_RE, '');
+  const stripped = text.replace(PICK_LINE_RE, '').replace(INVALID_LINE_RE, '');
+  return stripped
+    .split('\n')
+    .filter((line) => !/^选题/.test(line.trim()) && line.trim() !== '无效')
+    .join('\n');
 }
 
 export interface ActivityItem {

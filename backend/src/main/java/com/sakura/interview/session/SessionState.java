@@ -31,6 +31,8 @@ public final class SessionState {
     private final String createdAt;
     private final List<String> askedQuestions = new ArrayList<>();
     private int round;
+    /** 无效作答连击：模型按「选题 无效」标记判定，无效加一、切题清零，三振由 Supervisor 收场。 */
+    private int invalidStreak;
 
     private String resumeDigest;
     private JdProfile jdProfile;
@@ -85,6 +87,16 @@ public final class SessionState {
         round++;
     }
 
+    /** 无效作答连击记账：本轮回复带无效标记则加一，否则清零（问满收尾轮无标记，自然清零无害）。 */
+    public void recordAnswerValidity(boolean valid) {
+        this.invalidStreak = valid ? 0 : this.invalidStreak + 1;
+    }
+
+    /** 存储层回读恢复连击计数（与 round 同类的持久化状态）。 */
+    public void restoreInvalidStreak(int invalidStreak) {
+        this.invalidStreak = Math.max(0, invalidStreak);
+    }
+
     /** 占位建会话：暂存分析输入原文并标记待回填（后台与首轮兜底分析共用这两份原文）。 */
     public void markAnalysisPending(String resumeText, String jdText) {
         this.resumeText = resumeText;
@@ -137,6 +149,10 @@ public final class SessionState {
 
     public int round() {
         return round;
+    }
+
+    public int invalidStreak() {
+        return invalidStreak;
     }
 
     public List<String> askedQuestions() {

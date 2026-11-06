@@ -39,6 +39,16 @@ public final class Supervisor {
     /** 出题标记行前缀：提示词约定新题以单独一行"选题"结尾（题型判定信号）。 */
     static final String PICK_MARK = "选题";
 
+    /** 无效作答标记：出题轮与选题合并为"选题 无效"行，三振收场轮单独一行"无效"。 */
+    static final String INVALID_MARK = "无效";
+
+    /** 三振阈值：连续无效作答达此值，系统出面收场并结束会话（执法权在系统不在模型）。 */
+    private static final int INVALID_STRIKES = 3;
+
+    /** 三振模板收场语：模型违反指令仍出新题时的零调用桥接（仿闸门桥接）。 */
+    private static final String STRUCK_OUT_CLOSING =
+            "本场面试因连续无效作答提前结束。你可以在结束后生成复盘报告，查看逐题评分与改进建议。";
+
     /** 预检索查询里候选人回答的截取长度。 */
     private static final int ANSWER_EXCERPT_CHARS = 120;
 
@@ -191,6 +201,12 @@ public final class Supervisor {
                 if (remaining && RefusalDetector.isRefusal(userText)) {
                     system = system + Prompts.REFUSAL_DIRECTIVE;
                 }
+                // 无效作答连击按档位升轮级指令：一振警告后果、二振最终收场指令
+                if (remaining && state.invalidStreak() == 1) {
+                    system = system + Prompts.INVALID_WARN_DIRECTIVE;
+                } else if (remaining && state.invalidStreak() >= 2) {
+                    system = system + Prompts.INVALID_FINAL_DIRECTIVE;
+                }
                 yield interviewerTurn(state, system, userText, listener, remaining, candidates);
             }
         };
@@ -210,7 +226,7 @@ public final class Supervisor {
         return finalizeTurn(state, intent, role, finalChunk);
     }
 
-    /** 面试官轮：与通用轮的差别只在未问满时套提前收尾闸门，落库口径完全一致。 */
+    /** 面试官轮：与通用轮的差别在未问满时套提前收尾闸门与无效三振执法，落库口径完全一致。 */
     private SupervisorReply interviewerTurn(SessionState state, String systemPrompt, String userText,
                                             TurnListener listener, boolean remaining,
                                             String candidates) {
@@ -219,10 +235,35 @@ public final class Supervisor {
         String context = contextInput(sessionId);
         StreamChunk.Final finalChunk = streamTurn(
                 AgentRuntime.ROLE_INTERVIEWER, sessionId, systemPrompt, context, listener);
-        StreamChunk.Final effective = remaining
+        // 提前收尾闸门对三振收场轮豁免：连击两次后收场是预期行为，不能当漂移拦下重试
+        StreamChunk.Final effective = remaining && state.invalidStreak() < 2
                 ? enforceNotConcluded(state, systemPrompt, context, finalChunk, listener, candidates)
                 : finalChunk;
-        return finalizeTurn(state, Intent.INTERVIEW, AgentRuntime.ROLE_INTERVIEWER, effective);
+        // 无效作答记账：拒绝轮两类机制各管各的，不增也不清；其余轮按标记判——带无效标记连击加一，切题清零
+        boolean struckOut = false;
+        if (!remaining || !RefusalDetector.isRefusal(userText)) {
+            state.recordAnswerValidity(!hasInvalidMark(effective.fullText()));
+            struckOut = state.invalidStreak() >= INVALID_STRIKES;
+            if (struckOut) {
+                effective = closeOnStrikes(effective);
+            }
+        }
+        SupervisorReply reply = finalizeTurn(state, Intent.INTERVIEW, AgentRuntime.ROLE_INTERVIEWER, effective);
+        // 收场消息先落库再置 ENDED：同轮 saveSession 与 endSession 的写序不颠倒，状态不会被轮内回写覆盖
+        if (struckOut) {
+            store.endSession(sessionId);
+        }
+        return reply;
+    }
+
+    /** 三振收场：模型按最终指令收场则原样使用，违反指令仍出新题则模板桥接（零额外调用）。 */
+    private static StreamChunk.Final closeOnStrikes(StreamChunk.Final reply) {
+        if (!hasPickMark(reply.fullText())) {
+            return reply;
+        }
+        System.err.println("[无效三振] 模型仍出新题，已模板桥接收场");
+        return new StreamChunk.Final(STRUCK_OUT_CLOSING,
+                reply.inputTokens(), reply.outputTokens(), reply.toolCalls());
     }
 
     /**
@@ -329,17 +370,33 @@ public final class Supervisor {
         return lastNonEmptyLine(fullText).startsWith(PICK_MARK);
     }
 
-    /** 剥除末尾的出题标记行：落库文本、已问题单与前端回显均不带标记。 */
+    /**
+     * 无效标记判定：任一行以「选题」开头且含「无效」（真机实测模型爱把标记行写在指出之后、
+     * 新题之前，再按老习惯补一行裸选题），或收场轮任一行为「无效」。位置无关，只认行面。
+     */
+    static boolean hasInvalidMark(String fullText) {
+        if (fullText == null) {
+            return false;
+        }
+        return fullText.lines().map(String::strip).anyMatch(line ->
+                INVALID_MARK.equals(line)
+                        || (line.startsWith(PICK_MARK) && line.contains(INVALID_MARK)));
+    }
+
+    /** 剥除全部标记行（选题或无效，正文任意位置）：落库文本、已问题单与前端回显均不带标记。 */
     static String stripPickMark(String fullText) {
         if (fullText == null) {
             return "";
         }
-        if (!hasPickMark(fullText)) {
-            return fullText.stripTrailing();
+        StringBuilder kept = new StringBuilder();
+        for (String line : fullText.split("\n", -1)) {
+            String stripped = line.strip();
+            if (stripped.startsWith(PICK_MARK) || stripped.equals(INVALID_MARK)) {
+                continue;
+            }
+            kept.append(line).append('\n');
         }
-        String stripped = fullText.stripTrailing();
-        int lineStart = stripped.lastIndexOf('\n') + 1;
-        return stripped.substring(0, lineStart).stripTrailing();
+        return kept.toString().stripTrailing();
     }
 
     private static String lastNonEmptyLine(String text) {
