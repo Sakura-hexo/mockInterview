@@ -63,6 +63,11 @@ public final class EnvKeys {
         return orDefault("TTS_VOICE", "zh-CN-XiaoxiaoNeural");
     }
 
+    /** edge-tts 边车地址（env TTS_EDGE_URL）：容器编排指服务名，本机默认 8000 端口。 */
+    public static String ttsEdgeUrl() {
+        return orDefault("TTS_EDGE_URL", "http://localhost:8000");
+    }
+
     /** 是否放行模型的隐藏思考流。qwen 系思考模型的 reasoning_content 不进入回复正文，
      * 但按解码速度逐 token 生成，面试场景表现为数十秒黑屏死等（困难档找茬最深、思考量最大），
      * 因此默认关闭，需要深度思考时置 LLM_THINKING=true。
