@@ -70,23 +70,33 @@ describe('pickChineseVoice', () => {
     expect(pickChineseVoice([])).toBeNull();
   });
 
-  it('同为普通话时自然嗓音优先于旧 SAPI', () => {
+  it('同为普通话时本地自然嗓音优先于旧 SAPI', () => {
     const huihui = { lang: 'zh-CN', name: 'Microsoft Huihui - Chinese (Simplified, PRC)' };
-    const xiaoxiao = { lang: 'zh-CN', name: 'Microsoft Xiaoxiao Online (Natural)' };
-    expect(pickChineseVoice([huihui, xiaoxiao])?.name).toBe('Microsoft Xiaoxiao Online (Natural)');
+    const xiaoxiao = { lang: 'zh-CN', name: 'Microsoft Xiaoxiao Natural - Chinese (Mainland)' };
+    expect(pickChineseVoice([huihui, xiaoxiao])?.name).toBe('Microsoft Xiaoxiao Natural - Chinese (Mainland)');
+  });
+
+  it('Edge 的 Online 在线嗓音排最后：静默失效不再被自动选中', () => {
+    const huihui = { lang: 'zh-CN', name: 'Microsoft Huihui - Chinese (Simplified, PRC)' };
+    const online = { lang: 'zh-CN', name: 'Microsoft Xiaoxiao Online (Natural) - Chinese (Mainland)' };
+    expect(pickChineseVoice([online, huihui])?.name).toBe(
+      'Microsoft Huihui - Chinese (Simplified, PRC)',
+    );
   });
 });
 
 describe('chineseVoiceOptions 嗓音菜单排序', () => {
-  it('普通话优先，其后自然嗓音在旧 SAPI 前，其他中文最后', () => {
+  it('普通话优先，其后自然嗓音在旧 SAPI 前，在线嗓音不再抢自动位，其他中文殿后', () => {
     const huihui = { lang: 'zh-CN', name: 'Microsoft Huihui - Chinese (Simplified, PRC)' };
     const yue = { lang: 'zh-HK', name: 'Google 粵語（香港）' };
-    const xiaoxiao = { lang: 'zh-CN', name: 'Microsoft Xiaoxiao Online (Natural)' };
+    const xiaoxiao = { lang: 'zh-CN', name: 'Microsoft Xiaoxiao Natural - Chinese (Mainland)' };
+    const online = { lang: 'zh-CN', name: 'Microsoft Xiaoxiao Online (Natural) - Chinese (Mainland)' };
     const english = { lang: 'en-US', name: 'English' };
-    const options = chineseVoiceOptions([huihui, english, yue, xiaoxiao]);
+    const options = chineseVoiceOptions([huihui, english, yue, online, xiaoxiao]);
     expect(options.map((v) => v.name)).toEqual([
-      'Microsoft Xiaoxiao Online (Natural)',
+      'Microsoft Xiaoxiao Natural - Chinese (Mainland)',
       'Microsoft Huihui - Chinese (Simplified, PRC)',
+      'Microsoft Xiaoxiao Online (Natural) - Chinese (Mainland)',
       'Google 粵語（香港）',
     ]);
   });

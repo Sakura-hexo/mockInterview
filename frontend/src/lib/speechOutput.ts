@@ -36,9 +36,11 @@ export function speechOutputSupported(source: SpeechOutputSource): boolean {
   return source.speechSynthesis !== undefined && source.SpeechSynthesisUtterance !== undefined;
 }
 
-/** 嗓音好听度排序键：微软自然嗓音（晓晓/云希系）最优先，Google 云嗓音次之，旧 SAPI 垫底。 */
+/** 嗓音好听度排序键：本地自然嗓音（晓晓/云希系）最优先，Google 云嗓音次之，旧 SAPI 第三；
+ * Edge 列出的 Online 在线嗓音对网页 speak 静默失效（入朗读态无声音且不回调），排最后只供手动尝试。 */
 function voicePreference(name: string): number {
   const lower = name.toLowerCase();
+  if (lower.includes('online')) return 3;
   if (/(xiaoxiao|yunxi|yunyang|yunyi|xiaoyi|natural|neural|晓晓|云希|云扬)/.test(lower)) return 0;
   if (lower.includes('google')) return 1;
   return 2;
