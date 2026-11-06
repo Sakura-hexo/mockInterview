@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  chineseVoiceOptions,
+  findVoiceByName,
   isSilentCancel,
   pickChineseVoice,
   speechOutputErrorMessage,
@@ -66,6 +68,45 @@ describe('pickChineseVoice', () => {
   it('无中文嗓音返回 null 交给 lang 兜底', () => {
     expect(pickChineseVoice([{ lang: 'en-US', name: 'English' }])).toBeNull();
     expect(pickChineseVoice([])).toBeNull();
+  });
+
+  it('同为普通话时本地自然嗓音优先于旧 SAPI', () => {
+    const huihui = { lang: 'zh-CN', name: 'Microsoft Huihui - Chinese (Simplified, PRC)' };
+    const xiaoxiao = { lang: 'zh-CN', name: 'Microsoft Xiaoxiao Natural - Chinese (Mainland)' };
+    expect(pickChineseVoice([huihui, xiaoxiao])?.name).toBe('Microsoft Xiaoxiao Natural - Chinese (Mainland)');
+  });
+
+  it('Edge 的 Online 在线嗓音排最后：静默失效不再被自动选中', () => {
+    const huihui = { lang: 'zh-CN', name: 'Microsoft Huihui - Chinese (Simplified, PRC)' };
+    const online = { lang: 'zh-CN', name: 'Microsoft Xiaoxiao Online (Natural) - Chinese (Mainland)' };
+    expect(pickChineseVoice([online, huihui])?.name).toBe(
+      'Microsoft Huihui - Chinese (Simplified, PRC)',
+    );
+  });
+});
+
+describe('chineseVoiceOptions 嗓音菜单排序', () => {
+  it('普通话优先，其后自然嗓音在旧 SAPI 前，在线嗓音不再抢自动位，其他中文殿后', () => {
+    const huihui = { lang: 'zh-CN', name: 'Microsoft Huihui - Chinese (Simplified, PRC)' };
+    const yue = { lang: 'zh-HK', name: 'Google 粵語（香港）' };
+    const xiaoxiao = { lang: 'zh-CN', name: 'Microsoft Xiaoxiao Natural - Chinese (Mainland)' };
+    const online = { lang: 'zh-CN', name: 'Microsoft Xiaoxiao Online (Natural) - Chinese (Mainland)' };
+    const english = { lang: 'en-US', name: 'English' };
+    const options = chineseVoiceOptions([huihui, english, yue, online, xiaoxiao]);
+    expect(options.map((v) => v.name)).toEqual([
+      'Microsoft Xiaoxiao Natural - Chinese (Mainland)',
+      'Microsoft Huihui - Chinese (Simplified, PRC)',
+      'Microsoft Xiaoxiao Online (Natural) - Chinese (Mainland)',
+      'Google 粵語（香港）',
+    ]);
+  });
+});
+
+describe('findVoiceByName 按名找嗓音', () => {
+  it('精确匹配返回原对象，找不到返回 null', () => {
+    const kangkang = { lang: 'zh-CN', name: 'Microsoft Kangkang' };
+    expect(findVoiceByName([kangkang], 'Microsoft Kangkang')).toBe(kangkang);
+    expect(findVoiceByName([kangkang], '别的')).toBeNull();
   });
 });
 

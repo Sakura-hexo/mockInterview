@@ -41,6 +41,14 @@ export interface SpeechSupportSource {
   webkitSpeechRecognition?: SpeechRecognitionConstructor;
 }
 
+/** lib.dom 未收录 Web Speech Recognition，补全局声明后 window 可直接传入 SpeechSupportSource。 */
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
+
 const SIMPLIFIED_MAP: Record<string, string> = {
   '愛': '爱', '礙': '碍', '罷': '罢', '備': '备', '筆': '笔',
   '幣': '币', '邊': '边', '變': '变', '標': '标', '錶': '表',

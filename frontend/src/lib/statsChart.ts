@@ -1,6 +1,7 @@
 import type { DailyPoint } from '../api/stats';
 
-// 统计页的纯展示逻辑：趋势补零、条形高度、token 缩写——纯函数便于单测
+// 统计页的纯展示逻辑：趋势补零、token 缩写——纯函数便于单测
+// 图表绘制（刻度/柱形/tooltip）在 deepseekChart.ts
 
 /** 近 N 天趋势补零：后端只返回有数据的天，前端铺满连续日期（含今天，本地时区）。 */
 export function fillDailyTrend(points: DailyPoint[], days: number): DailyPoint[] {
@@ -23,14 +24,7 @@ export function localDateKey(day: Date): string {
   return `${day.getFullYear()}-${month}-${date}`;
 }
 
-/** 条形高度百分比（0-100）：相对最大值，全零时返回等高矮条避免空白图。 */
-export function barPercents(values: number[]): number[] {
-  const max = Math.max(...values, 0);
-  if (max <= 0) {
-    return values.map(() => 4);
-  }
-  return values.map((value) => Math.max(Math.round((value / max) * 100), value > 0 ? 4 : 2));
-}
+// 柱状图绘制与刻度算法已迁移 deepseekChart.ts（DeepSeek 用量图移植，2026-11-04）
 
 /** token 缩写：万位以上一位小数，其余原样。 */
 export function formatTokens(value: number): string {

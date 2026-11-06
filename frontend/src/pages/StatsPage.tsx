@@ -7,7 +7,8 @@ import {
   type TokenStatsResponse,
 } from '../api/stats';
 import { ApiError } from '../api/http';
-import { averageTokens, barPercents, fillDailyTrend, formatTokens } from '../lib/statsChart';
+import { averageTokens, fillDailyTrend, formatTokens } from '../lib/statsChart';
+import UsageChart from '../components/UsageChart';
 import './StatsPage.css';
 
 const DIRECTION_LABEL: Record<string, string> = { JAVA_BACKEND: 'Java 后端' };
@@ -49,7 +50,6 @@ export default function StatsPage() {
 
   const summary = stats.summary;
   const trend = fillDailyTrend(stats.daily, TREND_DAYS);
-  const percents = barPercents(trend.map((p) => p.tokens));
 
   return (
     <>
@@ -80,12 +80,7 @@ export default function StatsPage() {
       <div className="main-body">
         <div className="stats-wrap">
           {tab === 'my' ? (
-            <MyStats
-              summary={summary}
-              trend={trend}
-              percents={percents}
-              sessions={stats.sessions}
-            />
+            <MyStats summary={summary} trend={trend} sessions={stats.sessions} />
           ) : (
             admin && <AdminPanel admin={admin} />
           )}
@@ -102,12 +97,10 @@ export default function StatsPage() {
 function MyStats({
   summary,
   trend,
-  percents,
   sessions,
 }: {
   summary: TokenStatsResponse['summary'];
   trend: { date: string; tokens: number }[];
-  percents: number[];
   sessions: TokenStatsResponse['sessions'];
 }) {
   return (
@@ -122,16 +115,7 @@ function MyStats({
 
       <div className="stats-card">
         <h3>近 30 天每日用量</h3>
-        <div className="trend-chart">
-          {trend.map((point, i) => (
-            <div
-              key={point.date}
-              className="trend-bar"
-              style={{ height: `${percents[i]}%` }}
-              title={`${point.date} · ${point.tokens} token`}
-            />
-          ))}
-        </div>
+        <UsageChart dates={trend.map((p) => p.date)} values={trend.map((p) => p.tokens)} />
       </div>
 
       <div className="stats-card">

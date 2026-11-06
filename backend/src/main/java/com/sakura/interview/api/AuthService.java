@@ -4,6 +4,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 import java.security.SecureRandom;
 import java.util.HexFormat;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 /**
@@ -54,6 +55,18 @@ public final class AuthService {
         }
         sessions.clearLoginFailures(username);
         return issueToken(username, user.id());
+    }
+
+    /** 内置账号播种：不存在则建、密码不符则重置。绕过注册校验——短密码是内置管理员的有意取舍。 */
+    public void ensureAccount(String username, String password) {
+        Optional<UserStore.UserRecord> existing = users.findByUsername(username);
+        if (existing.isEmpty()) {
+            users.create(username, encoder.encode(password));
+            return;
+        }
+        if (!encoder.matches(password, existing.get().passwordHash())) {
+            users.updatePasswordHash(existing.get().id(), encoder.encode(password));
+        }
     }
 
     /** 登出：删除 Redis 会话，令牌即时失效。 */

@@ -6,6 +6,7 @@ import HistoryPage from './pages/HistoryPage';
 import NewInterviewPage from './pages/NewInterviewPage';
 import InterviewPage from './pages/InterviewPage';
 import ReportPage from './pages/ReportPage';
+import StatsPage from './pages/StatsPage';
 import './App.css';
 
 // 路由守卫：无登录标志一律跳 /login；真实凭据校验由后端 Cookie 会话兜底（页面方案 3.1）

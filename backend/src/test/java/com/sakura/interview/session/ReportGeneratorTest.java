@@ -198,4 +198,120 @@ class ReportGeneratorTest {
         String prompt = captured.get(0);
         assertThat(prompt).contains("中间内容已压缩").doesNotContain("答" + "字".repeat(2000));
     }
+
+    // ---- 报告线四智能体协作（评分员-审稿员-参考回答员-汇总员，2026-11-04 升级）----
+
+    /** 协作剧本调用器：审稿与范文走可注入剧本；评分按是否回炉批切换输出；汇总固定。 */
+    private static LlmCaller collaboratingCaller(
+            java.util.function.Supplier<String> verdictScript,
+            java.util.function.Supplier<String> answerScript,
+            java.util.function.Predicate<String> reworkDetector) {
+        return (sys, user) -> {
+            if (sys.contains("逐题评估器")) {
+                if (reworkDetector.test(user)) {
+                    return "{\"items\":[{\"question\":\"重评\",\"userAnswerSummary\":\"答\","
+                            + "\"comment\":\"已修正\",\"score\":6}]}";
+                }
+                return "{\"items\":["
+                        + "{\"question\":\"题一\",\"userAnswerSummary\":\"答一\",\"comment\":\"扎实\",\"score\":8},"
+                        + "{\"question\":\"题二\",\"userAnswerSummary\":\"答二\",\"comment\":\"矛盾\",\"score\":2}]}";
+            }
+            if (sys.contains("质检审稿员")) {
+                return verdictScript.get();
+            }
+            if (sys.contains("参考回答员")) {
+                return answerScript.get();
+            }
+            if (sys.contains("复盘汇总器")) {
+                return "{\"scores\":{\"overall\":7,\"technicalDepth\":7,\"expression\":7,\"followUpHandling\":7},"
+                        + "\"suggestions\":[\"建议一\",\"建议二\"]}";
+            }
+            return JD_JSON;
+        };
+    }
+
+    @Test
+    void 质检通过_范文按题号回填() {
+        FakeSessionStore store = sessionWithPairs(2);
+        LlmCaller caller = collaboratingCaller(
+                () -> "{\"pass\":true,\"failedItems\":[]}",
+                () -> "{\"answers\":[{\"index\":1,\"referenceAnswer\":\"范文一\"},{\"index\":2,\"referenceAnswer\":\"范文二\"}]}",
+                user -> false);
+
+        InterviewReport report = generator(caller, store).generate("s");
+
+        assertThat(report.items()).hasSize(2);
+        assertThat(report.items().get(0).referenceAnswer()).isEqualTo("范文一");
+        assertThat(report.items().get(1).referenceAnswer()).isEqualTo("范文二");
+        assertThat(report.items().get(0).score()).isEqualTo(8);
+    }
+
+    @Test
+    void 审稿不通过_失败题局部回炉_二审通过() {
+        FakeSessionStore store = sessionWithPairs(2);
+        AtomicInteger reviewCalls = new AtomicInteger();
+        LlmCaller caller = collaboratingCaller(
+                () -> reviewCalls.incrementAndGet() == 1
+                        ? "{\"pass\":false,\"failedItems\":[{\"index\":2,\"reason\":\"评语与分数矛盾\"}]}"
+                        : "{\"pass\":true,\"failedItems\":[]}",
+                () -> JD_JSON,
+                // 回炉批只含失败题：批内重编号第1题，但题目原文是会话的第2题
+                user -> user.contains("第2题是什么") && !user.contains("第1题是什么"));
+
+        InterviewReport report = generator(caller, store).generate("s");
+
+        assertThat(reviewCalls.get()).isEqualTo(2);
+        assertThat(report.items().get(1).comment()).isEqualTo("已修正");
+        assertThat(report.items().get(1).score()).isEqualTo(6);
+        assertThat(report.items().get(1).comment()).doesNotContain("复核存疑");
+        assertThat(report.items().get(0).comment()).isEqualTo("扎实");
+    }
+
+    @Test
+    void 回炉耗尽_失败题降级标注存疑_分数保留() {
+        FakeSessionStore store = sessionWithPairs(1);
+        AtomicInteger scorerCalls = new AtomicInteger();
+        LlmCaller caller = (sys, user) -> {
+            if (sys.contains("逐题评估器")) {
+                // 单题会话首评与回炉的用户输入相同，按调用次序区分剧本
+                String comment = scorerCalls.incrementAndGet() == 1 ? "首评" : "已修正";
+                return "{\"items\":[{\"question\":\"题\",\"userAnswerSummary\":\"答\",\"comment\":\""
+                        + comment + "\",\"score\":7}]}";
+            }
+            if (sys.contains("质检审稿员")) {
+                return "{\"pass\":false,\"failedItems\":[{\"index\":1,\"reason\":\"评语与分数矛盾\"}]}";
+            }
+            return JD_JSON;
+        };
+
+        InterviewReport report = generator(caller, store).generate("s");
+
+        assertThat(scorerCalls.get()).isEqualTo(3);
+        assertThat(report.items().get(0).comment()).isEqualTo("已修正（该题评分经复核存疑）");
+        assertThat(report.items().get(0).score()).isEqualTo(7);
+    }
+
+    @Test
+    void 参考回答失败_留空不阻断报告() {
+        FakeSessionStore store = sessionWithPairs(1);
+        LlmCaller caller = (sys, user) -> {
+            if (sys.contains("逐题评估器")) {
+                return "{\"items\":[{\"question\":\"题\",\"userAnswerSummary\":\"答\",\"comment\":\"扎实\",\"score\":7}]}";
+            }
+            if (sys.contains("参考回答员")) {
+                return "这不是 JSON";
+            }
+            if (sys.contains("质检审稿员")) {
+                return "{\"pass\":true,\"failedItems\":[]}";
+            }
+            return "{\"scores\":{\"overall\":7,\"technicalDepth\":7,\"expression\":7,\"followUpHandling\":7},"
+                    + "\"suggestions\":[\"建议一\"]}";
+        };
+
+        InterviewReport report = generator(caller, store).generate("s");
+
+        assertThat(report.items().get(0).referenceAnswer()).isNull();
+        assertThat(report.items()).hasSize(1);
+        assertThat(report.scores().overall()).isEqualTo(7);
+    }
 }

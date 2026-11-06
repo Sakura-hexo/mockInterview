@@ -1,5 +1,7 @@
 package com.sakura.interview.session;
 
+import com.sakura.interview.tool.JdProfile;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -30,6 +32,15 @@ public final class FakeSessionStore implements SessionStore {
     @Override
     public Optional<SessionState> loadSession(String sessionId) {
         return Optional.ofNullable(sessions.get(sessionId));
+    }
+
+    /** 内存实现即存储本体：原地回填，等价于生产实现的原子 UPDATE。 */
+    @Override
+    public void completeAnalysis(String sessionId, String resumeDigest, JdProfile jdProfile) {
+        SessionState state = sessions.get(sessionId);
+        if (state != null) {
+            state.applyAnalysis(resumeDigest, jdProfile);
+        }
     }
 
     @Override

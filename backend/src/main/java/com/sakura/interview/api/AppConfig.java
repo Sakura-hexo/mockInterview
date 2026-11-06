@@ -221,7 +221,25 @@ public class AppConfig {
 
     @Bean
     public AuthService authService(MySqlUserStore users, RedisAuthStore sessions) {
-        return new AuthService(users, sessions);
+        AuthService service = new AuthService(users, sessions);
+        seedBuiltInAdmin(service);
+        return service;
+    }
+
+    /** TTS 合成通道：未配置 TTS_PROVIDER 时为关闭态占位（接口 404，前端回落浏览器朗读）；
+     *  edge 免费通道适配器待 provider 拍板后接入（方案 plans/2026-11-06/服务端TTS合成-优化方案.md）。 */
+    @Bean
+    public TtsSpeaker ttsSpeaker() {
+        return new DisabledTtsSpeaker();
+    }
+
+    /** 内置管理员播种：仅当 ADMIN_USERNAME 指向内置名 admin 时生效，幂等（缺则建、密码不符则重置）。
+     *  指向其他用户名时不播种不改密码——普通账号的管理权只由门禁判定，不动其凭据。 */
+    private static void seedBuiltInAdmin(AuthService service) {
+        if (!"admin".equals(EnvKeys.adminUsername())) {
+            return;
+        }
+        service.ensureAccount("admin", EnvKeys.adminPassword());
     }
 
     @Bean(destroyMethod = "shutdown")

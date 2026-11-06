@@ -34,6 +34,9 @@ public final class ReportExportTool {
             sb.append("### ").append(index++).append(". ").append(item.question()).append("\n");
             sb.append("- 回答摘要：").append(item.userAnswerSummary()).append("\n");
             sb.append("- 点评：").append(item.comment()).append("\n");
+            if (item.referenceAnswer() != null && !item.referenceAnswer().isBlank()) {
+                sb.append("- 参考回答：").append(item.referenceAnswer()).append("\n");
+            }
             sb.append("- 得分：").append(item.score()).append("/10\n\n");
         }
 

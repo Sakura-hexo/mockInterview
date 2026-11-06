@@ -32,4 +32,13 @@ public final class FakeUserStore implements UserStore {
     public Optional<UserRecord> findById(long id) {
         return byUsername.values().stream().filter(u -> u.id() == id).findFirst();
     }
+
+    @Override
+    public void updatePasswordHash(long id, String passwordHash) {
+        byUsername.values().stream()
+                .filter(u -> u.id() == id)
+                .findFirst()
+                .ifPresent(u -> byUsername.put(u.username(),
+                        new UserRecord(id, u.username(), passwordHash)));
+    }
 }

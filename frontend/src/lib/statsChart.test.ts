@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { averageTokens, barPercents, fillDailyTrend, formatTokens, localDateKey } from './statsChart';
+import { averageTokens, fillDailyTrend, formatTokens, localDateKey } from './statsChart';
 
 describe('fillDailyTrend 趋势补零', () => {
   it('铺满连续 N 天并把有数据的天对齐', () => {
@@ -16,17 +16,6 @@ describe('fillDailyTrend 趋势补零', () => {
     const filled = fillDailyTrend([], 5);
     expect(filled).toHaveLength(5);
     expect(filled.every((p) => p.tokens === 0)).toBe(true);
-  });
-});
-
-describe('barPercents 条形高度', () => {
-  it('按最大值归一化为百分比', () => {
-    expect(barPercents([100, 50, 0])).toEqual([100, 50, 2]);
-  });
-
-  it('有值的天保底 4，零值天 2，全零时等高矮条', () => {
-    expect(barPercents([100, 1, 0])).toEqual([100, 4, 2]);
-    expect(barPercents([0, 0])).toEqual([4, 4]);
   });
 });
 

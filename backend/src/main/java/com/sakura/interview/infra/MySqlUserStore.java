@@ -65,4 +65,9 @@ public final class MySqlUserStore implements UserStore {
                 id);
         return found.isEmpty() ? Optional.empty() : Optional.of(found.get(0));
     }
+
+    @Override
+    public void updatePasswordHash(long id, String passwordHash) {
+        jdbc.update("UPDATE t_user SET password_hash = ? WHERE id = ?", passwordHash, id);
+    }
 }

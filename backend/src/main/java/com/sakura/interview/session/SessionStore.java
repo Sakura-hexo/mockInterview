@@ -1,5 +1,7 @@
 package com.sakura.interview.session;
 
+import com.sakura.interview.tool.JdProfile;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -13,6 +15,13 @@ public interface SessionStore {
     void saveSession(SessionState state);
 
     Optional<SessionState> loadSession(String sessionId);
+
+    /**
+     * 异步分析完成回填：原子更新摘要与岗位画像并清 pending 与原文暂存。
+     * 分析四列只经本方法改写——saveSession 的覆盖路径不带分析列，
+     * 防止聊天轮次把已完成的分析覆盖回占位。
+     */
+    void completeAnalysis(String sessionId, String resumeDigest, JdProfile jdProfile);
 
     /** 推进状态机：CREATED、IN_PROGRESS、ENDED、REPORTED。 */
     void updateStatus(String sessionId, String status);
