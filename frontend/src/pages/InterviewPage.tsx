@@ -154,13 +154,29 @@ export default function InterviewPage() {
               <button
                 type="button"
                 className={`btn btn-ghost auto-read-btn ${autoRead ? 'on' : ''}`}
-                onClick={() =>
-                  setAutoRead((current) => {
-                    localStorage.setItem(AUTO_READ_KEY, current ? '0' : '1');
-                    return !current;
-                  })
-                }
-                title={autoRead ? '新题完成生成后自动朗读，点击关闭' : '开启后新题自动朗读'}
+                onClick={() => {
+                  const next = !autoRead;
+                  localStorage.setItem(AUTO_READ_KEY, next ? '1' : '0');
+                  setAutoRead(next);
+                  if (next) {
+                    // 开关打开的瞬间立刻朗读最新一题：此前完成的题不会补读，
+                    // 立刻出声让用户当场确认开关生效
+                    const last = [...annotated]
+                      .reverse()
+                      .find((m) => m.role === 'INTERVIEWER' && !m.streaming);
+                    if (last && !readOnlyLoaded && tts.supported) {
+                      const key = last.id ?? last.content;
+                      lastInterviewerRef.current = key;
+                      setTtsError('');
+                      setSpeakingId(key);
+                      tts.speak(last.content);
+                    }
+                  } else {
+                    tts.stop();
+                    setSpeakingId(null);
+                  }
+                }}
+                title={autoRead ? '新题完成生成后自动朗读，点击关闭' : '开启后新题自动朗读，并立刻朗读最新一题'}
               >
                 自动读题{autoRead ? '开' : '关'}
               </button>
