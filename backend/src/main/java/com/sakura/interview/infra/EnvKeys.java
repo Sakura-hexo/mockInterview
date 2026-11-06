@@ -53,6 +53,16 @@ public final class EnvKeys {
         return orDefault("ADMIN_PASSWORD", "admin");
     }
 
+    /** 服务端 TTS 通道（env TTS_PROVIDER）：off 关闭（前端回落浏览器朗读），edge 为免费微软朗读通道。 */
+    public static String ttsProvider() {
+        return orDefault("TTS_PROVIDER", "off").toLowerCase();
+    }
+
+    /** TTS 默认嗓音（env TTS_VOICE）：微软神经嗓音名，默认晓晓。 */
+    public static String ttsVoice() {
+        return orDefault("TTS_VOICE", "zh-CN-XiaoxiaoNeural");
+    }
+
     /** 是否放行模型的隐藏思考流。qwen 系思考模型的 reasoning_content 不进入回复正文，
      * 但按解码速度逐 token 生成，面试场景表现为数十秒黑屏死等（困难档找茬最深、思考量最大），
      * 因此默认关闭，需要深度思考时置 LLM_THINKING=true。
