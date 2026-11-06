@@ -150,19 +150,36 @@ export default function InterviewPage() {
         </div>
         <div className="actions">
           {tts.supported && (
-            <button
-              type="button"
-              className={`btn btn-ghost auto-read-btn ${autoRead ? 'on' : ''}`}
-              onClick={() =>
-                setAutoRead((current) => {
-                  localStorage.setItem(AUTO_READ_KEY, current ? '0' : '1');
-                  return !current;
-                })
-              }
-              title={autoRead ? '新题完成生成后自动朗读，点击关闭' : '开启后新题自动朗读'}
-            >
-              自动读题{autoRead ? '开' : '关'}
-            </button>
+            <>
+              <button
+                type="button"
+                className={`btn btn-ghost auto-read-btn ${autoRead ? 'on' : ''}`}
+                onClick={() =>
+                  setAutoRead((current) => {
+                    localStorage.setItem(AUTO_READ_KEY, current ? '0' : '1');
+                    return !current;
+                  })
+                }
+                title={autoRead ? '新题完成生成后自动朗读，点击关闭' : '开启后新题自动朗读'}
+              >
+                自动读题{autoRead ? '开' : '关'}
+              </button>
+              {tts.voices.length > 1 && (
+                <select
+                  className="voice-select"
+                  value={tts.voiceName}
+                  onChange={(e) => tts.setVoice(e.target.value)}
+                  title="读题嗓音：自动按自然嗓音优先挑选，或手动指定"
+                >
+                  <option value="">嗓音·自动</option>
+                  {tts.voices.map((voice) => (
+                    <option key={voice.name} value={voice.name}>
+                      {voice.name.split(' - ')[0]}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </>
           )}
           {!readOnly && (
             <button className="btn btn-danger" onClick={handleEnd} disabled={ending}>

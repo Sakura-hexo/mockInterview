@@ -36,13 +36,41 @@ export function speechOutputSupported(source: SpeechOutputSource): boolean {
   return source.speechSynthesis !== undefined && source.SpeechSynthesisUtterance !== undefined;
 }
 
-/** 中文嗓音优先 zh-CN，其次任意 zh；都没有则返回 null，交给 utterance.lang 兜底。泛型保调用方拿到原元素类型。 */
+/** 嗓音好听度排序键：微软自然嗓音（晓晓/云希系）最优先，Google 云嗓音次之，旧 SAPI 垫底。 */
+function voicePreference(name: string): number {
+  const lower = name.toLowerCase();
+  if (/(xiaoxiao|yunxi|yunyang|yunyi|xiaoyi|natural|neural|晓晓|云希|云扬)/.test(lower)) return 0;
+  if (lower.includes('google')) return 1;
+  return 2;
+}
+
+/** 读题嗓音菜单：中文嗓音先按普通话优先、再按好听度排序，保持原列表稳定序。 */
+export function chineseVoiceOptions<T extends SpeechSynthesisVoiceLike>(voices: T[]): T[] {
+  return voices
+    .map((voice, index) => ({ voice, index }))
+    .filter(({ voice }) => voice.lang.toLowerCase().startsWith('zh'))
+    .sort((a, b) => {
+      const aMandarin = a.voice.lang.toLowerCase().replace('_', '-').startsWith('zh-cn') ? 0 : 1;
+      const bMandarin = b.voice.lang.toLowerCase().replace('_', '-').startsWith('zh-cn') ? 0 : 1;
+      if (aMandarin !== bMandarin) return aMandarin - bMandarin;
+      const pref = voicePreference(a.voice.name) - voicePreference(b.voice.name);
+      if (pref !== 0) return pref;
+      return a.index - b.index;
+    })
+    .map((entry) => entry.voice);
+}
+
+/** 按名字精确找嗓音：页面选择器以名字为值。 */
+export function findVoiceByName<T extends SpeechSynthesisVoiceLike>(
+  voices: T[],
+  name: string,
+): T | null {
+  return voices.find((voice) => voice.name === name) ?? null;
+}
+
+/** 自动挑嗓音：zh-CN 优先，同为普通话时自然嗓音优先于旧 SAPI；无中文嗓音返回 null 走 lang 兜底。 */
 export function pickChineseVoice<T extends SpeechSynthesisVoiceLike>(voices: T[]): T | null {
-  const chinese = voices.filter((voice) => voice.lang.toLowerCase().startsWith('zh'));
-  const mandarin = chinese.find(
-    (voice) => voice.lang.toLowerCase().replace('_', '-').startsWith('zh-cn'),
-  );
-  return mandarin ?? chinese[0] ?? null;
+  return chineseVoiceOptions(voices)[0] ?? null;
 }
 
 /**

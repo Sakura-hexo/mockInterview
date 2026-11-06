@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  chineseVoiceOptions,
+  findVoiceByName,
   isSilentCancel,
   pickChineseVoice,
   speechOutputErrorMessage,
@@ -66,6 +68,35 @@ describe('pickChineseVoice', () => {
   it('无中文嗓音返回 null 交给 lang 兜底', () => {
     expect(pickChineseVoice([{ lang: 'en-US', name: 'English' }])).toBeNull();
     expect(pickChineseVoice([])).toBeNull();
+  });
+
+  it('同为普通话时自然嗓音优先于旧 SAPI', () => {
+    const huihui = { lang: 'zh-CN', name: 'Microsoft Huihui - Chinese (Simplified, PRC)' };
+    const xiaoxiao = { lang: 'zh-CN', name: 'Microsoft Xiaoxiao Online (Natural)' };
+    expect(pickChineseVoice([huihui, xiaoxiao])?.name).toBe('Microsoft Xiaoxiao Online (Natural)');
+  });
+});
+
+describe('chineseVoiceOptions 嗓音菜单排序', () => {
+  it('普通话优先，其后自然嗓音在旧 SAPI 前，其他中文最后', () => {
+    const huihui = { lang: 'zh-CN', name: 'Microsoft Huihui - Chinese (Simplified, PRC)' };
+    const yue = { lang: 'zh-HK', name: 'Google 粵語（香港）' };
+    const xiaoxiao = { lang: 'zh-CN', name: 'Microsoft Xiaoxiao Online (Natural)' };
+    const english = { lang: 'en-US', name: 'English' };
+    const options = chineseVoiceOptions([huihui, english, yue, xiaoxiao]);
+    expect(options.map((v) => v.name)).toEqual([
+      'Microsoft Xiaoxiao Online (Natural)',
+      'Microsoft Huihui - Chinese (Simplified, PRC)',
+      'Google 粵語（香港）',
+    ]);
+  });
+});
+
+describe('findVoiceByName 按名找嗓音', () => {
+  it('精确匹配返回原对象，找不到返回 null', () => {
+    const kangkang = { lang: 'zh-CN', name: 'Microsoft Kangkang' };
+    expect(findVoiceByName([kangkang], 'Microsoft Kangkang')).toBe(kangkang);
+    expect(findVoiceByName([kangkang], '别的')).toBeNull();
   });
 });
 
