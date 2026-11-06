@@ -7,6 +7,7 @@ import com.sakura.interview.rag.MilvusBankImporter;
 import com.sakura.interview.infra.AgentLlmCaller;
 import com.sakura.interview.infra.AgentScopeRuntime;
 import com.sakura.interview.infra.ChatModels;
+import com.sakura.interview.infra.EdgeTtsSpeaker;
 import com.sakura.interview.infra.EmbeddingModels;
 import com.sakura.interview.infra.EnvKeys;
 import com.sakura.interview.infra.MySqlAnalysisCache;
@@ -226,10 +227,13 @@ public class AppConfig {
         return service;
     }
 
-    /** TTS 合成通道：未配置 TTS_PROVIDER 时为关闭态占位（接口 404，前端回落浏览器朗读）；
-     *  edge 免费通道适配器待 provider 拍板后接入（方案 plans/2026-11-06/服务端TTS合成-优化方案.md）。 */
+    /** TTS 合成通道：TTS_PROVIDER=edge 走边车容器（微软免费朗读通道），
+     *  off 时为关闭态占位（接口 404，前端回落浏览器朗读）。 */
     @Bean
     public TtsSpeaker ttsSpeaker() {
+        if ("edge".equals(EnvKeys.ttsProvider())) {
+            return new EdgeTtsSpeaker(EnvKeys.ttsEdgeUrl());
+        }
         return new DisabledTtsSpeaker();
     }
 

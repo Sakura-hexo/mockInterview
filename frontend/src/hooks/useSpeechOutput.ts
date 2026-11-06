@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { fetchTtsAudio, fetchTtsVoices } from '../api/tts';
 import {
   chineseVoiceOptions,
   findVoiceByName,
@@ -18,17 +19,22 @@ interface UseSpeechOutputOptions {
 const VOICE_NAME_KEY = 'TTS_VOICE_NAME';
 
 /**
- * 面试官读题朗读：speak 前先 cancel 替换当前朗读，逐句入队规避 Chrome 长段截断；
- * 用户主动停止触发的 canceled/interrupted 静默不报错；卸载时停掉残留朗读。
+ * 面试官读题朗读，双通道：
+ * 服务端 TTS 可用时（/api/tts/voices 非空）走后端 mp3 神经嗓音，任何浏览器听感一致；
+ * 不可用或合成失败回落浏览器 speechSynthesis（逐句入队规避 Chrome 长段截断）。
  */
 export function useSpeechOutput({ onDone }: UseSpeechOutputOptions = {}) {
-  const [supported] = useState(() => speechOutputSupported(window));
+  const [browserSupported] = useState(() => speechOutputSupported(window));
   const [speaking, setSpeaking] = useState(false);
   const [error, setError] = useState('');
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [serverVoices, setServerVoices] = useState<string[]>([]);
   const [voiceName, setVoiceName] = useState(() => localStorage.getItem(VOICE_NAME_KEY) ?? '');
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const doneRef = useRef(onDone);
   const mountedRef = useRef(true);
+
+  const supported = browserSupported || serverVoices.length > 0;
 
   useEffect(() => {
     doneRef.current = onDone;
@@ -38,11 +44,13 @@ export function useSpeechOutput({ onDone }: UseSpeechOutputOptions = {}) {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      audioRef.current?.pause();
+      audioRef.current = null;
       window.speechSynthesis?.cancel();
     };
   }, []);
 
-  // 嗓音列表异步就绪：挂载即取一次并监听 voiceschanged（Chrome 首次常为空）
+  // 浏览器嗓音列表异步就绪：挂载即取一次并监听 voiceschanged（Chrome 首次常为空）
   useEffect(() => {
     const synthesis = window.speechSynthesis;
     if (!synthesis) return;
@@ -50,6 +58,15 @@ export function useSpeechOutput({ onDone }: UseSpeechOutputOptions = {}) {
     refresh();
     synthesis.addEventListener('voiceschanged', refresh);
     return () => synthesis.removeEventListener('voiceschanged', refresh);
+  }, []);
+
+  // 服务端 TTS 探测：清单非空即优先走服务端合成
+  useEffect(() => {
+    fetchTtsVoices()
+      .then((list) => {
+        if (list.length > 0) setServerVoices(list);
+      })
+      .catch(() => {});
   }, []);
 
   const setVoice = useCallback((name: string) => {
@@ -63,7 +80,7 @@ export function useSpeechOutput({ onDone }: UseSpeechOutputOptions = {}) {
     doneRef.current?.();
   }, []);
 
-  const speak = useCallback(
+  const speakViaBrowser = useCallback(
     (text: string) => {
       const synthesis = window.speechSynthesis;
       const Utterance = window.SpeechSynthesisUtterance;
@@ -102,12 +119,57 @@ export function useSpeechOutput({ onDone }: UseSpeechOutputOptions = {}) {
     [finish, voices, voiceName],
   );
 
+  const speakViaServer = useCallback(
+    async (text: string) => {
+      const content = stripMarkdown(text);
+      if (!content) return;
+      const voice = serverVoices.includes(voiceName) ? voiceName : serverVoices[0];
+      try {
+        const blob = await fetchTtsAudio(content, voice);
+        if (!mountedRef.current) return;
+        audioRef.current?.pause();
+        const audio = new Audio(URL.createObjectURL(blob));
+        audioRef.current = audio;
+        audio.onended = () => {
+          URL.revokeObjectURL(audio.src);
+          finish();
+        };
+        audio.onerror = () => {
+          URL.revokeObjectURL(audio.src);
+          if (mountedRef.current) speakViaBrowser(content);
+        };
+        setError('');
+        await audio.play();
+        setSpeaking(true);
+      } catch {
+        // 服务端合成失败：回落浏览器朗读，不打断用户
+        speakViaBrowser(content);
+      }
+    },
+    [serverVoices, voiceName, finish, speakViaBrowser],
+  );
+
+  const speak = useCallback(
+    (text: string) => {
+      if (serverVoices.length > 0) {
+        void speakViaServer(text);
+        return;
+      }
+      speakViaBrowser(text);
+    },
+    [serverVoices, speakViaServer, speakViaBrowser],
+  );
+
   const stop = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
     // cancel 会触发 pending 语句的 onerror(canceled) 走静默收尾，
     // 但 Firefox 等不一定回调，这里主动收尾保证状态复位（重复调用幂等）
     window.speechSynthesis?.cancel();
     finish();
   }, [finish]);
 
-  return { supported, speaking, error, speak, stop, voices, voiceName, setVoice };
+  return { supported, speaking, error, speak, stop, voices, serverVoices, voiceName, setVoice };
 }

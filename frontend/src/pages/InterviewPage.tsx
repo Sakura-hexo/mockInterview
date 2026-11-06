@@ -13,6 +13,12 @@ import './InterviewPage.css';
 
 const DIRECTION_LABEL: Record<string, string> = { JAVA_BACKEND: 'Java 后端' };
 const DIFFICULTY_LABEL: Record<string, string> = { EASY: '简单', MEDIUM: '中等', HARD: '困难' };
+// 服务端神经嗓音的中文名（与后端边车清单对应）
+const SERVER_VOICE_LABEL: Record<string, string> = {
+  'zh-CN-XiaoxiaoNeural': '晓晓 · 女声',
+  'zh-CN-YunxiNeural': '云希 · 男声',
+  'zh-CN-YunyangNeural': '云扬 · 男声',
+};
 
 // 自动读题开关持久化：默认开（TTS 的主场景就是面试官开口问），关掉记住选择
 const AUTO_READ_KEY = 'interview-auto-read';
@@ -180,7 +186,21 @@ export default function InterviewPage() {
               >
                 自动读题{autoRead ? '开' : '关'}
               </button>
-              {tts.voices.length > 1 && (
+              {tts.serverVoices.length > 0 ? (
+                <select
+                  className="voice-select"
+                  value={tts.serverVoices.includes(tts.voiceName) ? tts.voiceName : ''}
+                  onChange={(e) => tts.setVoice(e.target.value)}
+                  title="读题嗓音：服务端神经合成（微软晓晓同款），暂不可用时回落浏览器朗读"
+                >
+                  <option value="">嗓音·自动</option>
+                  {tts.serverVoices.map((voice) => (
+                    <option key={voice} value={voice}>
+                      {SERVER_VOICE_LABEL[voice] ?? voice}
+                    </option>
+                  ))}
+                </select>
+              ) : tts.voices.length > 1 ? (
                 <select
                   className="voice-select"
                   value={tts.voiceName}
@@ -194,7 +214,7 @@ export default function InterviewPage() {
                     </option>
                   ))}
                 </select>
-              )}
+              ) : null}
             </>
           )}
           {!readOnly && (

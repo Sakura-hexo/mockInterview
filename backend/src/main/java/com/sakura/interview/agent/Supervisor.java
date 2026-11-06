@@ -184,6 +184,11 @@ public final class Supervisor {
     public SupervisorReply chat(String sessionId, String userText, TurnListener listener) {
         SessionState state = requireState(sessionId);
         Intent intent = router.route(userText);
+        // 开题后的闲聊即跑题作答：归面试官线严肃点名换题并进三振计数，不再走陪聊线温柔带偏
+        // （真机 s-f997bcfd：第 5 题进行中回「你好」，陪聊线只温和寒暄不判无效）
+        if (intent == Intent.CHAT && store.countQuestions(sessionId) > 0) {
+            intent = Intent.INTERVIEW;
+        }
         return switch (intent) {
             // 复盘元命令不落消息：报告评估读全量日志，不能被元命令污染问答配对
             case REPORT -> new SupervisorReply(intent, reportService.handle(sessionId), 0, 0, null);

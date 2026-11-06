@@ -17,7 +17,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * 无效作答三振出局（2026-11-06 方案）：模型按「选题 无效」标记判定、系统确定性计数执法。
  * 覆盖：标记剥除与连击、切题清零、警告与最终指令注入、三振收场、违规出新题模板桥接、
- * 提前收尾闸门豁免、拒绝轮连击中性、最终指令轮切题照常继续。
+ * 提前收尾闸门豁免、拒绝轮连击中性、最终指令轮切题照常继续、
+ * 开题后闲聊重路由面试官线按跑题作答记账。
  */
 class SupervisorInvalidAnswerTest {
 
@@ -42,12 +43,31 @@ class SupervisorInvalidAnswerTest {
     }
 
     private static Wiring newSupervisor(FakeAgentRuntime runtime) {
+        return newSupervisor(runtime, branchingCaller());
+    }
+
+    private static Wiring newSupervisor(FakeAgentRuntime runtime, LlmCaller caller) {
         FakeSessionStore sessions = new FakeSessionStore();
-        StructuredOutputInvoker invoker = new StructuredOutputInvoker(branchingCaller());
+        StructuredOutputInvoker invoker = new StructuredOutputInvoker(caller);
         Supervisor supervisor = new Supervisor(runtime, invoker, sessions,
                 new ContextCompressor((sys, user) -> "合并摘要"),
                 new ReportService(sessions, new FakeReportStore()));
         return new Wiring(supervisor, sessions);
+    }
+
+    /** 闲聊分流用调用器：意图分类器把「你好」判 CHAT，其余一律 INTERVIEW。 */
+    private static LlmCaller chatClassifyingCaller() {
+        return (sys, user) -> {
+            if (sys.contains("创建分析器")) {
+                return "{\"digest\":\"三年 Java 后端\",\"direction\":\"Java后端\","
+                        + "\"skills\":[\"Spring\"],\"bonus\":[]}";
+            }
+            if (sys.contains("意图分类器")) {
+                // 结构化调用器会在用户文本后追加格式要求后缀，按前缀判别
+                return user.startsWith("你好") ? "{\"intent\":\"CHAT\"}" : "{\"intent\":\"INTERVIEW\"}";
+            }
+            return "{}";
+        };
     }
 
     private static String createSession(Wiring wiring) {
@@ -170,6 +190,41 @@ class SupervisorInvalidAnswerTest {
         wiring.supervisor().chat(sessionId, "胡话三");
 
         assertThat(wiring.sessions().endedSessions).contains(sessionId);
+    }
+
+    @Test
+    void 开题前寒暄仍走陪聊线不进三振() {
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "你好！我们随时可以开始，先做个自我介绍吧。");
+        Wiring wiring = newSupervisor(runtime, chatClassifyingCaller());
+        String sessionId = createSession(wiring);
+
+        Supervisor.SupervisorReply reply = wiring.supervisor().chat(sessionId, "你好");
+
+        // 还没问出第一题：没有题可跑，寒暄保留陪聊线
+        assertThat(runtime.calls().get(0).role()).isEqualTo(AgentRuntime.ROLE_CHAT);
+        assertThat(runtime.calls().get(0).systemPrompt()).contains("轻松陪聊");
+        assertThat(reply.intent()).isEqualTo(Intent.CHAT);
+        assertThat(reply.action()).isEqualTo(Supervisor.ACTION_FOLLOW_UP);
+        assertThat(wiring.supervisor().state(sessionId).invalidStreak()).isZero();
+    }
+
+    @Test
+    void 开题后闲聊按跑题作答归面试官线记账() {
+        java.util.concurrent.atomic.AtomicInteger turn = new java.util.concurrent.atomic.AtomicInteger();
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> turn.incrementAndGet() == 1
+                ? "好，我们开始。第一题：谈谈 JVM 内存结构。\n选题" : INVALID_TURN);
+        Wiring wiring = newSupervisor(runtime, chatClassifyingCaller());
+        String sessionId = createSession(wiring);
+
+        wiring.supervisor().chat(sessionId, "开始面试吧");
+        Supervisor.SupervisorReply reply = wiring.supervisor().chat(sessionId, "你好");
+
+        // 开题后的闲聊即跑题作答：归面试官线严肃点名并换题，连击计一，不再温柔陪聊
+        assertThat(runtime.calls().get(1).role()).isEqualTo(AgentRuntime.ROLE_INTERVIEWER);
+        assertThat(runtime.calls().get(1).systemPrompt()).doesNotContain("轻松陪聊");
+        assertThat(reply.intent()).isEqualTo(Intent.INTERVIEW);
+        assertThat(reply.action()).isEqualTo(Supervisor.ACTION_NEXT);
+        assertThat(wiring.supervisor().state(sessionId).invalidStreak()).isEqualTo(1);
     }
 
     @Test
