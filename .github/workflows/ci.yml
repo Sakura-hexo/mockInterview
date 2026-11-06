@@ -1,5 +1,5 @@
 # CI：后端单测 + 前端单测与构建 + 镜像构建验证（main 推送时）
-# 后端 114 例单测无外部依赖（Fake 桩 + 内存实现），无需密钥即可在 Actions 上复现。
+# 后端 269 例单测无外部依赖（Fake 桩 + 内存实现），无需密钥即可在 Actions 上复现。
 name: CI
 
 on:
@@ -10,7 +10,7 @@ on:
 
 jobs:
   backend-test:
-    name: 后端单测（114 例）
+    name: 后端单测（269 例）
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
