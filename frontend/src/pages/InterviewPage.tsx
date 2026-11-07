@@ -7,7 +7,7 @@ import { useSpeechInput } from '../hooks/useSpeechInput';
 import { useSpeechOutput } from '../hooks/useSpeechOutput';
 import MessageBubble from '../components/MessageBubble';
 import ActivityStream from '../components/ActivityStream';
-import { appendTranscript } from '../lib/speechInput';
+import { appendTranscript, COUNTDOWN_WINDOW_MS, formatRecordElapsed, MAX_RECORD_MS } from '../lib/speechInput';
 import type { AnnotatedMessage } from '../lib/interviewPhase';
 import './InterviewPage.css';
 
@@ -46,9 +46,12 @@ export default function InterviewPage() {
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
-  const { supported, listening, transcribing, error: speechError, start, stop: stopSpeech } = useSpeechInput({
+  const { supported, listening, transcribing, error: speechError, elapsedMs, capped, start, stop: stopSpeech } = useSpeechInput({
     onTranscript: (transcript) => setDraft((draft) => appendTranscript(draft, transcript)),
   });
+  // 单段录音计时：剩余不足 15 秒切红字倒计时，到点自动停（钩子内执法）
+  const recordRemainingMs = MAX_RECORD_MS - elapsedMs;
+  const countdownActive = listening && recordRemainingMs <= COUNTDOWN_WINDOW_MS;
 
   // 面试官读题：气泡按钮 + 顶栏自动读题开关（ENDED 只读回看不自动读）
   const [speakingId, setSpeakingId] = useState<string | null>(null);
@@ -272,12 +275,18 @@ export default function InterviewPage() {
             disabled={streaming}
           />
           <button
-            className={`speech-btn ${listening ? 'speech-listening' : ''}`}
+            className={`speech-btn ${listening ? 'speech-listening' : ''} ${countdownActive ? 'speech-countdown' : ''}`}
             onClick={listening ? stopSpeech : start}
             disabled={streaming || !supported || transcribing}
             title={supported ? '语音输入，识别后可再编辑' : '当前浏览器不支持语音输入'}
           >
-            {listening ? '停止' : transcribing ? '识别中' : '语音'}
+            {listening
+              ? countdownActive
+                ? `剩余 ${Math.max(1, Math.ceil(recordRemainingMs / 1000))} 秒`
+                : `录制中 ${formatRecordElapsed(elapsedMs)}`
+              : transcribing
+                ? '识别中'
+                : '语音'}
           </button>
           {streaming ? (
             <button className="stop-btn" onClick={stop}>
@@ -298,6 +307,9 @@ export default function InterviewPage() {
             </button>
           )}
           {speechError && <div className="speech-error">{speechError}</div>}
+          {capped && !listening && !transcribing && (
+            <div className="speech-hint">单段已达上限，点击「语音」继续说，识别结果会接在草稿后面</div>
+          )}
           {!supported && (
             <div className="speech-error">当前浏览器不支持语音输入，请改用 Chrome 或 Edge，或手动输入</div>
           )}

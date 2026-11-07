@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchAsrHealth, transcribeAudio } from '../api/asr';
 import {
   getSpeechRecognitionConstructor,
+  MAX_RECORD_MS,
   recorderMimeType,
   speechErrorMessage,
   speechSupported,
@@ -23,13 +24,23 @@ export function useSpeechInput({ onTranscript }: UseSpeechInputOptions) {
   const [listening, setListening] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [error, setError] = useState('');
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const [capped, setCapped] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const transcriptRef = useRef(onTranscript);
   const mountedRef = useRef(true);
+  const startedAtRef = useRef(0);
 
   const supported = browserSupported || serverAsr;
+
+  /** 每段开始时重置计时与封段标记。 */
+  const markSegmentStart = useCallback(() => {
+    startedAtRef.current = Date.now();
+    setElapsedMs(0);
+    setCapped(false);
+  }, []);
 
   useEffect(() => {
     transcriptRef.current = onTranscript;
@@ -90,11 +101,12 @@ export function useSpeechInput({ onTranscript }: UseSpeechInputOptions) {
       recorder.start();
       recorderRef.current = recorder;
       setError('');
+      markSegmentStart();
       setListening(true);
     } catch {
       if (mountedRef.current) setError('无法访问麦克风，请检查浏览器权限后重试');
     }
-  }, []);
+  }, [markSegmentStart]);
 
   const startBrowserRecognition = useCallback(() => {
     const Recognition = getSpeechRecognitionConstructor(window);
@@ -125,13 +137,14 @@ export function useSpeechInput({ onTranscript }: UseSpeechInputOptions) {
       recognition.start();
       recognitionRef.current = recognition;
       setError('');
+      markSegmentStart();
       setListening(true);
     } catch {
       recognition.abort();
       recognitionRef.current = null;
       setError('语音识别启动失败，请重试');
     }
-  }, []);
+  }, [markSegmentStart]);
 
   const start = useCallback(() => {
     if (listening || transcribing) return;
@@ -153,5 +166,20 @@ export function useSpeechInput({ onTranscript }: UseSpeechInputOptions) {
     recognitionRef.current?.stop();
   }, []);
 
-  return { supported, listening, transcribing, error, start, stop };
+  // 单段计时：每 250ms 刷新显示；到 MAX_RECORD_MS 自动停，走与手动停同一条上传识别路径。
+  // 计时基于起始时刻差值而非累加，后台标签页定时器降频只会让显示变粗、不会越走越慢。
+  useEffect(() => {
+    if (!listening) return;
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - startedAtRef.current;
+      setElapsedMs(elapsed);
+      if (elapsed >= MAX_RECORD_MS) {
+        setCapped(true);
+        stop();
+      }
+    }, 250);
+    return () => clearInterval(timer);
+  }, [listening, stop]);
+
+  return { supported, listening, transcribing, error, elapsedMs, capped, start, stop };
 }

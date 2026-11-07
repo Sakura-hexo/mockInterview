@@ -1,12 +1,15 @@
-"""ASR HTTP 边车：Java 后端经此调用本地 paraformer 模型做中文语音识别。
+"""ASR HTTP 边车：Java 后端经此调用本地 SenseVoice 模型做中英日韩粤语音识别。
 
-独立容器与 edge-tts 同构：推理依赖（sherpa-onnx + ffmpeg）与 78MB int8 模型全部
+独立容器与 edge-tts 同构：推理依赖（sherpa-onnx + ffmpeg）与 239MB int8 模型全部
 烘在镜像内，运行零外联、零密钥——是浏览器 Web Speech 出墙依赖的永久替代。
-模型构建期烘入（GitHub Release 直链），运行时不下载。
+模型构建期烘入（hf-mirror 直链），运行时不下载。
+换装自 paraformer-small：实测真机麦克风信噪比下小模型会把技术短语残化成
+"计学学"类音节残文，SenseVoice 同条件几乎全对且自带标点（方案见 .agentdocs）。
 """
 
 import json
 import os
+import re
 import subprocess
 import tempfile
 import threading
@@ -18,8 +21,11 @@ import sherpa_onnx
 
 PORT = 8001
 MAX_BYTES = 10 * 1024 * 1024
-MAX_SECONDS = 120
-MODEL_DIR = "/opt/model/sherpa-onnx-paraformer-zh-small-2024-03-09"
+# 前端单段 120 秒封段；余量兜住切后台标签页时定时器被降频导致的自动停漂移
+MAX_SECONDS = 180
+MODEL_DIR = "/opt/model/sense-voice"
+# SenseVoice 输出带 <|zh|><|NEUTRAL|> 等事件标记，落库前剥除
+TAG_RE = re.compile(r"<\|[^|]*\|>")
 
 
 class BadAudio(Exception):
@@ -30,9 +36,10 @@ class TooLong(Exception):
     """音频时长超过上限——按客户端错误处理。"""
 
 
-RECOGNIZER = sherpa_onnx.OfflineRecognizer.from_paraformer(
-    paraformer=MODEL_DIR + "/model.int8.onnx",
+RECOGNIZER = sherpa_onnx.OfflineRecognizer.from_sense_voice(
+    model=MODEL_DIR + "/model.int8.onnx",
     tokens=MODEL_DIR + "/tokens.txt",
+    use_itn=True,
 )
 # onnxruntime 会话并发解码不安全；单次请求 0.1 秒级，串行无压力
 DECODE_LOCK = threading.Lock()
@@ -72,7 +79,7 @@ def transcribe(audio: bytes) -> str:
             stream = RECOGNIZER.create_stream()
             stream.accept_waveform(rate, pcm)
             RECOGNIZER.decode_stream(stream)
-        return stream.result.text
+        return TAG_RE.sub("", stream.result.text).strip()
     finally:
         if raw_fd is not None:
             os.close(raw_fd)
@@ -93,7 +100,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/health":
             self._send(200, "application/json",
-                       json.dumps({"status": "ok", "model": "paraformer-zh-small"}).encode())
+                       json.dumps({"status": "ok", "model": "sense-voice"}).encode())
         else:
             self._send(404, "text/plain", b"not found")
 

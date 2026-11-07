@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   appendTranscript,
+  formatRecordElapsed,
   recorderMimeType,
   speechErrorMessage,
   speechSupported,
@@ -85,5 +86,23 @@ describe('recorderMimeType', () => {
   it('无 MediaRecorder 或全不支持时返回空串交浏览器默认', () => {
     expect(recorderMimeType({})).toBe('');
     expect(recorderMimeType({ MediaRecorder: { isTypeSupported: () => false } })).toBe('');
+  });
+});
+
+describe('formatRecordElapsed', () => {
+  it('不足一分钟显示 0 加两位秒', () => {
+    expect(formatRecordElapsed(0)).toBe('0:00');
+    expect(formatRecordElapsed(8_400)).toBe('0:08');
+    expect(formatRecordElapsed(59_999)).toBe('0:59');
+  });
+
+  it('过分钟进位补零', () => {
+    expect(formatRecordElapsed(60_000)).toBe('1:00');
+    expect(formatRecordElapsed(65_000)).toBe('1:05');
+    expect(formatRecordElapsed(120_000)).toBe('2:00');
+  });
+
+  it('负数按 0 处理不出现负秒', () => {
+    expect(formatRecordElapsed(-500)).toBe('0:00');
   });
 });

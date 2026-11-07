@@ -196,12 +196,32 @@
 
 .speech-btn:hover:not(:disabled) { border-color: #3b82f6; color: #1d4ed8; }
 .speech-btn.speech-listening { background: #fee2e2; border-color: #fecaca; color: #991b1b; }
+.speech-btn.speech-countdown {
+  background: #dc2626;
+  border-color: #b91c1c;
+  color: #fff;
+  font-weight: 600;
+  animation: speech-countdown-pulse 1s infinite;
+}
+
+@keyframes speech-countdown-pulse {
+  0%, 100% { background: #dc2626; }
+  50% { background: #ef4444; }
+}
+
 .speech-btn:disabled { background: #f5f6fa; color: #94a3b8; cursor: not-allowed; }
 
 .speech-error {
   flex-basis: 100%;
   padding: 6px 2px 0;
   color: #b91c1c;
+  font-size: 12px;
+}
+
+.speech-hint {
+  flex-basis: 100%;
+  padding: 6px 2px 0;
+  color: #475569;
   font-size: 12px;
 }
 
