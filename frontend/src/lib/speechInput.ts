@@ -114,6 +114,18 @@ export function appendTranscript(draft: string, transcript: string): string {
   return `${current}${needsSpace ? ' ' : ''}${text}`;
 }
 
+/** 单段录音上限：到点自动停并识别，点击语音继续说可无限续段（对齐方案 ASR识别质量升级）。 */
+export const MAX_RECORD_MS = 120_000;
+/** 剩余不足此时长进入红字倒计时。 */
+export const COUNTDOWN_WINDOW_MS = 15_000;
+
+export function formatRecordElapsed(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
 export function speechErrorMessage(code: string): string {
   if (code === 'not-allowed' || code === 'service-not-allowed') {
     return '浏览器未授权麦克风，请在地址栏允许后重试';

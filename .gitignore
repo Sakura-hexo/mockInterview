@@ -23,3 +23,7 @@ logs/
 .DS_Store
 Thumbs.db
 .agentdocs/
+
+# ASR 模型权重不进仓库（构建上下文 COPY 用，来源见 asr-service/Dockerfile 注释）
+backend/asr-service/model.int8.onnx
+backend/asr-service/tokens.txt
