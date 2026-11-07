@@ -68,12 +68,24 @@ public final class EnvKeys {
         return orDefault("TTS_EDGE_URL", "http://localhost:8000");
     }
 
-    /** 是否放行模型的隐藏思考流。qwen 系思考模型的 reasoning_content 不进入回复正文，
-     * 但按解码速度逐 token 生成，面试场景表现为数十秒黑屏死等（困难档找茬最深、思考量最大），
-     * 因此默认关闭，需要深度思考时置 LLM_THINKING=true。
+    /**
+     * 面试官思考流分档（env LLM_THINKING 三值）：false 全关、true 全开、
+     * auto 按难度分档——MEDIUM、HARD 开，EASY 关。默认 false 兼容现有部署。
+     * 思考流不进正文但按解码速度逐 token 生成，轮次付出数十秒死等，只换深度场景值得。
+     * 只对面试官角色生效，报告、压缩、路由、闲聊等其余角色不经此开关（一律关闭）。
      */
-    public static boolean llmThinkingEnabled() {
-        return "true".equalsIgnoreCase(orDefault("LLM_THINKING", "false"));
+    public static boolean llmThinkingFor(String difficulty) {
+        return thinkingResolves(orDefault("LLM_THINKING", "false"), difficulty);
+    }
+
+    /** 三值解析（包内可见供单测直测）：mode 与 difficulty 均宽容大小写与空白。 */
+    static boolean thinkingResolves(String mode, String difficulty) {
+        String normalized = mode == null ? "" : mode.trim().toLowerCase();
+        return switch (normalized) {
+            case "true" -> true;
+            case "auto" -> "MEDIUM".equalsIgnoreCase(difficulty) || "HARD".equalsIgnoreCase(difficulty);
+            default -> false;
+        };
     }
 
     public static String openAiApiKey() {

@@ -13,8 +13,15 @@ public interface AgentRuntime {
     String ROLE_INTERVIEWER = "interviewer";
     String ROLE_CHAT = "chat";
 
-    /** 流式生成：产出若干 Delta 与恰好一个 Final。 */
-    Flux<StreamChunk> streamGenerate(String role, String sessionId, String systemPrompt, String userInput);
+    /** 面试官线带思考开关的流式生成：非面试官角色无视此开关（思考恒关）。 */
+    Flux<StreamChunk> streamGenerate(String role, String sessionId, String systemPrompt,
+                                     String userInput, boolean thinking);
+
+    /** 兼容旧口径：思考开关默认关闭。 */
+    default Flux<StreamChunk> streamGenerate(String role, String sessionId,
+                                             String systemPrompt, String userInput) {
+        return streamGenerate(role, sessionId, systemPrompt, userInput, false);
+    }
 
     /** 整段生成：默认实现取流式结果的最后一个 Final，CLI 与单测沿用旧口径。 */
     default Mono<AgentReply> generate(String role, String sessionId, String systemPrompt, String userInput) {

@@ -41,10 +41,15 @@ public final class ChatModels {
     }
 
     public static Model chat(String tier) {
+        return chat(tier, false);
+    }
+
+    /** 按档位加思考开关构建：只有面试官线会传 true，其余调用一律默认关闭。 */
+    public static Model chat(String tier, boolean thinking) {
         Model raw = switch (EnvKeys.modelProvider()) {
-            case "openai" -> openAi(tier);
+            case "openai" -> openAi(tier, thinking);
             case "ollama" -> ollama(tier);
-            default -> dashScope(tier);
+            default -> dashScope(tier, thinking);
         };
         return new MonitoredModel(raw, BREAKERS.circuitBreaker("llm-" + tier), tier, meterRegistry);
     }
@@ -64,30 +69,31 @@ public final class ChatModels {
         return BREAKERS;
     }
 
-    private static Model dashScope(String tier) {
+    private static Model dashScope(String tier, boolean thinking) {
         return DashScopeChatModel.builder()
                 .apiKey(EnvKeys.dashScopeApiKey())
                 .modelName(modelName(tier, EnvKeys.dashScopeModel(), EnvKeys.dashScopeModelFast()))
-                .enableThinking(EnvKeys.llmThinkingEnabled())
+                .enableThinking(thinking)
                 .build();
     }
 
-    private static Model openAi(String tier) {
+    private static Model openAi(String tier, boolean thinking) {
         return OpenAIChatModel.builder()
                 .apiKey(EnvKeys.openAiApiKey())
                 .baseUrl(EnvKeys.openAiBaseUrl())
                 .modelName(modelName(tier, EnvKeys.openAiModel(), EnvKeys.openAiModelFast()))
-                .generateOptions(thinkingOptions())
+                .generateOptions(thinkingOptions(thinking))
                 .build();
     }
 
     /**
      * OpenAI 兼容路线的思考开关：qwen 系中转端点用请求体参数 enable_thinking 控制
-     * 隐藏思考流（reasoning_effort 实测无效）。开关语义与 EnvKeys.llmThinkingEnabled 一致。
+     * 隐藏思考流（reasoning_effort 实测无效）。思考开启时不传该参数，
+     * 由端点按模型默认思考行为执行。
      */
-    private static GenerateOptions thinkingOptions() {
+    static GenerateOptions thinkingOptions(boolean thinking) {
         GenerateOptions.Builder builder = GenerateOptions.builder();
-        if (!EnvKeys.llmThinkingEnabled()) {
+        if (!thinking) {
             builder.additionalBodyParam("enable_thinking", false);
         }
         return builder.build();

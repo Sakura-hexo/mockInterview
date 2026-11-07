@@ -29,8 +29,8 @@ public final class AgentScopeRuntime implements AgentRuntime {
 
     @Override
     public Flux<StreamChunk> streamGenerate(String role, String sessionId,
-                                            String systemPrompt, String userInput) {
-        ReActAgent agent = buildAgent(role, systemPrompt);
+                                            String systemPrompt, String userInput, boolean thinking) {
+        ReActAgent agent = buildAgent(role, systemPrompt, thinking);
         RuntimeContext context = RuntimeContext.builder()
                 .userId("supervisor")
                 .sessionId(sessionId)
@@ -82,14 +82,16 @@ public final class AgentScopeRuntime implements AgentRuntime {
         return result.getTextContent();
     }
 
-    private ReActAgent buildAgent(String role, String systemPrompt) {
+    private ReActAgent buildAgent(String role, String systemPrompt, boolean thinking) {
         // 角色分级：面试官走主力档，闲聊走快档；两档互挂 fallbackModel 降级
         String tier = AgentRuntime.ROLE_INTERVIEWER.equals(role)
                 ? ChatModels.TIER_MAIN : ChatModels.TIER_FAST;
+        // 思考流只服务面试官线：其余角色无视开关，降级 fallback 档也一律关闭
+        boolean modelThinking = AgentRuntime.ROLE_INTERVIEWER.equals(role) && thinking;
         return ReActAgent.builder()
                 .name(role)
                 .sysPrompt(systemPrompt)
-                .model(ChatModels.chat(tier))
+                .model(ChatModels.chat(tier, modelThinking))
                 .fallbackModel(ChatModels.chat(ChatModels.otherTier(tier)))
                 .stateStore(new InMemoryAgentStateStore())
                 .maxIters(1) // 单轮生成：无工具可调，出题靠预检索注入

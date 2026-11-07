@@ -1,5 +1,6 @@
 package com.sakura.interview.agent;
 
+import com.sakura.interview.infra.EnvKeys;
 import com.sakura.interview.infra.StructuredOutputInvoker;
 import com.sakura.interview.session.AnalysisCache;
 import com.sakura.interview.session.ContextAssembler;
@@ -19,6 +20,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.function.Function;
 
 /**
  * Supervisor：按意图与会话状态调度。只依赖 AgentRuntime、SessionStore 端口与
@@ -65,6 +67,8 @@ public final class Supervisor {
     private final ReportService reportService;
     private final QuestionBankTool questionBank;
     private final Executor maintenanceExecutor;
+    /** 难度到面试官思考开关的解析（env 三值语义），单测注入替身隔离。 */
+    private final Function<String, Boolean> thinkingFor;
     /** 分析在飞集合：提交时认领（含排队未执行），防后台与首轮兜底重复跑同一会话的分析。 */
     private final Set<String> analyzing = ConcurrentHashMap.newKeySet();
 
@@ -80,6 +84,15 @@ public final class Supervisor {
                       SessionAnalyst analyst, SessionStore store, ContextCompressor compressor,
                       ReportService reportService, QuestionBankTool questionBank,
                       Executor maintenanceExecutor) {
+        this(runtime, invoker, analyst, store, compressor, reportService,
+                questionBank, maintenanceExecutor, EnvKeys::llmThinkingFor);
+    }
+
+    /** 单测用全参装配：难度到思考开关的解析可注入，隔离 env 语义分支。 */
+    Supervisor(AgentRuntime runtime, StructuredOutputInvoker invoker,
+               SessionAnalyst analyst, SessionStore store, ContextCompressor compressor,
+               ReportService reportService, QuestionBankTool questionBank,
+               Executor maintenanceExecutor, Function<String, Boolean> thinkingFor) {
         this.runtime = runtime;
         this.invoker = invoker;
         this.analyst = analyst;
@@ -88,6 +101,7 @@ public final class Supervisor {
         this.reportService = reportService;
         this.questionBank = questionBank;
         this.maintenanceExecutor = maintenanceExecutor;
+        this.thinkingFor = thinkingFor;
         this.router = new Router(invoker);
     }
 
@@ -212,7 +226,8 @@ public final class Supervisor {
                 } else if (remaining && state.invalidStreak() >= 2) {
                     system = system + Prompts.INVALID_FINAL_DIRECTIVE;
                 }
-                yield interviewerTurn(state, system, userText, listener, remaining, candidates);
+                boolean thinking = thinkingFor.apply(state.config().difficulty());
+                yield interviewerTurn(state, system, userText, listener, remaining, candidates, thinking);
             }
         };
     }
@@ -227,22 +242,22 @@ public final class Supervisor {
         String sessionId = state.sessionId();
         store.appendMessage(sessionId, "user", userText, 0, 0);
         StreamChunk.Final finalChunk = streamTurn(role, sessionId, systemPrompt,
-                contextInput(sessionId), listener);
+                contextInput(sessionId), listener, false);
         return finalizeTurn(state, intent, role, finalChunk);
     }
 
     /** 面试官轮：与通用轮的差别在未问满时套提前收尾闸门与无效三振执法，落库口径完全一致。 */
     private SupervisorReply interviewerTurn(SessionState state, String systemPrompt, String userText,
                                             TurnListener listener, boolean remaining,
-                                            String candidates) {
+                                            String candidates, boolean thinking) {
         String sessionId = state.sessionId();
         store.appendMessage(sessionId, "user", userText, 0, 0);
         String context = contextInput(sessionId);
         StreamChunk.Final finalChunk = streamTurn(
-                AgentRuntime.ROLE_INTERVIEWER, sessionId, systemPrompt, context, listener);
+                AgentRuntime.ROLE_INTERVIEWER, sessionId, systemPrompt, context, listener, thinking);
         // 提前收尾闸门对三振收场轮豁免：连击两次后收场是预期行为，不能当漂移拦下重试
         StreamChunk.Final effective = remaining && state.invalidStreak() < 2
-                ? enforceNotConcluded(state, systemPrompt, context, finalChunk, listener, candidates)
+                ? enforceNotConcluded(state, systemPrompt, context, finalChunk, listener, candidates, thinking)
                 : finalChunk;
         // 无效作答记账：拒绝轮两类机制各管各的，不增也不清；其余轮按标记判——带无效标记连击加一，切题清零
         boolean struckOut = false;
@@ -278,13 +293,14 @@ public final class Supervisor {
      */
     private StreamChunk.Final enforceNotConcluded(SessionState state, String systemPrompt,
                                                   String contextInput, StreamChunk.Final first,
-                                                  TurnListener listener, String candidates) {
+                                                  TurnListener listener, String candidates,
+                                                  boolean thinking) {
         String text = first.fullText();
         if (hasPickMark(text) || !FarewellDetector.isConclusion(text)) {
             return first;
         }
         StreamChunk.Final retry = streamTurn(AgentRuntime.ROLE_INTERVIEWER, state.sessionId(),
-                systemPrompt + Prompts.FAREWELL_DIRECTIVE, contextInput, listener);
+                systemPrompt + Prompts.FAREWELL_DIRECTIVE, contextInput, listener, thinking);
         if (hasPickMark(retry.fullText()) || !FarewellDetector.isConclusion(retry.fullText())) {
             return retry;
         }
@@ -413,8 +429,8 @@ public final class Supervisor {
     }
 
     private StreamChunk.Final streamTurn(String role, String sessionId, String systemPrompt,
-                                         String contextInput, TurnListener listener) {
-        Flux<StreamChunk> flux = runtime.streamGenerate(role, sessionId, systemPrompt, contextInput);
+                                         String contextInput, TurnListener listener, boolean thinking) {
+        Flux<StreamChunk> flux = runtime.streamGenerate(role, sessionId, systemPrompt, contextInput, thinking);
         if (listener != null) {
             flux = flux.doOnNext(chunk -> {
                 if (chunk instanceof StreamChunk.Delta delta && !delta.text().isEmpty()) {
