@@ -7,14 +7,15 @@ import java.util.List;
 import java.util.function.Function;
 
 /**
- * 编排单测用假运行时：记录每次调用的 role、sessionId、系统提示词与输入，
+ * 编排单测用假运行时：记录每次调用的 role、sessionId、系统提示词、输入与思考开关，
  * 按预设函数回复——编排逻辑的正确性不依赖真实模型。
  * 输入 token 以输入长度近似、输出 token 固定，保证可断言；
  * 回复按三个增量下发以覆盖流式路径，toolCalls 可注入用于题型推导断言。
  */
 public final class FakeAgentRuntime implements AgentRuntime {
 
-    public record Call(String role, String sessionId, String systemPrompt, String userInput) {
+    public record Call(String role, String sessionId, String systemPrompt,
+                       String userInput, boolean thinking) {
     }
 
     private final List<Call> calls = new ArrayList<>();
@@ -36,8 +37,8 @@ public final class FakeAgentRuntime implements AgentRuntime {
 
     @Override
     public Flux<StreamChunk> streamGenerate(String role, String sessionId,
-                                            String systemPrompt, String userInput) {
-        Call call = new Call(role, sessionId, systemPrompt, userInput);
+                                            String systemPrompt, String userInput, boolean thinking) {
+        Call call = new Call(role, sessionId, systemPrompt, userInput, thinking);
         calls.add(call);
         String text = responder.apply(call);
         String first = text.length() <= 2 ? text : text.substring(0, 2);

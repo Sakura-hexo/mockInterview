@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   appendTranscript,
+  recorderMimeType,
   speechErrorMessage,
   speechSupported,
   toSimplifiedChinese,
@@ -65,5 +66,24 @@ describe('speechErrorMessage', () => {
     expect(speechErrorMessage('not-allowed')).toContain('麦克风');
     expect(speechErrorMessage('no-speech')).toContain('未识别');
     expect(speechErrorMessage('unknown')).toContain('重试');
+  });
+});
+
+describe('recorderMimeType', () => {
+  it('优先返回 opus 编码的 webm 格式', () => {
+    expect(
+      recorderMimeType({ MediaRecorder: { isTypeSupported: (t) => t === 'audio/webm;codecs=opus' } }),
+    ).toBe('audio/webm;codecs=opus');
+  });
+
+  it('webm 不支持时逐级回落到 mp4', () => {
+    expect(
+      recorderMimeType({ MediaRecorder: { isTypeSupported: (t) => t === 'audio/mp4' } }),
+    ).toBe('audio/mp4');
+  });
+
+  it('无 MediaRecorder 或全不支持时返回空串交浏览器默认', () => {
+    expect(recorderMimeType({})).toBe('');
+    expect(recorderMimeType({ MediaRecorder: { isTypeSupported: () => false } })).toBe('');
   });
 });

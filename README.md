@@ -31,7 +31,7 @@
 - 注册登录 Cookie 会话；内置管理端账号与全平台数据看板（用量趋势图表）
 - GitHub Actions CI 三线并行：后端单测、前端单测与构建、镜像构建验证
 - k6 压测脚本（对话链路与静态资源）；Prometheus 加 Grafana 监控栈一键起
-- 六边形端口化：AgentRuntime 端口隔离智能体引擎，FakeAgentRuntime 支撑无模型单测（后端 269 例、前端 65 例）
+- 六边形端口化：AgentRuntime 端口隔离智能体引擎，FakeAgentRuntime 支撑无模型单测（后端 189 例、前端 68 例）
 
 ## 🏗️ 系统架构
 

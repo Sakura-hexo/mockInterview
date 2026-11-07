@@ -6,7 +6,8 @@ import io.agentscope.core.embedding.ollama.OllamaTextEmbedding;
 import io.agentscope.core.embedding.openai.OpenAITextEmbedding;
 
 /**
- * Embedding 客户端统一工厂：与 ChatModels 共用 MODEL_PROVIDER 开关分派三路。
+ * Embedding 客户端统一工厂：按 EMBEDDING_PROVIDER 独立分派三路（缺省回落 MODEL_PROVIDER）。
+ * 聊天与向量检索可走不同厂商（如聊天 DeepSeek、embedding 百炼 text-embedding-v3）。
  * 维度随模型走：text-embedding-v3 为 1024，本地 nomic-embed-text 为 768；
  * 切换 embedding 模型后 Milvus 集合维度会变，必须用 --rebuild 重建题库。
  */
@@ -19,10 +20,10 @@ public final class EmbeddingModels {
     }
 
     public static EmbeddingModel embedding() {
-        return switch (EnvKeys.modelProvider()) {
+        return switch (EnvKeys.embeddingProvider()) {
             case "openai" -> OpenAITextEmbedding.builder()
-                    .apiKey(EnvKeys.openAiApiKey())
-                    .baseUrl(EnvKeys.openAiBaseUrl())
+                    .apiKey(EnvKeys.embeddingApiKey())
+                    .baseUrl(EnvKeys.embeddingBaseUrl())
                     .modelName(EnvKeys.openAiEmbeddingModel())
                     .dimensions(TEXT_EMBEDDING_V3_DIM)
                     .build();

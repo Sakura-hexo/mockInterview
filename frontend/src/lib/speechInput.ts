@@ -82,6 +82,21 @@ export function getSpeechRecognitionConstructor(
   return source.SpeechRecognition ?? source.webkitSpeechRecognition;
 }
 
+export interface RecorderSourceLike {
+  MediaRecorder?: { isTypeSupported?: (type: string) => boolean };
+}
+
+/** 服务端识别通道的录音格式：优先 opus 压缩体积，逐级回落，全不支持则交浏览器默认。 */
+export function recorderMimeType(source: RecorderSourceLike): string {
+  const recorder = source.MediaRecorder;
+  if (!recorder?.isTypeSupported) return '';
+  const candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+  for (const type of candidates) {
+    if (recorder.isTypeSupported(type)) return type;
+  }
+  return '';
+}
+
 export function speechSupported(source: SpeechSupportSource): boolean {
   return getSpeechRecognitionConstructor(source) !== undefined;
 }

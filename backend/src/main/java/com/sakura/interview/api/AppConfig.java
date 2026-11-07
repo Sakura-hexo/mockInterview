@@ -18,6 +18,7 @@ import com.sakura.interview.infra.MySqlUserStore;
 import com.sakura.interview.infra.PersistentSessionStore;
 import com.sakura.interview.infra.RedisAuthStore;
 import com.sakura.interview.infra.RedisSessionCache;
+import com.sakura.interview.infra.SherpaAsrTranscriber;
 import com.sakura.interview.infra.StructuredOutputInvoker;
 import com.sakura.interview.rag.MilvusQuestionStore;
 import com.sakura.interview.session.AnalysisCache;
@@ -235,6 +236,16 @@ public class AppConfig {
             return new EdgeTtsSpeaker(EnvKeys.ttsEdgeUrl());
         }
         return new DisabledTtsSpeaker();
+    }
+
+    /** ASR 识别通道：ASR_PROVIDER=sherpa 走边车容器（本地 paraformer 识别），
+     *  off 时为关闭态占位（接口 404，前端回落浏览器识别）。 */
+    @Bean
+    public AsrTranscriber asrTranscriber() {
+        if ("sherpa".equals(EnvKeys.asrProvider())) {
+            return new SherpaAsrTranscriber(EnvKeys.asrUrl());
+        }
+        return new DisabledAsrTranscriber();
     }
 
     /** 内置管理员播种：仅当 ADMIN_USERNAME 指向内置名 admin 时生效，幂等（缺则建、密码不符则重置）。

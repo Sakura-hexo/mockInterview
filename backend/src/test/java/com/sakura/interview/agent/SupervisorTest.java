@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -428,5 +429,67 @@ class SupervisorTest {
         assertThat(runtime.calls()).hasSize(2);
         assertThat(reply.reply()).contains("全部结束");
         assertThat(reply.action()).isEqualTo(Supervisor.ACTION_FOLLOW_UP);
+    }
+
+    // ---- 思考流按难度分级（2026-11-07 拍板：MEDIUM、HARD 开，EASY 关）----
+
+    /** 注入思考开关解析的全参装配：隔离 env 语义，只锁 Supervisor 传参分支。 */
+    private static Wiring newSupervisor(FakeAgentRuntime runtime, Function<String, Boolean> thinkingFor) {
+        FakeSessionStore sessions = new FakeSessionStore();
+        FakeReportStore reports = new FakeReportStore();
+        StructuredOutputInvoker invoker = new StructuredOutputInvoker(branchingCaller());
+        Supervisor supervisor = new Supervisor(runtime, invoker,
+                new SessionAnalyst(invoker, AnalysisCache.NONE), sessions,
+                new ContextCompressor((sys, user) -> "合并摘要"),
+                new ReportService(sessions, reports), null, Runnable::run, thinkingFor);
+        return new Wiring(supervisor, sessions, reports);
+    }
+
+    @Test
+    void 面试官思考开关按难度分档传递() {
+        Function<String, Boolean> autoLike = d -> "MEDIUM".equals(d) || "HARD".equals(d);
+        for (String difficulty : List.of("HARD", "MEDIUM", "EASY")) {
+            FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "第一题：谈谈 JVM。\n选题");
+            Wiring wiring = newSupervisor(runtime, autoLike);
+            String sessionId = wiring.supervisor()
+                    .createSession(null, "我的简历", "招 Java 后端",
+                            new SessionConfig("JAVA_BACKEND", difficulty, 10)).sessionId();
+
+            wiring.supervisor().chat(sessionId, "回答一");
+
+            assertThat(runtime.calls().get(0).thinking())
+                    .as("%s 档思考开关", difficulty)
+                    .isEqualTo(autoLike.apply(difficulty));
+        }
+    }
+
+    @Test
+    void 闲聊轮思考开关恒关_解析器全开也不放行() {
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> "面试加油！");
+        Wiring wiring = newSupervisor(runtime, d -> true);
+        String sessionId = wiring.supervisor().createSession("我的简历", "招 Java 后端").sessionId();
+
+        wiring.supervisor().chat(sessionId, "今天天气不错");
+
+        assertThat(runtime.calls()).hasSize(1);
+        assertThat(runtime.calls().get(0).role()).isEqualTo(AgentRuntime.ROLE_CHAT);
+        assertThat(runtime.calls().get(0).thinking()).isFalse();
+    }
+
+    @Test
+    void 提前收尾闸门重试继承思考开关() {
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c -> c.systemPrompt().contains("本场题目尚未问满")
+                ? "好，我们继续。下一题：谈谈索引失效场景。\n选题"
+                : "本场面试问题到这里结束。");
+        Wiring wiring = newSupervisor(runtime, d -> true);
+        String sessionId = wiring.supervisor()
+                .createSession(null, "我的简历", "招 Java 后端",
+                        new SessionConfig("JAVA_BACKEND", "HARD", 10)).sessionId();
+
+        wiring.supervisor().chat(sessionId, "回答一");
+
+        assertThat(runtime.calls()).hasSize(2);
+        assertThat(runtime.calls().get(0).thinking()).isTrue();
+        assertThat(runtime.calls().get(1).thinking()).isTrue();
     }
 }

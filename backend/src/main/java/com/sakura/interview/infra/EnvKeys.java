@@ -41,6 +41,15 @@ public final class EnvKeys {
     }
 
     /**
+     * embedding 独立开关（env EMBEDDING_PROVIDER）：与聊天分离，
+     * 供聊天与向量检索走不同厂商的混搭场景（如聊天 DeepSeek、embedding 百炼）。
+     * 未配置时回落 MODEL_PROVIDER，行为与共用开关的现状完全一致。
+     */
+    public static String embeddingProvider() {
+        return orDefault("EMBEDDING_PROVIDER", modelProvider());
+    }
+
+    /**
      * 管理员用户名（env ADMIN_USERNAME）：指定谁可见管理页签（全站统计与题库上传）。
      * 不配置时管理接口一律 404 零暴露；不建角色表，单人有明确管理员即可。
      */
@@ -68,12 +77,34 @@ public final class EnvKeys {
         return orDefault("TTS_EDGE_URL", "http://localhost:8000");
     }
 
-    /** 是否放行模型的隐藏思考流。qwen 系思考模型的 reasoning_content 不进入回复正文，
-     * 但按解码速度逐 token 生成，面试场景表现为数十秒黑屏死等（困难档找茬最深、思考量最大），
-     * 因此默认关闭，需要深度思考时置 LLM_THINKING=true。
+    /** 服务端 ASR 通道（env ASR_PROVIDER）：off 关闭（前端回落浏览器识别），sherpa 为本地 paraformer 识别。 */
+    public static String asrProvider() {
+        return orDefault("ASR_PROVIDER", "off").toLowerCase();
+    }
+
+    /** asr 边车地址（env ASR_URL）：容器编排指服务名，本机默认 8001 端口。 */
+    public static String asrUrl() {
+        return orDefault("ASR_URL", "http://localhost:8001");
+    }
+
+    /**
+     * 面试官思考流分档（env LLM_THINKING 三值）：false 全关、true 全开、
+     * auto 按难度分档——MEDIUM、HARD 开，EASY 关。默认 false 兼容现有部署。
+     * 思考流不进正文但按解码速度逐 token 生成，轮次付出数十秒死等，只换深度场景值得。
+     * 只对面试官角色生效，报告、压缩、路由、闲聊等其余角色不经此开关（一律关闭）。
      */
-    public static boolean llmThinkingEnabled() {
-        return "true".equalsIgnoreCase(orDefault("LLM_THINKING", "false"));
+    public static boolean llmThinkingFor(String difficulty) {
+        return thinkingResolves(orDefault("LLM_THINKING", "false"), difficulty);
+    }
+
+    /** 三值解析（包内可见供单测直测）：mode 与 difficulty 均宽容大小写与空白。 */
+    static boolean thinkingResolves(String mode, String difficulty) {
+        String normalized = mode == null ? "" : mode.trim().toLowerCase();
+        return switch (normalized) {
+            case "true" -> true;
+            case "auto" -> "MEDIUM".equalsIgnoreCase(difficulty) || "HARD".equalsIgnoreCase(difficulty);
+            default -> false;
+        };
     }
 
     public static String openAiApiKey() {
@@ -88,6 +119,19 @@ public final class EnvKeys {
 
     public static String openAiBaseUrl() {
         return orDefault("OPENAI_BASE_URL", "https://open.bigmodel.cn/api/paas/v4");
+    }
+
+    /**
+     * embedding 独立端点与密钥（EMBEDDING_BASE_URL / EMBEDDING_API_KEY）：
+     * 与聊天分线时的覆盖项，如聊天 DeepSeek、向量检索走中转站的 text-embedding-v3；
+     * 未配置时回落聊天线的 OPENAI_*，行为与共用现状一致。
+     */
+    public static String embeddingBaseUrl() {
+        return orDefault("EMBEDDING_BASE_URL", openAiBaseUrl());
+    }
+
+    public static String embeddingApiKey() {
+        return orDefault("EMBEDDING_API_KEY", openAiApiKey());
     }
 
     public static String openAiModel() {
