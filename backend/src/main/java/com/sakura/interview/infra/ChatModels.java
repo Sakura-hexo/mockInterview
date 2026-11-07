@@ -87,14 +87,16 @@ public final class ChatModels {
     }
 
     /**
-     * OpenAI 兼容路线的思考开关：qwen 系中转端点用请求体参数 enable_thinking 控制
-     * 隐藏思考流（reasoning_effort 实测无效）。思考开启时不传该参数，
-     * 由端点按模型默认思考行为执行。
+     * OpenAI 兼容路线的思考开关，关思考时发两种方言——各家忽略自己不认识的参数：
+     * enable_thinking 适用于 qwen 系端点（中转站/百炼兼容路）；
+     * thinking.type=disabled 适用于 DeepSeek V4 系（Anthropic 风格，实测 2026-11-07 生效）。
+     * 思考开启时两者都不传，由端点按模型默认思考行为执行。
      */
     static GenerateOptions thinkingOptions(boolean thinking) {
         GenerateOptions.Builder builder = GenerateOptions.builder();
         if (!thinking) {
             builder.additionalBodyParam("enable_thinking", false);
+            builder.additionalBodyParam("thinking", java.util.Map.of("type", "disabled"));
         }
         return builder.build();
     }
