@@ -22,8 +22,8 @@ public final class EmbeddingModels {
     public static EmbeddingModel embedding() {
         return switch (EnvKeys.embeddingProvider()) {
             case "openai" -> OpenAITextEmbedding.builder()
-                    .apiKey(EnvKeys.openAiApiKey())
-                    .baseUrl(EnvKeys.openAiBaseUrl())
+                    .apiKey(EnvKeys.embeddingApiKey())
+                    .baseUrl(EnvKeys.embeddingBaseUrl())
                     .modelName(EnvKeys.openAiEmbeddingModel())
                     .dimensions(TEXT_EMBEDDING_V3_DIM)
                     .build();

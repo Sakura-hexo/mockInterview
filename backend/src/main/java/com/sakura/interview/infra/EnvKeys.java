@@ -121,6 +121,19 @@ public final class EnvKeys {
         return orDefault("OPENAI_BASE_URL", "https://open.bigmodel.cn/api/paas/v4");
     }
 
+    /**
+     * embedding 独立端点与密钥（EMBEDDING_BASE_URL / EMBEDDING_API_KEY）：
+     * 与聊天分线时的覆盖项，如聊天 DeepSeek、向量检索走中转站的 text-embedding-v3；
+     * 未配置时回落聊天线的 OPENAI_*，行为与共用现状一致。
+     */
+    public static String embeddingBaseUrl() {
+        return orDefault("EMBEDDING_BASE_URL", openAiBaseUrl());
+    }
+
+    public static String embeddingApiKey() {
+        return orDefault("EMBEDDING_API_KEY", openAiApiKey());
+    }
+
     public static String openAiModel() {
         return orDefault("OPENAI_MODEL", "glm-4-flash");
     }
