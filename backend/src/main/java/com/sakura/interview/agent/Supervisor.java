@@ -392,8 +392,8 @@ public final class Supervisor {
     }
 
     /**
-     * 无效标记判定：任一行以「选题」开头且含「无效」（真机实测模型爱把标记行写在指出之后、
-     * 新题之前，再按老习惯补一行裸选题），或收场轮任一行为「无效」。位置无关，只认行面。
+     * 无效标记判定：独立一行「无效」，或「选题 无效」开头的标记行（真机实测模型爱把标记
+     * 写在指出之后、新题之前）。位置无关，只认标记行形状——题目行含「无效」字样不误判。
      */
     static boolean hasInvalidMark(String fullText) {
         if (fullText == null) {
@@ -401,21 +401,30 @@ public final class Supervisor {
         }
         return fullText.lines().map(String::strip).anyMatch(line ->
                 INVALID_MARK.equals(line)
-                        || (line.startsWith(PICK_MARK) && line.contains(INVALID_MARK)));
+                        || line.startsWith(PICK_MARK + " " + INVALID_MARK));
     }
 
-    /** 剥除全部标记行（选题或无效，正文任意位置）：落库文本、已问题单与前端回显均不带标记。 */
+    /**
+     * 标记行形状：裸「选题」、「选题 无效」开头，或独立一行「无效」。
+     * 带内容的行不是标记——真机会把题目写成「选题：JB-037 说一下…」起头（复述候选题），
+     * 以选题开头的宽判定会把题目整行剥掉。
+     */
+    static boolean isMarkerLine(String line) {
+        return line.equals(PICK_MARK)
+                || line.startsWith(PICK_MARK + " " + INVALID_MARK)
+                || line.equals(INVALID_MARK);
+    }
+
+    /** 剥除全部标记行（正文任意位置）：落库文本、已问题单与前端回显均不带标记。 */
     static String stripPickMark(String fullText) {
         if (fullText == null) {
             return "";
         }
         StringBuilder kept = new StringBuilder();
         for (String line : fullText.split("\n", -1)) {
-            String stripped = line.strip();
-            if (stripped.startsWith(PICK_MARK) || stripped.equals(INVALID_MARK)) {
-                continue;
+            if (!isMarkerLine(line.strip())) {
+                kept.append(line).append('\n');
             }
-            kept.append(line).append('\n');
         }
         return kept.toString().stripTrailing();
     }

@@ -10,16 +10,19 @@ import type { ChatMessage, InterviewSummary } from '../types';
 const STREAMING_ID = '__streaming__';
 const RECOVERY_POLL_MS = 3000; // 恢复轮询间隔（架构方案 4.3）
 // 出题与无效标记行仅做轮次信号：后端落库前剥除，前端流式期间同步剥除避免闪现。
-// 真机实测模型会把「选题 无效」写在回复中部再补一行裸选题，故按行过滤而非只剥结尾。
-const PICK_LINE_RE = /\n?选题[^\n]*$/;
+// 只认标记行形状（裸「选题」/「选题 无效」开头/独立「无效」）——题目可能被模型写成
+// 「选题：JB-037 说一下…」起头，宽判定会把题目整行剥掉（2026-11-07 真机实测）。
+const PICK_LINE_RE = /\n?选题( 无效)?$/;
 const INVALID_LINE_RE = /\n?无效$/;
+
+function isMarkerLine(line: string): boolean {
+  const t = line.trim();
+  return t === '选题' || t.startsWith('选题 无效') || t === '无效';
+}
 
 function stripPickLine(text: string): string {
   const stripped = text.replace(PICK_LINE_RE, '').replace(INVALID_LINE_RE, '');
-  return stripped
-    .split('\n')
-    .filter((line) => !/^选题/.test(line.trim()) && line.trim() !== '无效')
-    .join('\n');
+  return stripped.split('\n').filter((line) => !isMarkerLine(line)).join('\n');
 }
 
 export interface ActivityItem {
