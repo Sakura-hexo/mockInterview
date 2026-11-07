@@ -91,6 +91,28 @@ class SupervisorInvalidAnswerTest {
     }
 
     @Test
+    void 题目行以选题冒号起头_不当标记剥除() {
+        // 真机 s-88e8d85d 抓到的形状：模型复述候选题写成「选题：JB-037 说一下…」，
+        // 该行以选题开头但带内容——宽判定会把题目整行剥掉，候选人看不到题
+        FakeAgentRuntime runtime = new FakeAgentRuntime(c ->
+                "你答的是 HashMap 的结构，我问的是 MQ 选型，答非所问。\n选题 无效\n"
+                        + "选题：JB-037 说一下 HashMap 的 put 流程？");
+        Wiring wiring = newSupervisor(runtime);
+        String sessionId = createSession(wiring);
+
+        Supervisor.SupervisorReply reply =
+                wiring.supervisor().chat(sessionId, "HashMap 底层是数组加链表加红黑树");
+
+        assertThat(wiring.supervisor().state(sessionId).invalidStreak()).isEqualTo(1);
+        // 题目行以选题结尾整行存在：以选题开头被认作出题标记，action 正常推导
+        assertThat(reply.action()).isEqualTo(Supervisor.ACTION_QUESTION);
+        List<StoredMessage> messages = wiring.sessions().readAll(sessionId);
+        assertThat(messages.get(1).text())
+                .contains("JB-037 说一下 HashMap 的 put 流程？")
+                .doesNotContain("选题 无效");
+    }
+
+    @Test
     void 无效标记在回复中部_仍判无效并全量剥除() {
         // 真机 s-adabc26c 抓到的自然输出形状：指出后先写「选题 无效」行，新题结尾再补裸选题
         FakeAgentRuntime runtime = new FakeAgentRuntime(c ->
