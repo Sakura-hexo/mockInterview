@@ -41,6 +41,15 @@ public final class EnvKeys {
     }
 
     /**
+     * embedding 独立开关（env EMBEDDING_PROVIDER）：与聊天分离，
+     * 供聊天与向量检索走不同厂商的混搭场景（如聊天 DeepSeek、embedding 百炼）。
+     * 未配置时回落 MODEL_PROVIDER，行为与共用开关的现状完全一致。
+     */
+    public static String embeddingProvider() {
+        return orDefault("EMBEDDING_PROVIDER", modelProvider());
+    }
+
+    /**
      * 管理员用户名（env ADMIN_USERNAME）：指定谁可见管理页签（全站统计与题库上传）。
      * 不配置时管理接口一律 404 零暴露；不建角色表，单人有明确管理员即可。
      */
@@ -66,6 +75,16 @@ public final class EnvKeys {
     /** edge-tts 边车地址（env TTS_EDGE_URL）：容器编排指服务名，本机默认 8000 端口。 */
     public static String ttsEdgeUrl() {
         return orDefault("TTS_EDGE_URL", "http://localhost:8000");
+    }
+
+    /** 服务端 ASR 通道（env ASR_PROVIDER）：off 关闭（前端回落浏览器识别），sherpa 为本地 paraformer 识别。 */
+    public static String asrProvider() {
+        return orDefault("ASR_PROVIDER", "off").toLowerCase();
+    }
+
+    /** asr 边车地址（env ASR_URL）：容器编排指服务名，本机默认 8001 端口。 */
+    public static String asrUrl() {
+        return orDefault("ASR_URL", "http://localhost:8001");
     }
 
     /**
