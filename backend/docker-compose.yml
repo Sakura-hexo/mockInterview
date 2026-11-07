@@ -151,6 +151,14 @@ services:
     restart: unless-stopped
     profiles: ["deploy"]
 
+  # ---- asr 边车（profile deploy）：本地 paraformer 识别，模型烘在镜像内零外联 ----
+  asr:
+    build: ./asr-service
+    image: interview-asr:latest
+    container_name: interview-asr
+    restart: unless-stopped
+    profiles: ["deploy"]
+
   app:
     build: .
     image: interview-backend:latest
@@ -170,6 +178,8 @@ services:
       MILVUS_URI: http://milvus:19530
       # TTS 边车：容器网络内指服务名（TTS_PROVIDER=edge 时生效）
       TTS_EDGE_URL: http://edge-tts:8000
+      # ASR 边车：容器网络内指服务名（ASR_PROVIDER=sherpa 时生效）
+      ASR_URL: http://asr:8001
       # JVM 时区与 MySQL 容器对齐（LocalDateTime 写入墙钟归位），否则 t_message 比东八区真实时间偏 8 小时
       TZ: Asia/Shanghai
     depends_on:
@@ -180,6 +190,8 @@ services:
       milvus:
         condition: service_healthy
       edge-tts:
+        condition: service_started
+      asr:
         condition: service_started
 
 volumes:

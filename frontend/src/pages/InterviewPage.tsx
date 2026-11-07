@@ -46,7 +46,7 @@ export default function InterviewPage() {
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
-  const { supported, listening, error: speechError, start, stop: stopSpeech } = useSpeechInput({
+  const { supported, listening, transcribing, error: speechError, start, stop: stopSpeech } = useSpeechInput({
     onTranscript: (transcript) => setDraft((draft) => appendTranscript(draft, transcript)),
   });
 
@@ -274,10 +274,10 @@ export default function InterviewPage() {
           <button
             className={`speech-btn ${listening ? 'speech-listening' : ''}`}
             onClick={listening ? stopSpeech : start}
-            disabled={streaming || !supported}
+            disabled={streaming || !supported || transcribing}
             title={supported ? '语音输入，识别后可再编辑' : '当前浏览器不支持语音输入'}
           >
-            {listening ? '停止' : '语音'}
+            {listening ? '停止' : transcribing ? '识别中' : '语音'}
           </button>
           {streaming ? (
             <button className="stop-btn" onClick={stop}>
