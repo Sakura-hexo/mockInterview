@@ -123,6 +123,7 @@ services:
       - "9090:9090"
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
 
   grafana:
     image: grafana/grafana:11.5.2
@@ -143,15 +144,15 @@ services:
 
   # ---- 应用容器（profile deploy）：初版部署一键栈，密钥经 .env 注入 ----
 
-  # ---- edge-tts 边车（profile deploy）：微软朗读通道的协议封装，鉴权轮换只升级本镜像 ----
-  edge-tts:
-    build: ./edge-tts-service
-    image: interview-edge-tts:latest
-    container_name: interview-edge-tts
+  # ---- tts 边车（profile deploy）：本地 matcha 神经朗读，模型烘在镜像内零外联零密钥 ----
+  tts:
+    build: ./tts-service
+    image: interview-tts:latest
+    container_name: interview-tts
     restart: unless-stopped
     profiles: ["deploy"]
 
-  # ---- asr 边车（profile deploy）：本地 paraformer 识别，模型烘在镜像内零外联 ----
+  # ---- asr 边车（profile deploy）：本地 SenseVoice 识别，模型烘在镜像内零外联 ----
   asr:
     build: ./asr-service
     image: interview-asr:latest
@@ -176,8 +177,8 @@ services:
       MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD:-interview123}
       REDIS_URI: redis://redis:6379
       MILVUS_URI: http://milvus:19530
-      # TTS 边车：容器网络内指服务名（TTS_PROVIDER=edge 时生效）
-      TTS_EDGE_URL: http://edge-tts:8000
+      # TTS 边车：容器网络内指服务名（TTS_PROVIDER=local 时生效）
+      TTS_URL: http://tts:8000
       # ASR 边车：容器网络内指服务名（ASR_PROVIDER=sherpa 时生效）
       ASR_URL: http://asr:8001
       # JVM 时区与 MySQL 容器对齐（LocalDateTime 写入墙钟归位），否则 t_message 比东八区真实时间偏 8 小时
@@ -189,7 +190,7 @@ services:
         condition: service_healthy
       milvus:
         condition: service_healthy
-      edge-tts:
+      tts:
         condition: service_started
       asr:
         condition: service_started

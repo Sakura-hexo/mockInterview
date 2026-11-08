@@ -62,22 +62,17 @@ public final class EnvKeys {
         return orDefault("ADMIN_PASSWORD", "admin");
     }
 
-    /** 服务端 TTS 通道（env TTS_PROVIDER）：off 关闭（前端回落浏览器朗读），edge 为免费微软朗读通道。 */
+    /** 服务端 TTS 通道（env TTS_PROVIDER）：off 关闭（前端回落浏览器朗读），local 为本地 matcha 边车合成。 */
     public static String ttsProvider() {
         return orDefault("TTS_PROVIDER", "off").toLowerCase();
     }
 
-    /** TTS 默认嗓音（env TTS_VOICE）：微软神经嗓音名，默认晓晓。 */
-    public static String ttsVoice() {
-        return orDefault("TTS_VOICE", "zh-CN-XiaoxiaoNeural");
+    /** TTS 边车地址（env TTS_URL）：容器编排指服务名，本机默认 8000 端口。 */
+    public static String ttsUrl() {
+        return orDefault("TTS_URL", "http://localhost:8000");
     }
 
-    /** edge-tts 边车地址（env TTS_EDGE_URL）：容器编排指服务名，本机默认 8000 端口。 */
-    public static String ttsEdgeUrl() {
-        return orDefault("TTS_EDGE_URL", "http://localhost:8000");
-    }
-
-    /** 服务端 ASR 通道（env ASR_PROVIDER）：off 关闭（前端回落浏览器识别），sherpa 为本地 paraformer 识别。 */
+    /** 服务端 ASR 通道（env ASR_PROVIDER）：off 关闭（前端回落浏览器识别），sherpa 为本地 SenseVoice 识别。 */
     public static String asrProvider() {
         return orDefault("ASR_PROVIDER", "off").toLowerCase();
     }

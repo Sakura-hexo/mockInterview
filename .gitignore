@@ -27,3 +27,15 @@ Thumbs.db
 # ASR 模型权重不进仓库（构建上下文 COPY 用，来源见 asr-service/Dockerfile 注释）
 backend/asr-service/model.int8.onnx
 backend/asr-service/tokens.txt
+backend/asr-service/silero_vad.onnx
+
+# TTS 模型与词典不进仓库（构建上下文 COPY 用，来源见 tts-service/Dockerfile 注释）
+backend/tts-service/model-steps-3.onnx
+backend/tts-service/vocos-16khz-univ.onnx
+backend/tts-service/lexicon.txt
+backend/tts-service/tokens.txt
+backend/tts-service/*.fst
+backend/tts-service/espeak-ng-data/
+
+# ZCode Sites 部署暂存目录
+.zcode-site/

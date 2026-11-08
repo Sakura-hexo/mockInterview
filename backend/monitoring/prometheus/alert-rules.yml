@@ -1,0 +1,20 @@
+groups:
+  - name: jvm-alerts
+    rules:
+      # 5 分钟内 Full GC 超过 3 次即告警（健康服务应为小时/天级一次）
+      - alert: FullGCTooFrequent
+        expr: increase(jvm_gc_pause_seconds_count{action="end of major GC"}[5m]) > 3
+        labels:
+          severity: warning
+        annotations:
+          summary: "Full GC 频繁：5 分钟内超过 3 次"
+
+      # 老年代使用率持续高于 90%（持续 1 分钟才触发，避免瞬时毛刺）
+      - alert: OldGenUsageHigh
+        expr: jvm_memory_used_bytes{area="heap",id="G1 Old Gen"}
+              / jvm_memory_max_bytes{area="heap",id="G1 Old Gen"} > 0.9
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "G1 老年代使用率超过 90%"

@@ -16,7 +16,7 @@ import java.util.Map;
 
 /**
  * 服务端 TTS 接口：GET /api/tts/voices 探测可用性兼嗓音清单（空配置 404，
- * 前端据此回落浏览器朗读）；POST /api/tts 合成 mp3，同文本同嗓音走 LRU 缓存
+ * 前端据此回落浏览器朗读）；POST /api/tts 合成 wav，同文本同嗓音走 LRU 缓存
  * 免重复请求（读题按钮反复点、回看重读都是重复合成）。
  */
 @RestController
@@ -82,7 +82,7 @@ public final class TtsController {
             cache.put(key, audio);
         }
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType("audio/mpeg"))
+                .contentType(MediaType.parseMediaType("audio/wav"))
                 .contentLength(audio.length)
                 .body(audio);
     }

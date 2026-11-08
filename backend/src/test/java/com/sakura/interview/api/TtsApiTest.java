@@ -76,12 +76,12 @@ class TtsApiTest {
     void 嗓音清单接口返回可用清单() throws Exception {
         mockMvc.perform(get("/api/tts/voices").cookie(sessionOf("ttsuser")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.voices[0]").value("zh-CN-XiaoxiaoNeural"))
-                .andExpect(jsonPath("$.data.voices.length()").value(2));
+                .andExpect(jsonPath("$.data.voices[0]").value("matcha-zh-en"))
+                .andExpect(jsonPath("$.data.voices.length()").value(1));
     }
 
     @Test
-    void 合成返回mp3字节且未指定嗓音用默认() throws Exception {
+    void 合成返回wav字节且未指定嗓音用默认() throws Exception {
         MvcResult result = mockMvc.perform(post("/api/tts")
                         .cookie(sessionOf("ttsuser"))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -89,29 +89,30 @@ class TtsApiTest {
                 .andExpect(status().isOk())
                 .andReturn();
 
-        assertThat(result.getResponse().getContentType()).startsWith("audio/mpeg");
+        assertThat(result.getResponse().getContentType()).startsWith("audio/wav");
         assertThat(new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8))
-                .isEqualTo("mp3:zh-CN-XiaoxiaoNeural:第一段测试文本");
+                .isEqualTo("wav:matcha-zh-en:第一段测试文本");
         assertThat(speaker.calls).isEqualTo(1);
     }
 
     @Test
-    void 指定清单内嗓音透传给合成器() throws Exception {
+    void 未在清单内的嗓音回落默认嗓音() throws Exception {
+        // 换装 matcha 前用户 localStorage 可能存着旧微软嗓音名，须静默回落而非报错
         MvcResult result = mockMvc.perform(post("/api/tts")
                         .cookie(sessionOf("ttsuser"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"text\":\"云希嗓音\",\"voice\":\"zh-CN-YunxiNeural\"}"))
+                        .content("{\"text\":\"旧嗓音名\",\"voice\":\"zh-CN-XiaoxiaoNeural\"}"))
                 .andExpect(status().isOk())
                 .andReturn();
 
         assertThat(new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8))
-                .startsWith("mp3:zh-CN-YunxiNeural:");
+                .startsWith("wav:matcha-zh-en:");
     }
 
     @Test
     void 同文本同嗓音命中缓存不重复合成() throws Exception {
         Cookie cookie = sessionOf("ttsuser");
-        String body = "{\"text\":\"缓存命中专用文本\",\"voice\":\"zh-CN-YunxiNeural\"}";
+        String body = "{\"text\":\"缓存命中专用文本\",\"voice\":\"matcha-zh-en\"}";
         mockMvc.perform(post("/api/tts").cookie(cookie)
                         .contentType(MediaType.APPLICATION_JSON).content(body))
                 .andExpect(status().isOk());
@@ -162,12 +163,12 @@ class TtsApiTest {
     static final class FakeTtsSpeaker implements TtsSpeaker {
 
         final AtomicReference<List<String>> voicesRef =
-                new AtomicReference<>(List.of("zh-CN-XiaoxiaoNeural", "zh-CN-YunxiNeural"));
+                new AtomicReference<>(List.of("matcha-zh-en"));
         int calls;
 
         void reset() {
             calls = 0;
-            voicesRef.set(List.of("zh-CN-XiaoxiaoNeural", "zh-CN-YunxiNeural"));
+            voicesRef.set(List.of("matcha-zh-en"));
         }
 
         @Override
@@ -178,7 +179,7 @@ class TtsApiTest {
         @Override
         public byte[] synthesize(String text, String voice) {
             calls += 1;
-            return ("mp3:" + voice + ":" + text).getBytes(StandardCharsets.UTF_8);
+            return ("wav:" + voice + ":" + text).getBytes(StandardCharsets.UTF_8);
         }
     }
 }

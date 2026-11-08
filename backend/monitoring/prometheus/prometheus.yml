@@ -1,6 +1,10 @@
 global:
   scrape_interval: 15s
 
+# 告警规则（容器内路径，由 docker-compose 挂载进来）
+rule_files:
+  - /etc/prometheus/alert-rules.yml
+
 scrape_configs:
   # 开发期后端跑在宿主机：host.docker.internal 指回宿主
   - job_name: interview-backend
