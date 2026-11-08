@@ -12,13 +12,15 @@ import java.time.Duration;
 import java.util.List;
 
 /**
- * 经 edge-tts 边车合成：微软 Edge 朗读通道的协议（wss + v2 鉴权）由官方 Python
- * 库封装在独立容器里，鉴权轮换只需升级边车镜像的库版本，本类保持纯 HTTP。
+ * 经 TTS 边车合成：本地 matcha 模型（sherpa-onnx）封装在独立容器里，
+ * 换引擎只升级边车镜像，本类保持纯 HTTP。换装自微软 edge-tts 通道：
+ * 到微软链路晚高峰吞吐仅约 300kbps，189 字要等 6 秒；本地合成 RTF 0.03，
+ * 同文本约 1 秒出声且不受网络波动影响（选型记录见 .agentdocs）。
  */
-public final class EdgeTtsSpeaker implements TtsSpeaker {
+public final class SherpaTtsSpeaker implements TtsSpeaker {
 
-    public static final List<String> VOICES = List.of(
-            "zh-CN-XiaoxiaoNeural", "zh-CN-YunxiNeural", "zh-CN-YunyangNeural");
+    /** 单说话人模型，清单一项；前端下拉与缓存键天然兼容。 */
+    public static final List<String> VOICES = List.of("matcha-zh-en");
 
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
@@ -26,7 +28,7 @@ public final class EdgeTtsSpeaker implements TtsSpeaker {
     private final HttpClient http;
     private final URI synthesizeUri;
 
-    public EdgeTtsSpeaker(String baseUrl) {
+    public SherpaTtsSpeaker(String baseUrl) {
         this.http = HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build();
         String trimmed = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         this.synthesizeUri = URI.create(trimmed + "/synthesize");
@@ -52,10 +54,10 @@ public final class EdgeTtsSpeaker implements TtsSpeaker {
             response = http.send(request, HttpResponse.BodyHandlers.ofByteArray());
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IOException("edge-tts 调用被中断", e);
+            throw new IOException("TTS 边车调用被中断", e);
         }
         if (response.statusCode() != 200) {
-            throw new IOException("edge-tts 服务返回 " + response.statusCode());
+            throw new IOException("TTS 边车服务返回 " + response.statusCode());
         }
         return response.body();
     }

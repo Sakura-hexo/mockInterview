@@ -1,6 +1,6 @@
 """ASR HTTP 边车：Java 后端经此调用本地 SenseVoice 模型做中英日韩粤语音识别。
 
-独立容器与 edge-tts 同构：推理依赖（sherpa-onnx + ffmpeg）与 239MB int8 模型全部
+独立容器与 tts 边车同构：推理依赖（sherpa-onnx + ffmpeg）与 239MB int8 模型全部
 烘在镜像内，运行零外联、零密钥——是浏览器 Web Speech 出墙依赖的永久替代。
 模型构建期烘入（构建上下文 COPY，来源链接见 Dockerfile 注释），运行时不下载。
 换装自 paraformer-small：实测真机麦克风信噪比下小模型会把技术短语残化成

@@ -12,8 +12,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** 边车客户端测试：内嵌 HTTP 假服务验证透传与错误转译，不碰微软真通道。 */
-class EdgeTtsSpeakerTest {
+/** 边车客户端测试：内嵌 HTTP 假服务验证透传与错误转译，不加载真模型。 */
+class SherpaTtsSpeakerTest {
 
     @Test
     void 合成透传文本与嗓音并返回音频字节() throws Exception {
@@ -21,13 +21,13 @@ class EdgeTtsSpeakerTest {
         HttpServer server = fakeServer(200, new byte[]{0x01, 0x02}, bodies);
         server.start();
         try {
-            EdgeTtsSpeaker speaker = new EdgeTtsSpeaker("http://localhost:" + server.getAddress().getPort() + "/");
-            byte[] audio = speaker.synthesize("你好", "zh-CN-YunxiNeural");
+            SherpaTtsSpeaker speaker = new SherpaTtsSpeaker("http://localhost:" + server.getAddress().getPort() + "/");
+            byte[] audio = speaker.synthesize("你好", "matcha-zh-en");
 
             assertThat(audio).containsExactly(0x01, 0x02);
             assertThat(bodies).hasSize(1);
-            assertThat(bodies.get(0)).contains("你好").contains("zh-CN-YunxiNeural");
-            assertThat(speaker.voices()).first().isEqualTo("zh-CN-XiaoxiaoNeural");
+            assertThat(bodies.get(0)).contains("你好").contains("matcha-zh-en");
+            assertThat(speaker.voices()).containsExactly("matcha-zh-en");
         } finally {
             server.stop(0);
         }
@@ -38,8 +38,8 @@ class EdgeTtsSpeakerTest {
         HttpServer server = fakeServer(502, new byte[0], new CopyOnWriteArrayList<>());
         server.start();
         try {
-            EdgeTtsSpeaker speaker = new EdgeTtsSpeaker("http://localhost:" + server.getAddress().getPort());
-            assertThatThrownBy(() -> speaker.synthesize("你好", "zh-CN-XiaoxiaoNeural"))
+            SherpaTtsSpeaker speaker = new SherpaTtsSpeaker("http://localhost:" + server.getAddress().getPort());
+            assertThatThrownBy(() -> speaker.synthesize("你好", "matcha-zh-en"))
                     .isInstanceOf(IOException.class)
                     .hasMessageContaining("502");
         } finally {
@@ -51,7 +51,7 @@ class EdgeTtsSpeakerTest {
         HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
         server.createContext("/synthesize", exchange -> {
             bodies.add(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
-            exchange.getResponseHeaders().add("Content-Type", "audio/mpeg");
+            exchange.getResponseHeaders().add("Content-Type", "audio/wav");
             exchange.sendResponseHeaders(status, audio.length);
             if (audio.length > 0) {
                 exchange.getResponseBody().write(audio);

@@ -7,7 +7,7 @@ import com.sakura.interview.rag.MilvusBankImporter;
 import com.sakura.interview.infra.AgentLlmCaller;
 import com.sakura.interview.infra.AgentScopeRuntime;
 import com.sakura.interview.infra.ChatModels;
-import com.sakura.interview.infra.EdgeTtsSpeaker;
+import com.sakura.interview.infra.SherpaTtsSpeaker;
 import com.sakura.interview.infra.EmbeddingModels;
 import com.sakura.interview.infra.EnvKeys;
 import com.sakura.interview.infra.MySqlAnalysisCache;
@@ -228,17 +228,17 @@ public class AppConfig {
         return service;
     }
 
-    /** TTS 合成通道：TTS_PROVIDER=edge 走边车容器（微软免费朗读通道），
+    /** TTS 合成通道：TTS_PROVIDER=local 走边车容器（本地 matcha 神经朗读，约 1 秒出声），
      *  off 时为关闭态占位（接口 404，前端回落浏览器朗读）。 */
     @Bean
     public TtsSpeaker ttsSpeaker() {
-        if ("edge".equals(EnvKeys.ttsProvider())) {
-            return new EdgeTtsSpeaker(EnvKeys.ttsEdgeUrl());
+        if ("local".equals(EnvKeys.ttsProvider())) {
+            return new SherpaTtsSpeaker(EnvKeys.ttsUrl());
         }
         return new DisabledTtsSpeaker();
     }
 
-    /** ASR 识别通道：ASR_PROVIDER=sherpa 走边车容器（本地 paraformer 识别），
+    /** ASR 识别通道：ASR_PROVIDER=sherpa 走边车容器（本地 SenseVoice 识别），
      *  off 时为关闭态占位（接口 404，前端回落浏览器识别）。 */
     @Bean
     public AsrTranscriber asrTranscriber() {

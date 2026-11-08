@@ -18,8 +18,8 @@
 
 **语音**
 
-- 读题服务端合成：edge-tts 边车容器输出微软神经嗓音（晓晓、云希、云扬），失败自动回落浏览器朗读
-- 语音输入：浏览器原生语音识别（Web Speech API）
+- 读题服务端合成：本地 matcha 边车容器（中英双语、RTF 0.03 约一秒出声），失败自动回落浏览器朗读
+- 语音输入：本地 SenseVoice 边车识别（长音频按静音分段），浏览器原生识别兜底
 
 **复盘报告**
 
@@ -45,7 +45,7 @@ flowchart TD
     S --> DB[("MySQL 事实源 · Redis 热存")]
     S --> MV[("Milvus 混合检索 · 稠密向量加 BM25 稀疏 RRF")]
     S --> RP["📋 报告线四角色 · 评分审稿范文汇总"]
-    API --> TTS["🔊 edge-tts 边车 · 微软神经嗓音"]
+    API --> TTS["🔊 matcha 边车 · 本地神经朗读"]
 ```
 
 ### 面试线：行为纠偏闭环（规则第一道门，模型只兜底）
@@ -135,7 +135,7 @@ mvn package -DskipTests
 docker compose --profile deploy --profile monitoring up -d
 ```
 
-浏览器打开 `http://localhost:8080`，注册即用；管理端用内置账号 `admin / admin` 登录。可选在 `.env` 加 `TTS_PROVIDER=edge` 开启服务端读题语音。
+浏览器打开 `http://localhost:8080`，注册即用；管理端用内置账号 `admin / admin` 登录。可选在 `.env` 加 `TTS_PROVIDER=local` 开启服务端读题语音。
 
 命令行最小面试官（只依赖模型密钥，零中间件）：
 
@@ -147,7 +147,7 @@ cd backend && mvn compile exec:java
 
 ## 技术栈
 
-Java 21、Spring Boot 3.4、AgentScope-Java 2.0、React 18、Vite、MySQL 8、Redis 7、Milvus 2.6（混合检索）、edge-tts（语音合成边车）、Prometheus、Grafana、k6、Docker Compose、GitHub Actions。
+Java 21、Spring Boot 3.4、AgentScope-Java 2.0、React 18、Vite、MySQL 8、Redis 7、Milvus 2.6（混合检索）、sherpa-onnx（本地语音边车：matcha 合成与 SenseVoice 识别）、Prometheus、Grafana、k6、Docker Compose、GitHub Actions。
 
 ## 目录结构
 
