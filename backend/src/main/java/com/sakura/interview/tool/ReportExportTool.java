@@ -1,7 +1,7 @@
 package com.sakura.interview.tool;
 
-import com.sakura.interview.session.InterviewReport;
-import com.sakura.interview.session.ReportItem;
+import com.sakura.interview.report.InterviewReport;
+import com.sakura.interview.report.ReportItem;
 
 /**
  * 复盘报告导出工具：InterviewReport 结构转 Markdown 字符串，

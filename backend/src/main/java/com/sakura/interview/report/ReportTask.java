@@ -1,4 +1,4 @@
-package com.sakura.interview.session;
+package com.sakura.interview.report;
 
 /**
  * 报告任务：状态机 GENERATING、RUNNING、DONE、FAILED；retryCount 为已失败次数，

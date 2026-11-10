@@ -1,7 +1,10 @@
 package com.sakura.interview.session;
 
+import com.sakura.interview.evaluation.QaPair;
 import com.sakura.interview.infra.LlmCaller;
 import com.sakura.interview.infra.StructuredOutputInvoker;
+import com.sakura.interview.report.InterviewReport;
+import com.sakura.interview.report.ReportGenerator;
 import com.sakura.interview.tool.JdProfile;
 import org.junit.jupiter.api.Test;
 

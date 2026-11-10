@@ -91,6 +91,44 @@
         }
       ],
       "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "读题合成时延（TTS p50 与 p95）",
+      "datasource": { "type": "prometheus", "uid": "prom" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, outcome) (rate(tts_synth_seconds_bucket[5m])))",
+          "legendFormat": "合成 {{outcome}} p95"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum by (le, outcome) (rate(tts_synth_seconds_bucket[5m])))",
+          "legendFormat": "合成 {{outcome}} p50"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "语音识别时延（ASR p50 与 p95）",
+      "datasource": { "type": "prometheus", "uid": "prom" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, model) (rate(asr_transcribe_seconds_bucket[5m])))",
+          "legendFormat": "{{model}} p95"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum by (le, model) (rate(asr_transcribe_seconds_bucket[5m])))",
+          "legendFormat": "{{model}} p50"
+        }
+      ],
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 }
     }
   ]
 }

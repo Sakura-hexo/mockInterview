@@ -6,7 +6,7 @@ import com.sakura.interview.session.ContextAssembler;
 import com.sakura.interview.session.ContextCompressor;
 import com.sakura.interview.session.FakeReportStore;
 import com.sakura.interview.session.FakeSessionStore;
-import com.sakura.interview.session.ReportService;
+import com.sakura.interview.report.ReportService;
 import com.sakura.interview.session.SessionSummary;
 import com.sakura.interview.session.StoredMessage;
 import org.junit.jupiter.api.Test;

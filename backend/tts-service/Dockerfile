@@ -1,8 +1,10 @@
 FROM python:3.12-slim
 
 # 大陆构建网络换清华 pypi 镜像源（与 asr 边车同法）
+# 版本锁 1.12.26：2.x 对 matcha zh-en 的 espeak 英文音素化失效——英文词按 OOV
+# 直接跳过（2026-11-10 容器实测 OOV word skipped Redis 与 Lua），1.12.26 宿主机验证英文可读
 RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple \
-    'sherpa-onnx>=1.12' numpy
+    'sherpa-onnx==1.12.26' numpy
 
 # 模型构建期烘入：权重文件放本目录后随上下文 COPY（gitignore 不入库）。
 # 实测 Docker VM 直连 hf-mirror 仅约 9KB/s，走宿主机下载再 COPY 才现实。

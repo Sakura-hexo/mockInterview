@@ -1,4 +1,4 @@
-package com.sakura.interview.session;
+package com.sakura.interview.report;
 
 /**
  * 逐题回顾：题目、候选人回答摘要、点评、该题得分（0 到 10）与参考回答。

@@ -5,11 +5,12 @@ import com.sakura.interview.agent.FakeAgentRuntime;
 import com.sakura.interview.agent.Supervisor;
 import com.sakura.interview.infra.LlmCaller;
 import com.sakura.interview.infra.StructuredOutputInvoker;
+import com.sakura.interview.report.ReportStore;
 import com.sakura.interview.session.ContextCompressor;
 import com.sakura.interview.session.FakeReportStore;
 import com.sakura.interview.session.FakeSessionStore;
-import com.sakura.interview.session.ReportService;
-import com.sakura.interview.session.ReportTask;
+import com.sakura.interview.report.ReportService;
+import com.sakura.interview.report.ReportTask;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,7 +63,7 @@ class InterviewApiTest {
         }
 
         @Bean
-        com.sakura.interview.session.ReportStore reportStore() {
+        ReportStore reportStore() {
             return reports;
         }
 

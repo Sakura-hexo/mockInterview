@@ -5,7 +5,7 @@ import com.sakura.interview.infra.StructuredOutputInvoker;
 import com.sakura.interview.session.AnalysisCache;
 import com.sakura.interview.session.ContextAssembler;
 import com.sakura.interview.session.ContextCompressor;
-import com.sakura.interview.session.ReportService;
+import com.sakura.interview.report.ReportService;
 import com.sakura.interview.session.SessionConfig;
 import com.sakura.interview.session.SessionState;
 import com.sakura.interview.session.SessionStore;
@@ -117,6 +117,7 @@ public final class Supervisor {
         return createSession(null, resumeText, jdText, null);
     }
 
+  
     /** 建会话（Web 用）：先落占位会话秒回，分析提交后台线程跑完回填——冷创建不再等模型。 */
     public CreateResult createSession(Long userId, String resumeText, String jdText,
                                       SessionConfig config) {

@@ -1,5 +1,10 @@
 package com.sakura.interview.session;
 
+import com.sakura.interview.report.InterviewReport;
+import com.sakura.interview.report.ReportItem;
+import com.sakura.interview.report.ReportScore;
+import com.sakura.interview.report.ReportService;
+import com.sakura.interview.report.ReportTask;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

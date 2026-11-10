@@ -7,8 +7,9 @@ RUN sed -i 's|deb.debian.org|mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.li
     && rm -rf /var/lib/apt/lists/*
 # ffmpeg：webm/opus 等浏览器录音格式转 wav 16k 单声道；bzip2：备选 GitHub tar 包解包用
 
+# 版本锁 2.0.1（当前镜像实测验证：SenseVoice 直解与 VAD 分段全过）；升级须全量回归 9 用例
 RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple \
-    'sherpa-onnx>=1.12' numpy
+    'sherpa-onnx==2.0.1' numpy
 
 # 模型构建期烘入：权重文件放本目录后随上下文 COPY（gitignore 不入库）。
 # 实测 Docker VM 直连 hf-mirror 仅约 9KB/s，走宿主机下载再 COPY 才现实。

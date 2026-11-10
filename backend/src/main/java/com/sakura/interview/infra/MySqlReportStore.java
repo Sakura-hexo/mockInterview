@@ -1,7 +1,7 @@
 package com.sakura.interview.infra;
 
-import com.sakura.interview.session.ReportStore;
-import com.sakura.interview.session.ReportTask;
+import com.sakura.interview.report.ReportStore;
+import com.sakura.interview.report.ReportTask;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;

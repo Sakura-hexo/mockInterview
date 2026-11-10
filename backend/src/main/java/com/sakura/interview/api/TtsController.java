@@ -1,5 +1,7 @@
 package com.sakura.interview.api;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,6 +15,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 服务端 TTS 接口：GET /api/tts/voices 探测可用性兼嗓音清单（空配置 404，
@@ -27,6 +30,7 @@ public final class TtsController {
     private static final int MAX_CACHE_ENTRIES = 100;
 
     private final TtsSpeaker speaker;
+    private final MeterRegistry meterRegistry;
     private final Map<String, byte[]> cache = Collections.synchronizedMap(
             new LinkedHashMap<>(16, 0.75f, true) {
                 @Override
@@ -35,8 +39,9 @@ public final class TtsController {
                 }
             });
 
-    public TtsController(TtsSpeaker speaker) {
+    public TtsController(TtsSpeaker speaker, MeterRegistry meterRegistry) {
         this.speaker = speaker;
+        this.meterRegistry = meterRegistry;
     }
 
     public record VoicesResponse(List<String> voices) {
@@ -74,10 +79,20 @@ public final class TtsController {
         String key = voice + '\n' + text;
         byte[] audio = cache.get(key);
         if (audio == null) {
+            // 只计缓存未命中的真实合成：命中计进去会把 p95 拉低失真
+            long start = System.nanoTime();
+            String outcome = "success";
             try {
                 audio = speaker.synthesize(text, voice);
             } catch (IOException e) {
+                outcome = "failure";
                 throw new ApiException(502, "语音合成失败，请稍后重试或改用浏览器朗读");
+            } finally {
+                Timer.builder("tts_synth_seconds")
+                        .tag("voice", voice)
+                        .tag("outcome", outcome)
+                        .register(meterRegistry)
+                        .record(System.nanoTime() - start, TimeUnit.NANOSECONDS);
             }
             cache.put(key, audio);
         }

@@ -1,6 +1,10 @@
-package com.sakura.interview.session;
+package com.sakura.interview.report;
 
+import com.sakura.interview.evaluation.AnswerEvaluation;
+import com.sakura.interview.evaluation.BatchEvaluation;
+import com.sakura.interview.evaluation.QaPair;
 import com.sakura.interview.infra.StructuredOutputInvoker;
+import com.sakura.interview.session.*;
 
 import java.util.ArrayList;
 import java.util.List;

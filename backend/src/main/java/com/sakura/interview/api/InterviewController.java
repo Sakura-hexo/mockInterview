@@ -2,11 +2,11 @@ package com.sakura.interview.api;
 
 import com.google.gson.Gson;
 import com.sakura.interview.agent.Supervisor;
-import com.sakura.interview.session.QaPair;
-import com.sakura.interview.session.ReportGenerator;
-import com.sakura.interview.session.ReportStore;
-import com.sakura.interview.session.ReportTask;
-import com.sakura.interview.session.InterviewReport;
+import com.sakura.interview.evaluation.QaPair;
+import com.sakura.interview.report.InterviewReport;
+import com.sakura.interview.report.ReportGenerator;
+import com.sakura.interview.report.ReportStore;
+import com.sakura.interview.report.ReportTask;
 import com.sakura.interview.session.SessionConfig;
 import com.sakura.interview.session.SessionOverview;
 import com.sakura.interview.session.SessionState;

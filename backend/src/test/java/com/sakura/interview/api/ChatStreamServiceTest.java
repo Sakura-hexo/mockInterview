@@ -7,7 +7,7 @@ import com.sakura.interview.infra.StructuredOutputInvoker;
 import com.sakura.interview.session.ContextCompressor;
 import com.sakura.interview.session.FakeReportStore;
 import com.sakura.interview.session.FakeSessionStore;
-import com.sakura.interview.session.ReportService;
+import com.sakura.interview.report.ReportService;
 import com.sakura.interview.session.SessionState;
 import com.sakura.interview.session.StoredMessage;
 import io.github.resilience4j.ratelimiter.RateLimiterConfig;
