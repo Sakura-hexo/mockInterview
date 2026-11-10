@@ -1,8 +1,8 @@
 package com.sakura.interview.tool;
 
-import com.sakura.interview.session.InterviewReport;
-import com.sakura.interview.session.ReportItem;
-import com.sakura.interview.session.ReportScore;
+import com.sakura.interview.report.InterviewReport;
+import com.sakura.interview.report.ReportItem;
+import com.sakura.interview.report.ReportScore;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

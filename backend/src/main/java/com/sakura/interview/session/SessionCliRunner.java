@@ -4,6 +4,8 @@ import com.google.gson.Gson;
 import com.sakura.interview.infra.MySqlDb;
 import com.sakura.interview.infra.PersistentSessionStore;
 import com.sakura.interview.infra.RedisSessionCache;
+import com.sakura.interview.report.InterviewReport;
+import com.sakura.interview.report.ReportTask;
 import com.zaxxer.hikari.HikariDataSource;
 
 import java.util.List;

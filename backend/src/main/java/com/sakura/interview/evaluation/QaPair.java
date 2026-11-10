@@ -1,4 +1,4 @@
-package com.sakura.interview.session;
+package com.sakura.interview.evaluation;
 
 /**
  * 评估配对：面试官的题目与候选人对其的完整回答（可能由多条消息拼接）。

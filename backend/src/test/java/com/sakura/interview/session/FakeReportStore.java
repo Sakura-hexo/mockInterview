@@ -1,5 +1,8 @@
 package com.sakura.interview.session;
 
+import com.sakura.interview.report.ReportStore;
+import com.sakura.interview.report.ReportTask;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;

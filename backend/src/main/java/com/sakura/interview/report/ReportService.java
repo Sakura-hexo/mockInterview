@@ -1,6 +1,8 @@
-package com.sakura.interview.session;
+package com.sakura.interview.report;
 
 import com.google.gson.Gson;
+import com.sakura.interview.evaluation.QaPair;
+import com.sakura.interview.session.SessionStore;
 import com.sakura.interview.tool.ReportExportTool;
 
 import java.util.List;

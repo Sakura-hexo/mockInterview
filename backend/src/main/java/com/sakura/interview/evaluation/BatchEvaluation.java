@@ -1,4 +1,6 @@
-package com.sakura.interview.session;
+package com.sakura.interview.evaluation;
+
+import com.sakura.interview.report.ReportItem;
 
 import java.util.List;
 

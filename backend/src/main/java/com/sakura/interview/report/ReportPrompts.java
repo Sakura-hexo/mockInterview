@@ -1,4 +1,4 @@
-package com.sakura.interview.session;
+package com.sakura.interview.report;
 
 /**
  * 复盘评估提示词。自写文本，禁抄竞品（AGPL）。

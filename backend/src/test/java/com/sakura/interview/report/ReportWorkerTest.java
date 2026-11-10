@@ -1,7 +1,10 @@
-package com.sakura.interview.session;
+package com.sakura.interview.report;
 
 import com.google.gson.Gson;
 import com.sakura.interview.infra.StructuredOutputInvoker;
+import com.sakura.interview.session.FakeReportStore;
+import com.sakura.interview.session.FakeSessionStore;
+import com.sakura.interview.session.SessionState;
 import com.sakura.interview.tool.JdProfile;
 import org.junit.jupiter.api.Test;
 

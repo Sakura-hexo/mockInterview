@@ -1,4 +1,4 @@
-package com.sakura.interview.session;
+package com.sakura.interview.report;
 
 /**
  * 复盘评分，各维度 0 到 10 分。

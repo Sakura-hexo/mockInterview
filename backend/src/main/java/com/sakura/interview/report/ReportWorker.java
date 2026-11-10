@@ -1,6 +1,8 @@
-package com.sakura.interview.session;
+package com.sakura.interview.report;
 
 import com.google.gson.Gson;
+import com.sakura.interview.session.SessionState;
+import com.sakura.interview.session.SessionStore;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import org.springframework.transaction.support.TransactionOperations;
