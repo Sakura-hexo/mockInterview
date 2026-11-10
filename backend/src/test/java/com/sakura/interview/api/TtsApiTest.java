@@ -1,5 +1,6 @@
 package com.sakura.interview.api;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ class TtsApiTest {
     private static final FakeUserStore users = new FakeUserStore();
     private static final FakeAuthStore authSessions = new FakeAuthStore();
     private static final FakeTtsSpeaker speaker = new FakeTtsSpeaker();
+    private static final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
 
     @TestConfiguration
     static class TestBeans {
@@ -53,6 +55,11 @@ class TtsApiTest {
         @Bean
         TtsSpeaker ttsSpeaker() {
             return speaker;
+        }
+
+        @Bean
+        SimpleMeterRegistry meterRegistry() {
+            return meterRegistry;
         }
     }
 
@@ -93,6 +100,8 @@ class TtsApiTest {
         assertThat(new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8))
                 .isEqualTo("wav:matcha-zh-en:第一段测试文本");
         assertThat(speaker.calls).isEqualTo(1);
+        assertThat(meterRegistry.find("tts_synth_seconds")
+                .tag("voice", "matcha-zh-en").tag("outcome", "success").timer()).isNotNull();
     }
 
     @Test

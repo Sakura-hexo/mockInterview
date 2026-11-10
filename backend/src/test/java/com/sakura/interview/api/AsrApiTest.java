@@ -1,5 +1,6 @@
 package com.sakura.interview.api;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ class AsrApiTest {
     private static final FakeUserStore users = new FakeUserStore();
     private static final FakeAuthStore authSessions = new FakeAuthStore();
     private static final FakeAsrTranscriber transcriber = new FakeAsrTranscriber();
+    private static final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
 
     @TestConfiguration
     static class TestBeans {
@@ -53,6 +55,11 @@ class AsrApiTest {
         @Bean
         AsrTranscriber asrTranscriber() {
             return transcriber;
+        }
+
+        @Bean
+        SimpleMeterRegistry meterRegistry() {
+            return meterRegistry;
         }
     }
 
@@ -92,6 +99,8 @@ class AsrApiTest {
         assertThat(transcriber.calls).isEqualTo(1);
         assertThat(transcriber.lastAudioLength).isEqualTo(4);
         assertThat(result.getResponse().getContentType()).startsWith("application/json");
+        assertThat(meterRegistry.find("asr_transcribe_seconds")
+                .tag("model", "sense-voice").tag("outcome", "success").timer()).isNotNull();
     }
 
     @Test
@@ -115,6 +124,8 @@ class AsrApiTest {
                         .contentType(MediaType.APPLICATION_OCTET_STREAM)
                         .content(new byte[16]))
                 .andExpect(status().is(502));
+        assertThat(meterRegistry.find("asr_transcribe_seconds")
+                .tag("outcome", "failure").timer()).isNotNull();
     }
 
     @Test

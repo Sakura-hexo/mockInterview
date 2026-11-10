@@ -33,3 +33,13 @@ management:
     elasticsearch:
       # Milvus SDK 传递依赖引入 ES 客户端，本项目无 Elasticsearch，关闭该健康检查
       enabled: false
+  metrics:
+    distribution:
+      percentiles-histogram:
+        # 自定义 Timer 必须显式开桶：Micrometer 默认只发 count/sum/max，
+        # 不开桶 Grafana 的 histogram_quantile 查不到 _bucket 序列、面板永远空图（2026-11-10 实测踩坑）
+        interview_turn_seconds: true
+        llm_call_seconds: true
+        report_task_seconds: true
+        tts_synth_seconds: true
+        asr_transcribe_seconds: true
