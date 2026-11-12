@@ -1,6 +1,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import type { AnnotatedMessage } from '../lib/interviewPhase';
+import './MessageBubble.css';
 
 // 面试官气泡：徽章 + Markdown 正文 + 流式光标 + metrics 小字 + 错误红条
 // 候选人气泡：蓝底右侧（页面方案 4.2，视觉按 V1 定稿设计稿 04）

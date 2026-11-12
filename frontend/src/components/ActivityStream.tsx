@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ActivityItem } from '../hooks/useInterviewStream';
+import './ActivityStream.css';
 
 // Agent 活动流：气泡下方灰色小字，最近 4 条、更旧淡出、可折叠（页面方案 4.2）
 // P0 事件较少（发送/生成/失败），标题为纯文字

@@ -1,0 +1,58 @@
+/* Agent 活动流样式（ActivityStream.tsx 引入）：气泡下方灰色小字，最近 4 条、更旧淡出 */
+
+.activity-wrap {
+  align-self: flex-start;
+  margin-left: 4px;
+  width: 76%;
+  margin-top: -8px;
+}
+
+.activity-stream {
+  padding: 6px 10px;
+  background: #f6f7fa;
+  border: 1px solid #e8ebf1;
+  border-radius: 8px;
+}
+
+.activity-toggle {
+  all: unset;
+  cursor: pointer;
+  font-size: 11px;
+  color: #8a94a6;
+  user-select: none;
+  font-family: inherit;
+}
+
+.activity-items {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 4px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-family: Consolas, monospace;
+  color: #6b7688;
+}
+
+/* 本轮内更早的条目淡出，突出最新状态（页面方案 4.2） */
+.activity-item.faded {
+  opacity: 0.55;
+}
+
+.activity-who { color: #475569; }
+
+.activity-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-ok { background: #10b981; }
+.dot-running { background: #f59e0b; animation: blink 1s infinite; }
+.dot-failed { background: #ef4444; }
