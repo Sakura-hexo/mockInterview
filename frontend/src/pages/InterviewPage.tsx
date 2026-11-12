@@ -14,8 +14,9 @@ import {
   MAX_RECORD_MS,
   toSimplifiedChinese,
 } from '../lib/speechInput';
-import { describeVoiceState, litBars } from '../lib/voiceActivity';
+import { describeVoiceState } from '../lib/voiceActivity';
 import type { AnnotatedMessage } from '../lib/interviewPhase';
+import VoiceStage from '../components/VoiceStage';
 import './InterviewPage.css';
 
 const DIRECTION_LABEL: Record<string, string> = { JAVA_BACKEND: 'Java 后端' };
@@ -33,23 +34,6 @@ const AUTO_READ_KEY = 'interview-auto-read';
 const VOICE_MODE_KEY = 'interview-voice-mode';
 // 面试官读完到自动开麦之间的留白：留出「轮到你了」的心理切换，也避开扬声器尾音被录进去
 const AUTO_LISTEN_DELAY_MS = 600;
-const VOICE_BARS = 18;
-
-/** 语音面板的麦克风图标（避免 emoji 在不同字体下渲染不一致） */
-function MicIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false">
-      <path
-        d="M12 15a3.5 3.5 0 0 0 3.5-3.5v-5a3.5 3.5 0 1 0-7 0v5A3.5 3.5 0 0 0 12 15Z"
-        fill="currentColor"
-      />
-      <path
-        d="M5.75 11.5a.9.9 0 0 1 1.8 0 4.45 4.45 0 0 0 8.9 0 .9.9 0 0 1 1.8 0 6.25 6.25 0 0 1-5.35 6.18v2.07a.9.9 0 0 1-1.8 0v-2.07A6.25 6.25 0 0 1 5.75 11.5Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
 
 // 面试聊天页 /interview/:id（页面方案 4.2，视觉按 V1 定稿设计稿 04/06）
 export default function InterviewPage() {
@@ -79,6 +63,8 @@ export default function InterviewPage() {
 
   // 语音面试模式：面试官读完自动开麦，用户说完自动提交，不再需要鼠标
   const [voiceMode, setVoiceMode] = useState(() => localStorage.getItem(VOICE_MODE_KEY) === '1');
+  // 字幕开关是纯视图状态：不持久化、每次进语音模式默认无字幕（真实面试感优先）
+  const [subtitleOn, setSubtitleOn] = useState(false);
   const [voiceDraft, setVoiceDraft] = useState('');
   const [voiceHint, setVoiceHint] = useState('');
 
@@ -137,6 +123,17 @@ export default function InterviewPage() {
     stopSpeechRef.current = stopSpeech;
     listeningRef.current = listening;
   });
+
+  /** 麦克风开关：无字幕舞台与字幕面板共用；录音中点是停，空闲点是开始 */
+  const toggleMic = useCallback(() => {
+    setVoiceHint('');
+    if (listeningRef.current) {
+      stopSpeechRef.current();
+      return;
+    }
+    setVoiceDraft('');
+    startSpeechRef.current();
+  }, []);
 
   // 单段录音计时：剩余不足 15 秒切红字倒计时，到点自动停（钩子内执法）
   const recordRemainingMs = MAX_RECORD_MS - elapsedMs;
@@ -240,6 +237,8 @@ export default function InterviewPage() {
       stopSpeechRef.current();
       return;
     }
+    // 每次开启语音面试都回到无字幕舞台（默认态即真实面试态，不记忆字幕偏好）
+    setSubtitleOn(false);
     // 开模式即读最后一题，读完自动开麦；没有历史题时直接进入聆听
     const last = [...annotatedRef.current].reverse().find((m) => m.role === 'INTERVIEWER' && !m.streaming);
     if (last && !readOnlyRef.current && tts.supported) {
@@ -310,6 +309,29 @@ export default function InterviewPage() {
   });
   const voiceAvailable = supported || tts.supported;
 
+  // 语音面试视图：stage=无字幕舞台（默认），panel=字幕开的气泡列表+面板；回看态不进入
+  const voiceView = !readOnly && voiceMode
+    ? {
+        variant: subtitleOn ? ('panel' as const) : ('stage' as const),
+        voiceState,
+        listening,
+        transcribing,
+        streaming,
+        supported,
+        capped,
+        level,
+        elapsedMs,
+        remainingMs: recordRemainingMs,
+        said: voiceDraft,
+        hint: voiceHint,
+        error: speechError,
+        onToggleMic: toggleMic,
+        onSwitchKeyboard: toggleVoiceMode,
+      }
+    : null;
+  // 无字幕舞台是否实际接管主区（加载/结束失败时退回气泡列表，错误信息优先可见）
+  const showStage = !!voiceView && voiceView.variant === 'stage' && !loadError && !endError;
+
   return (
     <>
       <header className="chat-header">
@@ -318,7 +340,7 @@ export default function InterviewPage() {
           {statusBadge}
         </div>
         <div className="actions">
-          {voiceAvailable && (
+          {voiceAvailable && !readOnly && (
             <button
               type="button"
               className={`btn btn-ghost voice-mode-btn ${voiceMode ? 'on' : ''}`}
@@ -404,7 +426,8 @@ export default function InterviewPage() {
 
       {ttsError && <div className="streaming-hint tts-error">{ttsError}</div>}
 
-      {!readOnly && (streaming || recovering) && (
+      {/* 舞台态不显示：四态条与状态行已覆盖「思考中」，保持无字幕纯净 */}
+      {!readOnly && !showStage && (streaming || recovering) && (
         <div className="streaming-hint">
           <span className="pulse" />
           <span>
@@ -420,98 +443,39 @@ export default function InterviewPage() {
       )}
 
       <div className="main-body" ref={listRef}>
-        <div className="message-list">
-          {loadError && <div className="interview-error">{loadError}</div>}
-          {endError && <div className="interview-error">{endError}</div>}
-          {annotated.map((m) => (
-            <MessageBubble
-              key={m.id ?? m.content}
-              message={m}
-              onToggleSpeak={m.role === 'INTERVIEWER' ? () => toggleSpeak(m) : undefined}
-              speaking={!!m.id && m.id === speakingId}
-              ttsSupported={tts.supported}
-            />
-          ))}
-          <ActivityStream items={activities} />
-        </div>
+        {showStage && voiceView ? (
+          <VoiceStage {...voiceView} />
+        ) : (
+          <div className="message-list">
+            {loadError && <div className="interview-error">{loadError}</div>}
+            {endError && <div className="interview-error">{endError}</div>}
+            {annotated.map((m) => (
+              <MessageBubble
+                key={m.id ?? m.content}
+                message={m}
+                onToggleSpeak={m.role === 'INTERVIEWER' ? () => toggleSpeak(m) : undefined}
+                speaking={!!m.id && m.id === speakingId}
+                ttsSupported={tts.supported}
+              />
+            ))}
+            <ActivityStream items={activities} />
+          </div>
+        )}
       </div>
 
-      {!readOnly && voiceMode && (
-        <div className={`voice-panel tone-${voiceState.tone}`}>
-          <div className="voice-head">
-            <span className="voice-dot" />
-            <span className="voice-status">{voiceState.text}</span>
-            {listening && (
-              <span className={`voice-timer mono ${countdownActive ? 'hot' : ''}`}>
-                {countdownActive
-                  ? `剩余 ${Math.max(1, Math.ceil(recordRemainingMs / 1000))} 秒`
-                  : formatRecordElapsed(elapsedMs)}
-              </span>
-            )}
-            <button type="button" className="voice-switch" onClick={toggleVoiceMode}>
-              切回键盘输入
-            </button>
-          </div>
-
-          <div className="voice-body">
-            <button
-              type="button"
-              className={`voice-mic ${listening ? 'on' : ''}`}
-              onClick={() => {
-                setVoiceHint('');
-                if (listening) {
-                  stopSpeech();
-                  return;
-                }
-                setVoiceDraft('');
-                startSpeech();
-              }}
-              disabled={transcribing || streaming || !supported}
-              title={listening ? '结束这段回答并提交' : '开始回答'}
-              aria-label={listening ? '结束这段回答并提交' : '开始回答'}
-            >
-              <MicIcon />
-            </button>
-
-            <div className="voice-meter" aria-hidden="true">
-              {Array.from({ length: VOICE_BARS }, (_, index) => (
-                <span
-                  key={index}
-                  className={`voice-bar ${listening && index < litBars(level, VOICE_BARS) ? 'on' : ''}`}
-                />
-              ))}
-            </div>
-
-            <div className="voice-transcript">
-              {voiceDraft ? (
-                <p className="voice-said">{voiceDraft}</p>
-              ) : (
-                <p className="voice-placeholder">
-                  {listening ? '正在听你说…' : transcribing ? '识别中…' : '你的回答会实时转成文字显示在这里'}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="voice-foot">
-            {speechError && <span className="voice-error">{speechError}</span>}
-            {!supported && (
-              <span className="voice-error">
-                服务端语音识别未开启，可在后端 .env 设置 ASR_PROVIDER=sherpa 后重启；当前请切回键盘输入
-              </span>
-            )}
-            {capped && !listening && !transcribing && (
-              <span className="voice-tip">单段已达上限，点麦克风可以接着说</span>
-            )}
-            {voiceHint && <span className="voice-tip">{voiceHint}</span>}
-            {!speechError && !voiceHint && supported && (
-              <span className="voice-tip">
-                说完停顿约 1.5 秒自动提交；想自己控节奏就再点一次麦克风结束这段
-              </span>
-            )}
-          </div>
-        </div>
+      {/* 字幕切换浮动按钮：无字幕舞台与字幕面板同在右下角，纯视图切换不碰录音与朗读 */}
+      {voiceView && (
+        <button
+          type="button"
+          className="subtitle-float"
+          onClick={() => setSubtitleOn((v) => !v)}
+          title={subtitleOn ? '收起字幕，回到纯净语音舞台' : '打开字幕回看消息记录（再点一次收起）'}
+        >
+          {subtitleOn ? '收起字幕' : '字幕'}
+        </button>
       )}
+
+      {voiceView?.variant === 'panel' && <VoiceStage {...voiceView} />}
 
       {!readOnly && !voiceMode && (
         <div className="input-area">
