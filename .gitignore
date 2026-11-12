@@ -39,3 +39,11 @@ backend/tts-service/espeak-ng-data/
 
 # ZCode Sites 部署暂存目录
 .zcode-site/
+.zcode-site.json
+
+# 个人材料与本地工作区，严禁进公开仓库（含真实姓名手机号）
+resume/
+.workbuddy/
+gui-test-screenshots/
+docs/报告评分链路与面试追问点.md
+docs/面试官追问链路与面试追问点.md

@@ -1,158 +1,11 @@
-/* 面试聊天页样式（V1 定稿设计稿 04/06），由 InterviewPage.tsx 引入 */
+/* 面试聊天页样式（V1 定稿设计稿 04/06），由 InterviewPage.tsx 引入。
+   气泡样式在 components/MessageBubble.css，活动流在 components/ActivityStream.css */
 
 .message-list {
   padding: 24px;
   max-width: 920px;
   margin: 0 auto;
 }
-
-.message-row {
-  display: flex;
-  margin-bottom: 16px;
-  flex-direction: column;
-}
-
-.message-row.user { align-items: flex-end; }
-.message-row.assistant { align-items: flex-start; }
-
-.bubble {
-  max-width: 76%;
-  padding: 12px 16px;
-  border-radius: 12px;
-  font-size: 14px;
-  line-height: 1.7;
-  word-break: break-word;
-}
-
-.bubble.user {
-  background: #3b82f6;
-  color: #fff;
-  border-bottom-right-radius: 4px;
-}
-
-.bubble.assistant {
-  background: #fff;
-  color: #2c3e50;
-  border: 1px solid #e5e8ef;
-  border-bottom-left-radius: 4px;
-}
-
-.bubble-meta {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  margin-bottom: 6px;
-  flex-wrap: wrap;
-}
-
-.bubble-tag {
-  display: inline-block;
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-weight: 500;
-}
-
-.bubble-tag.question { background: #dbeafe; color: #1e40af; }
-.bubble-tag.followup { background: #fef3c7; color: #92400e; }
-.bubble-tag.next { background: #e0e7ff; color: #3730a3; }
-
-.bubble-time { font-size: 11px; color: #94a3b8; }
-
-.bubble-content :is(p, ul, ol) { margin: 0 0 4px; }
-.bubble-content :is(p:last-child, ul:last-child, ol:last-child) { margin-bottom: 0; }
-.bubble-content strong { font-weight: 700; }
-.bubble-content code {
-  font-family: Consolas, monospace;
-  background: #f1f5f9;
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-.cursor {
-  display: inline-block;
-  color: #3b82f6;
-  animation: blink 1s infinite;
-  font-weight: bold;
-}
-
-/* blink/spin 动画统一定义在 App.css */
-
-.bubble-error {
-  margin-top: 8px;
-  padding: 6px 10px;
-  background: #fee2e2;
-  color: #991b1b;
-  border-radius: 6px;
-  font-size: 12.5px;
-}
-
-.bubble-stats {
-  font-size: 11px;
-  color: #94a3b8;
-  margin-top: 8px;
-  font-family: Consolas, monospace;
-}
-
-/* ==================== Agent 活动流 ==================== */
-
-.activity-wrap {
-  align-self: flex-start;
-  margin-left: 4px;
-  width: 76%;
-  margin-top: -8px;
-}
-
-.activity-stream {
-  padding: 6px 10px;
-  background: #f6f7fa;
-  border: 1px solid #e8ebf1;
-  border-radius: 8px;
-}
-
-.activity-toggle {
-  all: unset;
-  cursor: pointer;
-  font-size: 11px;
-  color: #8a94a6;
-  user-select: none;
-  font-family: inherit;
-}
-
-.activity-items {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  margin-top: 4px;
-}
-
-.activity-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-family: Consolas, monospace;
-  color: #6b7688;
-}
-
-/* 本轮内更早的条目淡出，突出最新状态（页面方案 4.2） */
-.activity-item.faded {
-  opacity: 0.55;
-}
-
-.activity-who { color: #475569; }
-
-.activity-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.dot-ok { background: #10b981; }
-.dot-running { background: #f59e0b; animation: blink 1s infinite; }
-.dot-failed { background: #ef4444; }
 
 /* ==================== 输入区 ==================== */
 
@@ -269,23 +122,7 @@
   font-size: 13px;
 }
 
-/* 面试官读题：气泡 meta 区的小按钮 + 顶栏自动读题开关 */
-.tts-btn {
-  padding: 1px 8px;
-  border: 1px solid #d5dbe6;
-  border-radius: 999px;
-  background: #fff;
-  color: #64748b;
-  font-size: 11px;
-  font-family: inherit;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
-}
-
-.tts-btn:hover:not(:disabled) { border-color: #3b82f6; color: #1d4ed8; }
-.tts-btn.tts-speaking { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
-.tts-btn:disabled { background: #f5f6fa; color: #94a3b8; cursor: not-allowed; }
-
+/* 面试官读题：气泡 meta 区的小按钮在 MessageBubble.css，这里只留顶栏相关 */
 .auto-read-btn.on { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
 
 /* 读题嗓音选择：与自动读题开关同排，选项名截短显示 */
@@ -304,3 +141,32 @@
 .voice-select:hover { border-color: #3b82f6; color: #3b82f6; }
 
 .tts-error { color: #b91c1c; font-size: 12px; }
+
+/* ==================== 语音面试开关与字幕浮动按钮（舞台/面板样式在 VoiceStage.css） ==================== */
+
+.voice-mode-btn.on {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+/* 字幕切换浮动按钮：无字幕舞台与字幕面板同一位置（右下角），随时切换回看 */
+.subtitle-float {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 20;
+  padding: 8px 16px;
+  border: 1px solid #d5dbe6;
+  border-radius: 999px;
+  background: #fff;
+  color: #334155;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(30, 42, 58, 0.1);
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.subtitle-float:hover { border-color: #3b82f6; color: #1d4ed8; }
+

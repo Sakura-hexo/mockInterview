@@ -7,8 +7,16 @@ import { useSpeechInput } from '../hooks/useSpeechInput';
 import { useSpeechOutput } from '../hooks/useSpeechOutput';
 import MessageBubble from '../components/MessageBubble';
 import ActivityStream from '../components/ActivityStream';
-import { appendTranscript, COUNTDOWN_WINDOW_MS, formatRecordElapsed, MAX_RECORD_MS } from '../lib/speechInput';
+import {
+  appendTranscript,
+  COUNTDOWN_WINDOW_MS,
+  formatRecordElapsed,
+  MAX_RECORD_MS,
+  toSimplifiedChinese,
+} from '../lib/speechInput';
+import { describeVoiceState } from '../lib/voiceActivity';
 import type { AnnotatedMessage } from '../lib/interviewPhase';
+import VoiceStage from '../components/VoiceStage';
 import './InterviewPage.css';
 
 const DIRECTION_LABEL: Record<string, string> = { JAVA_BACKEND: 'Java 后端' };
@@ -22,6 +30,10 @@ const SERVER_VOICE_LABEL: Record<string, string> = {
 
 // 自动读题开关持久化：默认开（TTS 的主场景就是面试官开口问），关掉记住选择
 const AUTO_READ_KEY = 'interview-auto-read';
+// 语音面试模式持久化：开着的用户下次进来还是语音，不用每场重新开
+const VOICE_MODE_KEY = 'interview-voice-mode';
+// 面试官读完到自动开麦之间的留白：留出「轮到你了」的心理切换，也避开扬声器尾音被录进去
+const AUTO_LISTEN_DELAY_MS = 600;
 
 // 面试聊天页 /interview/:id（页面方案 4.2，视觉按 V1 定稿设计稿 04/06）
 export default function InterviewPage() {
@@ -46,19 +58,122 @@ export default function InterviewPage() {
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
-  const { supported, listening, transcribing, error: speechError, elapsedMs, capped, start, stop: stopSpeech } = useSpeechInput({
-    onTranscript: (transcript) => setDraft((draft) => appendTranscript(draft, transcript)),
+
+  const readOnly = !!session && (session.status === 'ENDED' || session.status === 'REPORTED');
+
+  // 语音面试模式：面试官读完自动开麦，用户说完自动提交，不再需要鼠标
+  const [voiceMode, setVoiceMode] = useState(() => localStorage.getItem(VOICE_MODE_KEY) === '1');
+  // 字幕开关是纯视图状态：不持久化、每次进语音模式默认无字幕（真实面试感优先）
+  const [subtitleOn, setSubtitleOn] = useState(false);
+  const [voiceDraft, setVoiceDraft] = useState('');
+  const [voiceHint, setVoiceHint] = useState('');
+
+  // 自动流程（播报结束、识别结束、切换模式）都在异步回调里跑，
+  // 一律读 ref 而不是渲染闭包，避免拿到上一帧的 streaming / readOnly
+  const voiceModeRef = useRef(voiceMode);
+  const readOnlyRef = useRef(readOnly);
+  const streamingRef = useRef(streaming);
+  const annotatedRef = useRef<AnnotatedMessage[]>(annotated);
+  const sendRef = useRef(send);
+  useEffect(() => {
+    voiceModeRef.current = voiceMode;
+    readOnlyRef.current = readOnly;
+    streamingRef.current = streaming;
+    annotatedRef.current = annotated;
+    sendRef.current = send;
   });
+
+  const {
+    supported,
+    listening,
+    transcribing,
+    error: speechError,
+    elapsedMs,
+    capped,
+    level,
+    start: startSpeech,
+    stop: stopSpeech,
+  } = useSpeechInput({
+    autoStopOnSilence: voiceMode,
+    onTranscript: (transcript) => {
+      const text = toSimplifiedChinese(transcript).trim();
+      if (voiceModeRef.current) {
+        setVoiceDraft(text);
+        if (!text) {
+          setVoiceHint('没有听清，请靠近麦克风再说一次');
+          return;
+        }
+        if (readOnlyRef.current) return;
+        setVoiceHint('');
+        // 语音模式不需要再点发送：识别完成即视为答完这一句
+        sendRef.current(text);
+        return;
+      }
+      setDraft((current) => appendTranscript(current, transcript));
+    },
+  });
+
+  const supportedRef = useRef(supported);
+  const startSpeechRef = useRef(startSpeech);
+  const stopSpeechRef = useRef(stopSpeech);
+  const listeningRef = useRef(listening);
+  useEffect(() => {
+    supportedRef.current = supported;
+    startSpeechRef.current = startSpeech;
+    stopSpeechRef.current = stopSpeech;
+    listeningRef.current = listening;
+  });
+
+  /** 麦克风开关：无字幕舞台与字幕面板共用；录音中点是停，空闲点是开始 */
+  const toggleMic = useCallback(() => {
+    setVoiceHint('');
+    if (listeningRef.current) {
+      stopSpeechRef.current();
+      return;
+    }
+    setVoiceDraft('');
+    startSpeechRef.current();
+  }, []);
+
   // 单段录音计时：剩余不足 15 秒切红字倒计时，到点自动停（钩子内执法）
   const recordRemainingMs = MAX_RECORD_MS - elapsedMs;
   const countdownActive = listening && recordRemainingMs <= COUNTDOWN_WINDOW_MS;
+
+  const autoListenTimer = useRef<number | null>(null);
+  const clearAutoListen = useCallback(() => {
+    if (autoListenTimer.current !== null) {
+      window.clearTimeout(autoListenTimer.current);
+      autoListenTimer.current = null;
+    }
+  }, []);
+
+  /** 延时自动开麦：等到麦克风真正可用再判定一次前置条件，条件不满足就静默放弃。 */
+  const scheduleAutoListen = useCallback(
+    (delay = AUTO_LISTEN_DELAY_MS) => {
+      clearAutoListen();
+      autoListenTimer.current = window.setTimeout(() => {
+        autoListenTimer.current = null;
+        if (!voiceModeRef.current || readOnlyRef.current || streamingRef.current) return;
+        if (!supportedRef.current || listeningRef.current) return;
+        setVoiceDraft('');
+        startSpeechRef.current();
+      }, delay);
+    },
+    [clearAutoListen],
+  );
 
   // 面试官读题：气泡按钮 + 顶栏自动读题开关（ENDED 只读回看不自动读）
   const [speakingId, setSpeakingId] = useState<string | null>(null);
   const [autoRead, setAutoRead] = useState(() => localStorage.getItem(AUTO_READ_KEY) !== '0');
   const [ttsError, setTtsError] = useState('');
   const tts = useSpeechOutput({
-    onDone: () => setSpeakingId(null),
+    onDone: (reason) => {
+      setSpeakingId(null);
+      // 只有「自然读完」才接麦；用户主动关掉朗读时不抢麦
+      if (reason === 'ended' && voiceModeRef.current && !readOnlyRef.current) {
+        scheduleAutoListen();
+      }
+    },
   });
 
   const toggleSpeak = useCallback(
@@ -77,24 +192,28 @@ export default function InterviewPage() {
   );
 
   const lastInterviewerRef = useRef<string | null>(null);
-  const readOnlyLoaded = !!(session && (session.status === 'ENDED' || session.status === 'REPORTED'));
 
-  // 新面试官消息完成流式后自动朗读；挂载时只登记基线不补读历史
+  // 新面试官消息完成流式后自动朗读：
+  // 文本模式挂载时只登记基线不补读历史；语音模式要接着上次的口型，进页面就读最后一题
   useEffect(() => {
-    if (!autoRead || !tts.supported || readOnlyLoaded) return;
+    if (!autoRead && !voiceMode) return;
+    if (!tts.supported || readOnly) return;
     const last = [...annotated].reverse().find((m) => m.role === 'INTERVIEWER');
     if (!last || last.streaming) return;
     const key = last.id ?? last.content;
     if (lastInterviewerRef.current === null) {
       lastInterviewerRef.current = key;
-      return;
+      if (!voiceMode) return;
     }
     if (lastInterviewerRef.current === key) return;
     lastInterviewerRef.current = key;
+    // 换题时先停下正在录的回答，避免面试官的声音被录进去
+    if (listeningRef.current) stopSpeechRef.current();
+    clearAutoListen();
     setTtsError('');
     setSpeakingId(key);
     tts.speak(last.content);
-  }, [annotated, autoRead, tts.supported, readOnlyLoaded, tts.speak]);
+  }, [annotated, autoRead, voiceMode, tts.supported, readOnly, tts.speak, clearAutoListen]);
 
   // 新消息与流式增量时自动滚到底部
   useEffect(() => {
@@ -102,8 +221,36 @@ export default function InterviewPage() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [annotated]);
 
-  // 已结束会话只读回看：报告页"查看消息记录"入口（页面方案 4.3），
-  // 不再重定向报告页（否则与该入口互相弹回）
+  // 卸载时清掉待触发的自动开麦，避免离开页面后麦克风被拉起
+  useEffect(() => clearAutoListen, [clearAutoListen]);
+
+  const toggleVoiceMode = useCallback(() => {
+    const next = !voiceModeRef.current;
+    voiceModeRef.current = next;
+    setVoiceMode(next);
+    localStorage.setItem(VOICE_MODE_KEY, next ? '1' : '0');
+    setVoiceHint('');
+    if (!next) {
+      clearAutoListen();
+      tts.stop();
+      setSpeakingId(null);
+      stopSpeechRef.current();
+      return;
+    }
+    // 每次开启语音面试都回到无字幕舞台（默认态即真实面试态，不记忆字幕偏好）
+    setSubtitleOn(false);
+    // 开模式即读最后一题，读完自动开麦；没有历史题时直接进入聆听
+    const last = [...annotatedRef.current].reverse().find((m) => m.role === 'INTERVIEWER' && !m.streaming);
+    if (last && !readOnlyRef.current && tts.supported) {
+      const key = last.id ?? last.content;
+      lastInterviewerRef.current = key;
+      setTtsError('');
+      setSpeakingId(key);
+      tts.speak(last.content);
+      return;
+    }
+    scheduleAutoListen(200);
+  }, [clearAutoListen, scheduleAutoListen, tts]);
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -120,6 +267,9 @@ export default function InterviewPage() {
     if (!window.confirm('确定结束本场面试吗？结束后将生成复盘报告。')) return;
     setEnding(true);
     setEndError('');
+    clearAutoListen();
+    tts.stop();
+    stopSpeech();
     try {
       await endInterview(id);
       navigate(`/report/${id}`);
@@ -133,7 +283,6 @@ export default function InterviewPage() {
     return <div className="home-placeholder">会话加载中…</div>;
   }
 
-  const readOnly = !!session && (session.status === 'ENDED' || session.status === 'REPORTED');
   const statusBadge = readOnly ? (
     <span className={`badge ${session!.status === 'REPORTED' ? 'badge-green' : 'badge-yellow'}`}>
       {session!.status === 'REPORTED' ? '已出报告' : '已结束'}
@@ -150,6 +299,39 @@ export default function InterviewPage() {
     .filter(Boolean)
     .join(' · ');
 
+  const voiceState = describeVoiceState({
+    streaming,
+    recovering,
+    speaking: tts.speaking,
+    listening,
+    transcribing,
+    supported,
+  });
+  const voiceAvailable = supported || tts.supported;
+
+  // 语音面试视图：stage=无字幕舞台（默认），panel=字幕开的气泡列表+面板；回看态不进入
+  const voiceView = !readOnly && voiceMode
+    ? {
+        variant: subtitleOn ? ('panel' as const) : ('stage' as const),
+        voiceState,
+        listening,
+        transcribing,
+        streaming,
+        supported,
+        capped,
+        level,
+        elapsedMs,
+        remainingMs: recordRemainingMs,
+        said: voiceDraft,
+        hint: voiceHint,
+        error: speechError,
+        onToggleMic: toggleMic,
+        onSwitchKeyboard: toggleVoiceMode,
+      }
+    : null;
+  // 无字幕舞台是否实际接管主区（加载/结束失败时退回气泡列表，错误信息优先可见）
+  const showStage = !!voiceView && voiceView.variant === 'stage' && !loadError && !endError;
+
   return (
     <>
       <header className="chat-header">
@@ -158,7 +340,17 @@ export default function InterviewPage() {
           {statusBadge}
         </div>
         <div className="actions">
-          {tts.supported && (
+          {voiceAvailable && !readOnly && (
+            <button
+              type="button"
+              className={`btn btn-ghost voice-mode-btn ${voiceMode ? 'on' : ''}`}
+              onClick={toggleVoiceMode}
+              title="语音面试：面试官读完题自动开麦，你说完停顿即自动提交，全程不用碰键盘"
+            >
+              语音面试{voiceMode ? '开' : '关'}
+            </button>
+          )}
+          {tts.supported && !voiceMode && (
             <>
               <button
                 type="button"
@@ -173,7 +365,7 @@ export default function InterviewPage() {
                     const last = [...annotated]
                       .reverse()
                       .find((m) => m.role === 'INTERVIEWER' && !m.streaming);
-                    if (last && !readOnlyLoaded && tts.supported) {
+                    if (last && !readOnly && tts.supported) {
                       const key = last.id ?? last.content;
                       lastInterviewerRef.current = key;
                       setTtsError('');
@@ -189,6 +381,10 @@ export default function InterviewPage() {
               >
                 自动读题{autoRead ? '开' : '关'}
               </button>
+            </>
+          )}
+          {tts.supported && (
+            <>
               {tts.serverVoices.length > 0 ? (
                 <select
                   className="voice-select"
@@ -230,7 +426,8 @@ export default function InterviewPage() {
 
       {ttsError && <div className="streaming-hint tts-error">{ttsError}</div>}
 
-      {!readOnly && (streaming || recovering) && (
+      {/* 舞台态不显示：四态条与状态行已覆盖「思考中」，保持无字幕纯净 */}
+      {!readOnly && !showStage && (streaming || recovering) && (
         <div className="streaming-hint">
           <span className="pulse" />
           <span>
@@ -246,23 +443,41 @@ export default function InterviewPage() {
       )}
 
       <div className="main-body" ref={listRef}>
-        <div className="message-list">
-          {loadError && <div className="interview-error">{loadError}</div>}
-          {endError && <div className="interview-error">{endError}</div>}
-          {annotated.map((m) => (
-            <MessageBubble
-              key={m.id ?? m.content}
-              message={m}
-              onToggleSpeak={m.role === 'INTERVIEWER' ? () => toggleSpeak(m) : undefined}
-              speaking={!!m.id && m.id === speakingId}
-              ttsSupported={tts.supported}
-            />
-          ))}
-          <ActivityStream items={activities} />
-        </div>
+        {showStage && voiceView ? (
+          <VoiceStage {...voiceView} />
+        ) : (
+          <div className="message-list">
+            {loadError && <div className="interview-error">{loadError}</div>}
+            {endError && <div className="interview-error">{endError}</div>}
+            {annotated.map((m) => (
+              <MessageBubble
+                key={m.id ?? m.content}
+                message={m}
+                onToggleSpeak={m.role === 'INTERVIEWER' ? () => toggleSpeak(m) : undefined}
+                speaking={!!m.id && m.id === speakingId}
+                ttsSupported={tts.supported}
+              />
+            ))}
+            <ActivityStream items={activities} />
+          </div>
+        )}
       </div>
 
-      {!readOnly && (
+      {/* 字幕切换浮动按钮：无字幕舞台与字幕面板同在右下角，纯视图切换不碰录音与朗读 */}
+      {voiceView && (
+        <button
+          type="button"
+          className="subtitle-float"
+          onClick={() => setSubtitleOn((v) => !v)}
+          title={subtitleOn ? '收起字幕，回到纯净语音舞台' : '打开字幕回看消息记录（再点一次收起）'}
+        >
+          {subtitleOn ? '收起字幕' : '字幕'}
+        </button>
+      )}
+
+      {voiceView?.variant === 'panel' && <VoiceStage {...voiceView} />}
+
+      {!readOnly && !voiceMode && (
         <div className="input-area">
           <textarea
             placeholder={
@@ -276,7 +491,7 @@ export default function InterviewPage() {
           />
           <button
             className={`speech-btn ${listening ? 'speech-listening' : ''} ${countdownActive ? 'speech-countdown' : ''}`}
-            onClick={listening ? stopSpeech : start}
+            onClick={listening ? stopSpeech : startSpeech}
             disabled={streaming || !supported || transcribing}
             title={supported ? '语音输入，识别后可再编辑' : '当前浏览器不支持语音输入'}
           >
