@@ -11,9 +11,15 @@ import {
   stripMarkdown,
 } from '../lib/speechOutput';
 
+/** 朗读结束的两种成因：自然读完（ended）与被打断/主动停止（stopped）。 */
+export type SpeechEndReason = 'ended' | 'stopped';
+
 interface UseSpeechOutputOptions {
-  /** 朗读结束（完成、出错或被停止）时回调，驱动页面层清当前朗读消息标记。 */
-  onDone?: () => void;
+  /**
+   * 朗读结束（完成、出错或被停止）时回调，驱动页面层清当前朗读消息标记。
+   * 语音面试模式据 reason 区分「面试官问完了，该轮到候选人」与「用户主动打断」。
+   */
+  onDone?: (reason: SpeechEndReason) => void;
 }
 
 const VOICE_NAME_KEY = 'TTS_VOICE_NAME';
@@ -74,10 +80,10 @@ export function useSpeechOutput({ onDone }: UseSpeechOutputOptions = {}) {
     localStorage.setItem(VOICE_NAME_KEY, name);
   }, []);
 
-  const finish = useCallback(() => {
+  const finish = useCallback((reason: SpeechEndReason) => {
     if (!mountedRef.current) return;
     setSpeaking(false);
-    doneRef.current?.();
+    doneRef.current?.(reason);
   }, []);
 
   const speakViaBrowser = useCallback(
@@ -97,7 +103,7 @@ export function useSpeechOutput({ onDone }: UseSpeechOutputOptions = {}) {
       let remaining = parts.length;
       const settle = () => {
         remaining -= 1;
-        if (remaining === 0) finish();
+        if (remaining === 0) finish('ended');
       };
       parts.forEach((part) => {
         const utterance = new Utterance(part);
@@ -132,7 +138,8 @@ export function useSpeechOutput({ onDone }: UseSpeechOutputOptions = {}) {
         audioRef.current = audio;
         audio.onended = () => {
           URL.revokeObjectURL(audio.src);
-          finish();
+          audioRef.current = null;
+          finish('ended');
         };
         audio.onerror = () => {
           URL.revokeObjectURL(audio.src);
@@ -168,7 +175,7 @@ export function useSpeechOutput({ onDone }: UseSpeechOutputOptions = {}) {
     // cancel 会触发 pending 语句的 onerror(canceled) 走静默收尾，
     // 但 Firefox 等不一定回调，这里主动收尾保证状态复位（重复调用幂等）
     window.speechSynthesis?.cancel();
-    finish();
+    finish('stopped');
   }, [finish]);
 
   return { supported, speaking, error, speak, stop, voices, serverVoices, voiceName, setVoice };
